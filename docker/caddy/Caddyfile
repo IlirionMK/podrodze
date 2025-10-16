@@ -1,0 +1,6 @@
+:8081 {
+    root * /var/www/backend/public
+    encode gzip
+    php_fastcgi app:9000
+    file_server
+}

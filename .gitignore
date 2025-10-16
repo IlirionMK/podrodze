@@ -1,30 +1,76 @@
-/vendor/
+# === OS / System ===
+.DS_Store
+Thumbs.db
+*.swp
+*~
+*.tmp
+*.log
+logs/
+tmp/
+
+# === IDEs / Editors ===
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# === Node / Frontend ===
 node_modules/
-npm-debug.log
+npm-debug.log*
 yarn-error.log
+yarn-debug.log
+pnpm-debug.log
+/frontend/dist/
+frontend/.vite/
+*.tgz
 
-# Laravel 4 specific
-bootstrap/compiled.php
-app/storage/
-
-# Laravel 5 & Lumen specific
+# === PHP / Laravel ===
+/vendor/
+/public/build
+/public_html/build
 public/storage
 public/hot
-
-# Laravel 5 & Lumen specific with changed public path
 public_html/storage
 public_html/hot
-
+bootstrap/compiled.php
+app/storage/
 storage/*.key
-.env
+/storage/pail
+/.phpunit.result.cache
+/.phpactor.json
+composer.lock
+auth.json
 Homestead.yaml
 Homestead.json
 /.vagrant
-.phpunit.result.cache
-
-/public/build
-/storage/pail
+.env
+.env.*
+.env.local
 .env.backup
 .env.production
-.phpactor.json
-auth.json
+/.env.production
+.env.*.local
+/storage/debugbar/*
+/bootstrap/cache/*.php
+
+# === Docker ===
+docker-compose.override.yml
+docker/.env
+.env.local
+.env.production
+pgdata/
+
+# === Logs / Cache / Misc ===
+coverage/
+reports/
+.vagrant/
+
+# === OS generated ===
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# === Keep safe examples ===
+!.env.example
+!backend/.env.example
+!frontend/.env.example

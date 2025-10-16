@@ -1,0 +1,74 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: travel_app-php
+    working_dir: /var/www/backend
+    volumes:
+      - ./backend:/var/www/backend
+      - composer_cache:/tmp/composer
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - LOG_CHANNEL=stack
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - db
+      - redis
+
+  caddy:
+    image: caddy:2.8
+    container_name: travel_app-caddy
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./backend:/var/www/backend
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile
+    depends_on:
+      - app
+
+  db:
+    image: postgres:16
+    container_name: travel_app-db
+    environment:
+      - POSTGRES_DB=${DB_DATABASE}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: travel_app-redis
+    ports:
+      - "6379:6379"
+  node:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile
+    container_name: travel_app-node
+    working_dir: /usr/src/frontend
+    command: sh -lc "npm install && npm run dev -- --host"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/usr/src/frontend
+      - node_modules:/usr/src/frontend/node_modules
+    depends_on:
+      - caddy
+
+
+volumes:
+  pgdata:
+  composer_cache:
+  node_modules:
