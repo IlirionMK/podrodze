@@ -9,7 +9,7 @@ logs/
 tmp/
 
 # === IDEs / Editors ===
-.idea/
+/.idea/
 .vscode/
 *.sublime-workspace
 *.sublime-project
