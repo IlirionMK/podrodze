@@ -9,6 +9,14 @@ function Run($c) {
   if ($LASTEXITCODE -ne 0) { throw "Команда упала: $c" }
 }
 
+#.\dev.ps1 -cmd up        # собрать и запустить все контейнеры
+#.\dev.ps1 -cmd down      # остановить и убрать контейнеры
+#.\dev.ps1 -cmd restart   # перезапуск (down + up)
+#.\dev.ps1 -cmd logs      # логи всех сервисов (tail 200, follow)
+#.\dev.ps1 -cmd ps        # статус контейнеров
+#.\dev.ps1 -cmd reset     # ⚠️ полный сброс: docker compose down -v + заново init
+
+
 switch ($cmd) {
   "init" {
     Run "docker compose up -d --build"
