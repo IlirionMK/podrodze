@@ -1,0 +1,78 @@
+name: Members
+description: ''
+endpoints:
+  -
+    httpMethods:
+      - GET
+    uri: 'api/v1/trips/{trip_id}/members'
+    metadata:
+      groupName: Members
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Lista uczestników podróży'
+      description: ''
+      authenticated: true
+      deprecated: false
+      custom: []
+    headers:
+      Authorization: 'Bearer {YOUR_AUTH_KEY}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      trip_id:
+        name: trip_id
+        description: 'The ID of the trip.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        custom: []
+      trip:
+        name: trip
+        description: 'ID podróży.'
+        required: true
+        example: 16
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        custom: []
+    cleanUrlParameters:
+      trip_id: 1
+      trip: 16
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          [
+            {
+              "id": 2,
+              "name": "User2",
+              "email": "user2@example.com",
+              "pivot": {
+                "trip_id": 2,
+                "user_id": 2,
+                "role": "member"
+              }
+            }
+          ]
+        headers: []
+        description: ''
+        custom: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+    custom: []
