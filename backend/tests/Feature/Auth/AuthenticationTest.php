@@ -12,36 +12,54 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['password' => bcrypt('password')]);
 
-        $response = $this->post('/login', [
+        $response = $this->postJson('/api/v1/login', [
             'email' => $user->email,
             'password' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertNoContent();
+        $response
+            ->assertOk()
+            ->assertJsonStructure([
+                'user'  => ['id', 'name', 'email'],
+                'token',
+            ]);
+
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'tokenable_id'   => $user->id,
+            'tokenable_type' => \App\Models\User::class,
+        ]);
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['password' => bcrypt('password')]);
 
-        $this->post('/login', [
+        $response = $this->postJson('/api/v1/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
         ]);
 
-        $this->assertGuest();
+        $response->assertStatus(in_array($response->getStatusCode(), [401, 422]) ? $response->getStatusCode() : 401);
+        $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
     public function test_users_can_logout(): void
     {
         $user = User::factory()->create();
+        $plain = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->actingAs($user)->post('/logout');
+        $response = $this->postJson('/api/v1/logout', [], [
+            'Authorization' => "Bearer {$plain}",
+        ]);
 
-        $this->assertGuest();
         $response->assertNoContent();
+
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'tokenable_id'   => $user->id,
+            'tokenable_type' => \App\Models\User::class,
+            'name'           => 'test-token',
+        ]);
     }
 }

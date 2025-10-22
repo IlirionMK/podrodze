@@ -11,30 +11,42 @@ use Illuminate\Support\Facades\Auth;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Handle an incoming authentication request.
+     * Handle an incoming authentication request (API, Sanctum).
      */
     public function store(LoginRequest $request)
     {
         $request->authenticate();
 
-        $user = $request->user();
+        $user  = $request->user();
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user'  => $user,
             'token' => $token,
-        ]);
+        ], 200);
     }
+
     /**
-     * Destroy an authenticated session.
+     * Destroy an authenticated session (revoke current Sanctum token).
      */
     public function destroy(Request $request): Response
     {
-        Auth::guard('web')->logout();
+        if ($request->user()) {
+            $currentToken = $request->user()->currentAccessToken();
+            if ($currentToken) {
+                $currentToken->delete();
+            }
+        }
 
-        $request->session()->invalidate();
+        try {
+            Auth::guard('web')->logout();
+        } catch (\Throwable $e) {
+        }
 
-        $request->session()->regenerateToken();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->noContent();
     }
