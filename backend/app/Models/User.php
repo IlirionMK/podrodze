@@ -66,4 +66,8 @@ class User extends Authenticatable
             ->withPivot(['role', 'status', 'created_at', 'updated_at'])
             ->withTimestamps();
     }
+    public function preferences()
+    {
+        return $this->hasMany(\App\Models\UserPreference::class);
+    }
 }
