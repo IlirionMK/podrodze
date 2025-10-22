@@ -16,12 +16,12 @@ class Trip extends Model
     public function members()
     {
         return $this->belongsToMany(\App\Models\User::class, 'trip_user')
-            ->withTimestamps()
-            ->withPivot('role');
+            ->withPivot(['role', 'status', 'created_at', 'updated_at'])
+            ->withTimestamps();
     }
+
     public function owner()
     {
         return $this->belongsTo(\App\Models\User::class, 'owner_id');
     }
-
 }

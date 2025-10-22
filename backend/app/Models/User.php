@@ -47,14 +47,23 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Trips owned by the user (owner_id).
+     */
     public function trips()
     {
         return $this->hasMany(Trip::class, 'owner_id');
     }
+
+    /**
+     * Trips the user was invited to / joined via pivot `trip_user`.
+     * Includes pivot fields: role, status, created_at, updated_at.
+     */
     public function joinedTrips()
     {
-        return $this->belongsToMany(Trip::class, 'trip_user')->withTimestamps()->withPivot('role');
+        return $this->belongsToMany(Trip::class, 'trip_user')
+            ->withPivot(['role', 'status', 'created_at', 'updated_at'])
+            ->withTimestamps();
     }
-
-
 }

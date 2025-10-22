@@ -11,7 +11,6 @@ class TripController extends Controller
 {
     use AuthorizesRequests;
 
-
     public function index(Request $request)
     {
         $user = $request->user();
@@ -31,16 +30,16 @@ class TripController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name'       => ['required', 'string', 'max:255'],
             'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'end_date'   => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
         $trip = Trip::create([
-            'name' => $data['name'],
+            'name'       => $data['name'],
             'start_date' => $data['start_date'] ?? null,
-            'end_date' => $data['end_date'] ?? null,
-            'owner_id' => $request->user()->id,
+            'end_date'   => $data['end_date'] ?? null,
+            'owner_id'   => $request->user()->id,
         ]);
 
         return response()->json($trip, 201);
@@ -57,9 +56,9 @@ class TripController extends Controller
         $this->authorize('update', $trip);
 
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
+            'name'       => ['sometimes', 'string', 'max:255'],
             'start_date' => ['sometimes', 'nullable', 'date'],
-            'end_date' => ['sometimes', 'nullable', 'date', 'after_or_equal:start_date'],
+            'end_date'   => ['sometimes', 'nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
         $trip->update($data);
@@ -75,6 +74,27 @@ class TripController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * @group Trips / Members
+     *
+     * Invite user to a trip
+     *
+     * Sends an invitation to a user with the given `user_id`.
+     * Sets `status = pending`. Handles resending, duplicates and declined invitations.
+     *
+     * @authenticated
+     *
+     * @urlParam trip integer required Trip ID. Example: 2
+     * @bodyParam user_id integer required ID of the invited user. Example: 5
+     * @bodyParam role string optional member|editor. Default: member. Example: member
+     *
+     * @response 201 {"message":"User invited","status":"pending"}
+     * @response 200 {"message":"Invite already pending"}
+     * @response 200 {"message":"Already a member"}
+     * @response 200 {"message":"Invite re-sent (pending)","status":"pending"}
+     * @response 400 {"message":"Owner is already a member"}
+     * @response 401 {"message":"Unauthenticated"}
+     */
     public function invite(Request $request, Trip $trip)
     {
         $this->authorize('update', $trip);
@@ -91,14 +111,52 @@ class TripController extends Controller
             return response()->json(['message' => 'Owner is already a member'], 400);
         }
 
+        $existing = $trip->members()
+            ->withPivot(['role', 'status'])
+            ->where('users.id', $userId)
+            ->first();
 
-        if ($trip->members()->where('users.id', $userId)->exists()) {
-            return response()->json(['message' => 'Already a member'], 200);
+        if ($existing) {
+            $status = $existing->pivot->status ?? null;
+
+            if ($status === 'accepted') {
+                return response()->json(['message' => 'Already a member'], 200);
+            }
+
+            if ($status === 'pending') {
+                return response()->json(['message' => 'Invite already pending'], 200);
+            }
+
+            if ($status === 'declined') {
+                $trip->members()->updateExistingPivot($userId, [
+                    'role'   => $role,
+                    'status' => 'pending',
+                ]);
+
+                return response()->json([
+                    'message' => 'Invite re-sent (pending)',
+                    'status'  => 'pending',
+                ], 200);
+            }
+
+            $trip->members()->updateExistingPivot($userId, [
+                'role'   => $role,
+                'status' => 'pending',
+            ]);
+
+            return response()->json([
+                'message' => 'Invite set to pending',
+                'status'  => 'pending',
+            ], 200);
         }
 
-        $trip->members()->syncWithoutDetaching([$userId => ['role' => $role]]);
+        $trip->members()->syncWithoutDetaching([
+            $userId => ['role' => $role, 'status' => 'pending'],
+        ]);
 
-        return response()->json(['message' => 'User invited'], 201);
-
+        return response()->json([
+            'message' => 'User invited',
+            'status'  => 'pending',
+        ], 201);
     }
 }

@@ -1,16 +1,20 @@
-name: Members
+name: 'Trips / Members'
 description: ''
 endpoints:
   -
     httpMethods:
-      - GET
-    uri: 'api/v1/trips/{trip_id}/members'
+      - POST
+    uri: 'api/v1/trips/{trip_id}/invite'
     metadata:
-      groupName: Members
+      groupName: 'Trips / Members'
       groupDescription: ''
       subgroup: ''
       subgroupDescription: ''
-      title: 'Lista uczestników podróży'
+      title: |-
+        Invite user to a trip
+
+        Sends an invitation to a user with the given `user_id`.
+        Sets `status = pending`. Handles resending, duplicates and declined invitations.
       description: ''
       authenticated: true
       deprecated: false
@@ -24,7 +28,7 @@ endpoints:
         name: trip_id
         description: 'The ID of the trip.'
         required: true
-        example: 1
+        example: 16
         type: integer
         enumValues: []
         exampleWasSpecified: false
@@ -32,38 +36,78 @@ endpoints:
         custom: []
       trip:
         name: trip
-        description: 'ID podróży.'
+        description: 'Trip ID.'
         required: true
-        example: 16
+        example: 2
         type: integer
         enumValues: []
-        exampleWasSpecified: false
+        exampleWasSpecified: true
         nullable: false
         custom: []
     cleanUrlParameters:
-      trip_id: 1
-      trip: 16
+      trip_id: 16
+      trip: 2
     queryParameters: []
     cleanQueryParameters: []
-    bodyParameters: []
-    cleanBodyParameters: []
+    bodyParameters:
+      user_id:
+        name: user_id
+        description: 'ID of the invited user.'
+        required: true
+        example: 5
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      role:
+        name: role
+        description: 'optional member|editor. Default: member.'
+        required: false
+        example: member
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      user_id: 5
+      role: member
     fileParameters: []
     responses:
       -
         status: 200
-        content: |-
-          [
-            {
-              "id": 2,
-              "name": "User2",
-              "email": "user2@example.com",
-              "pivot": {
-                "trip_id": 2,
-                "user_id": 2,
-                "role": "member"
-              }
-            }
-          ]
+        content: '{"message":"Invite already pending"}'
+        headers: []
+        description: ''
+        custom: []
+      -
+        status: 200
+        content: '{"message":"Already a member"}'
+        headers: []
+        description: ''
+        custom: []
+      -
+        status: 200
+        content: '{"message":"Invite re-sent (pending)","status":"pending"}'
+        headers: []
+        description: ''
+        custom: []
+      -
+        status: 201
+        content: '{"message":"User invited","status":"pending"}'
+        headers: []
+        description: ''
+        custom: []
+      -
+        status: 400
+        content: '{"message":"Owner is already a member"}'
+        headers: []
+        description: ''
+        custom: []
+      -
+        status: 401
+        content: '{"message":"Unauthenticated"}'
         headers: []
         description: ''
         custom: []
