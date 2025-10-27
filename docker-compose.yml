@@ -25,7 +25,7 @@ services:
       - redis
 
   caddy:
-    image: caddy:2.8
+    image: caddy:2.10
     container_name: travel_app-caddy
     ports:
       - "8081:8081"
@@ -36,22 +36,29 @@ services:
       - app
 
   db:
-    image: postgres:16
+    image: postgres:18-bookworm
     container_name: travel_app-db
     environment:
       - POSTGRES_DB=${DB_DATABASE}
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     ports:
       - "5434:5432"
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.2.2-alpine
     container_name: travel_app-redis
     ports:
       - "6379:6379"
+  mailpit:
+    image: axllent/mailpit:v1.20.5
+    container_name: travel_app-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
   node:
     build:
       context: .
