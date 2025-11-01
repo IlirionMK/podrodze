@@ -36,6 +36,11 @@ Route::prefix('v1')->group(function () {
         Route::post  ('/trips/{trip}/accept',         [TripUserController::class, 'accept']);
         Route::post  ('/trips/{trip}/decline',        [TripUserController::class, 'decline']);
 
+        // ---- User invites ----
+        Route::get('/users/me/invites', [TripUserController::class, 'myInvites']);
+        Route::get('/users/me/invites/sent', [TripUserController::class, 'sentInvites']);
+
+
         // ---- Members ----
         Route::get   ('/trips/{trip}/members',        [TripUserController::class, 'index']);
         Route::put   ('/trips/{trip}/members/{user}', [TripUserController::class, 'update']);

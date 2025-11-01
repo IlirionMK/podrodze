@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Trip extends Model
 {
-    protected $fillable = ['name','start_date','end_date','owner_id'];
+    use HasFactory;
+
+    protected $fillable = ['name', 'start_date', 'end_date', 'owner_id'];
 
     protected $casts = [
         'start_date' => 'date',

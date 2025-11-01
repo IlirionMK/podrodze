@@ -17,13 +17,13 @@ class TripUserController extends Controller
     /**
      * @group Members
      *
-     * Lista uczestników podróży
+     * Get members of a trip
      *
-     * Zwraca wszystkich uczestników podróży wraz z ich rolą i statusem.
-     * Właściciel podróży również jest dołączany do listy z `is_owner: true` i `role: owner`.
+     * Returns all members of the trip with their role and status.
+     * The owner is also included in the list with `is_owner: true` and `role: owner`.
      *
      * @authenticated
-     * @urlParam trip int required ID podróży. Example: 1
+     * @urlParam trip int required Trip ID. Example: 1
      *
      * @response 200 [
      *   {
@@ -68,16 +68,17 @@ class TripUserController extends Controller
     /**
      * @group Members / Invites
      *
-     * Zaproszenie użytkownika do podróży
+     * Invite a user to a trip
      *
-     * Tworzy zaproszenie dla użytkownika z określoną rolą (`member` lub `editor`).
-     * Jeśli użytkownik wcześniej odrzucił zaproszenie (`status = declined`), można je wysłać ponownie z parametrem `resend: true`.
+     * Creates an invitation for a user with a specific role (`member` or `editor`).
+     * If the user previously declined the invitation (`status = declined`),
+     * it can be resent using the `resend: true` parameter.
      *
      * @authenticated
-     * @urlParam trip int required ID podróży. Example: 1
-     * @bodyParam user_id int required ID użytkownika. Example: 15
+     * @urlParam trip int required Trip ID. Example: 1
+     * @bodyParam user_id int required User ID. Example: 15
      * @bodyParam role string required member|editor. Example: member
-     * @bodyParam resend boolean optional Ustaw na true, aby ponownie wysłać zaproszenie po odrzuceniu. Example: true
+     * @bodyParam resend boolean optional Set to true to resend declined invitation. Example: true
      *
      * @response 201 {"message":"Invite created","trip_id":1,"user_id":15,"role":"member","status":"pending"}
      * @response 200 {"message":"Invite resent","trip_id":1,"user_id":15,"role":"member","status":"pending"}
@@ -100,8 +101,12 @@ class TripUserController extends Controller
         if ($current) {
             $status = $current->pivot->status ?? null;
 
-            if ($status === 'declined' && ($data['resend'] ?? false)) {
-                $trip->members()->updateExistingPivot($userId, ['role' => $data['role'], 'status' => 'pending']);
+            // Automatically allow re-inviting if the previous invitation was declined
+            if ($status === 'declined') {
+                $trip->members()->updateExistingPivot($userId, [
+                    'role' => $data['role'],
+                    'status' => 'pending',
+                ]);
 
                 LogActivity::add($request->user(), 'invite_resent', $trip, [
                     'invited_user_id' => $userId,
@@ -117,9 +122,32 @@ class TripUserController extends Controller
                 ], 200);
             }
 
+            // Keep the old resend behavior if resend=true was passed explicitly
+            if ($status === 'declined' && ($data['resend'] ?? false)) {
+                $trip->members()->updateExistingPivot($userId, [
+                    'role' => $data['role'],
+                    'status' => 'pending',
+                ]);
+
+                LogActivity::add($request->user(), 'invite_resent', $trip, [
+                    'invited_user_id' => $userId,
+                    'role'            => $data['role'],
+                ]);
+
+                return response()->json([
+                    'message' => 'Invite resent',
+                    'trip_id' => $trip->id,
+                    'user_id' => $userId,
+                    'role'    => $data['role'],
+                    'status'  => 'pending',
+                ], 200);
+            }
+
+            // Otherwise, block duplicates (pending or accepted)
             return response()->json(['message' => 'User already invited or a member'], 409);
         }
 
+        // First-time invite
         $trip->members()->attach($userId, ['role' => $data['role'], 'status' => 'pending']);
 
         LogActivity::add($request->user(), 'invite_created', $trip, [
@@ -139,13 +167,14 @@ class TripUserController extends Controller
     /**
      * @group Members
      *
-     * Zmiana roli uczestnika
+     * Update member role
      *
-     * Zmienia rolę uczestnika podróży (tylko dla właściciela lub edytora).
+     * Updates a member's role in the trip (`member` or `editor`).
+     * Only owner or editor can perform this action.
      *
      * @authenticated
-     * @urlParam trip int required ID podróży. Example: 1
-     * @urlParam user int required ID użytkownika. Example: 10
+     * @urlParam trip int required Trip ID. Example: 1
+     * @urlParam user int required User ID. Example: 10
      * @bodyParam role string required member|editor. Example: editor
      *
      * @response 200 {"message":"Role updated"}
@@ -177,15 +206,15 @@ class TripUserController extends Controller
     /**
      * @group Members
      *
-     * Usunięcie uczestnika z podróży
+     * Remove a member from the trip
      *
-     * Usuwa uczestnika z podróży. Dostępne dla właściciela i edytora:
-     * - Właściciel może usunąć dowolnego uczestnika.
-     * - Edytor może usunąć tylko uczestnika o roli "member".
+     * Removes a member from the trip. Rules:
+     * - Owner can remove anyone.
+     * - Editor can remove only members with the `member` role.
      *
      * @authenticated
-     * @urlParam trip int required ID podróży. Example: 1
-     * @urlParam user int required ID użytkownika do usunięcia. Example: 15
+     * @urlParam trip int required Trip ID. Example: 1
+     * @urlParam user int required User ID to remove. Example: 15
      *
      * @response 204
      * @response 403 {"message":"You cannot remove this user"}
@@ -226,12 +255,12 @@ class TripUserController extends Controller
     /**
      * @group Members / Invites
      *
-     * Akceptacja zaproszenia do podróży
+     * Accept an invitation
      *
-     * Użytkownik akceptuje swoje zaproszenie, jeśli status = pending.
+     * Allows a user to accept their own invitation (only if `status = pending`).
      *
      * @authenticated
-     * @urlParam trip int required ID podróży. Example: 1
+     * @urlParam trip int required Trip ID. Example: 1
      *
      * @response 200 {"message":"Invite accepted","trip_id":1,"user_id":15,"status":"accepted"}
      * @response 403 {"message":"No pending invite"}
@@ -239,7 +268,7 @@ class TripUserController extends Controller
      */
     public function accept(Request $request, Trip $trip)
     {
-        $this->authorize('view', $trip);
+        $this->authorize('accept', $trip);
 
         $user = $request->user();
 
@@ -269,12 +298,12 @@ class TripUserController extends Controller
     /**
      * @group Members / Invites
      *
-     * Odrzucenie zaproszenia do podróży
+     * Decline an invitation
      *
-     * Użytkownik odrzuca zaproszenie, jeśli status = pending.
+     * Allows a user to decline their invitation (only if `status = pending`).
      *
      * @authenticated
-     * @urlParam trip int required ID podróży. Example: 1
+     * @urlParam trip int required Trip ID. Example: 1
      *
      * @response 200 {"message":"Invite declined","trip_id":1,"user_id":15,"status":"declined"}
      * @response 403 {"message":"No pending invite"}
@@ -282,7 +311,7 @@ class TripUserController extends Controller
      */
     public function decline(Request $request, Trip $trip)
     {
-        $this->authorize('view', $trip);
+        $this->authorize('decline', $trip);
 
         $user = $request->user();
 
@@ -308,4 +337,107 @@ class TripUserController extends Controller
             'status'  => 'declined',
         ]);
     }
+    /**
+     * @group Members / Invites
+     *
+     * List user's invitations
+     *
+     * Returns all trips where the authenticated user has been invited.
+     * Each invitation includes trip details, role, status, and trip owner.
+     *
+     * @authenticated
+     *
+     * @response 200 [
+     *   {
+     *     "trip_id": 3,
+     *     "name": "Weekend in Berlin",
+     *     "start_date": "2025-11-10",
+     *     "end_date": "2025-11-13",
+     *     "role": "member",
+     *     "status": "pending",
+     *     "owner": {
+     *       "id": 1,
+     *       "name": "Owner User",
+     *       "email": "owner@example.com"
+     *     }
+     *   }
+     * ]
+     */
+    public function myInvites(Request $request)
+    {
+        $user = $request->user();
+
+        $invites = $user->joinedTrips()
+            ->with(['owner:id,name,email'])
+            ->get(['trips.id', 'trips.name', 'trips.start_date', 'trips.end_date', 'trips.owner_id'])
+            ->map(function ($trip) {
+                return [
+                    'trip_id'    => $trip->id,
+                    'name'       => $trip->name,
+                    'start_date' => $trip->start_date,
+                    'end_date'   => $trip->end_date,
+                    'role'       => $trip->pivot->role,
+                    'status'     => $trip->pivot->status,
+                    'owner'      => $trip->owner,
+                ];
+            });
+
+        return response()->json($invites);
+    }
+    /**
+     * @group Members / Invites
+     *
+     * List sent invitations (owner view)
+     *
+     * Returns all invitations sent by the authenticated user.
+     * Each entry includes invited user's name, email, role, status, and trip details.
+     *
+     * @authenticated
+     *
+     * @response 200 [
+     *   {
+     *     "trip_id": 3,
+     *     "trip_name": "Weekend in Prague",
+     *     "start_date": "2025-11-10",
+     *     "end_date": "2025-11-13",
+     *     "invited_user": {
+     *       "id": 90,
+     *       "name": "Member User",
+     *       "email": "member@example.com"
+     *     },
+     *     "role": "member",
+     *     "status": "pending"
+     *   }
+     * ]
+     */
+    public function sentInvites(Request $request)
+    {
+        $owner = $request->user();
+
+        $trips = $owner->trips()->with(['members:id,name,email'])->get();
+
+        $invitations = collect();
+
+        foreach ($trips as $trip) {
+            foreach ($trip->members as $member) {
+                $invitations->push([
+                    'trip_id'      => $trip->id,
+                    'trip_name'    => $trip->name,
+                    'start_date'   => $trip->start_date,
+                    'end_date'     => $trip->end_date,
+                    'invited_user' => [
+                        'id'    => $member->id,
+                        'name'  => $member->name,
+                        'email' => $member->email,
+                    ],
+                    'role'   => $member->pivot->role,
+                    'status' => $member->pivot->status,
+                ]);
+            }
+        }
+
+        return response()->json($invitations->values());
+    }
+
+
 }
