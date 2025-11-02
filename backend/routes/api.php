@@ -11,9 +11,11 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripUserController;
 use App\Http\Controllers\Api\V1\PreferenceController;
+use App\Http\Controllers\Api\V1\ItineraryController;
 
 Route::prefix('v1')->group(function () {
 
+    // ---- Public (guest) routes ----
     Route::middleware('guest')->group(function () {
         Route::post('/register',        [RegisteredUserController::class, 'store']);
         Route::post('/login',           [AuthenticatedSessionController::class, 'store']);
@@ -21,6 +23,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/reset-password',  [NewPasswordController::class, 'store']);
     });
 
+    // ---- Authenticated routes ----
     Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
 
         // ---- Trips CRUD ----
@@ -37,9 +40,8 @@ Route::prefix('v1')->group(function () {
         Route::post  ('/trips/{trip}/decline',        [TripUserController::class, 'decline']);
 
         // ---- User invites ----
-        Route::get('/users/me/invites', [TripUserController::class, 'myInvites']);
-        Route::get('/users/me/invites/sent', [TripUserController::class, 'sentInvites']);
-
+        Route::get('/users/me/invites',        [TripUserController::class, 'myInvites']);
+        Route::get('/users/me/invites/sent',   [TripUserController::class, 'sentInvites']);
 
         // ---- Members ----
         Route::get   ('/trips/{trip}/members',        [TripUserController::class, 'index']);
@@ -50,6 +52,9 @@ Route::prefix('v1')->group(function () {
         // ---- Preferences ----
         Route::get('/preferences', [PreferenceController::class, 'index']);
         Route::put('/users/me/preferences', [PreferenceController::class, 'update']);
+
+        // ---- Itinerary ----
+        Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'index']);
 
         // ---- User info ----
         Route::get('/user', fn (Request $r) => $r->user());
