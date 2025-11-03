@@ -37,7 +37,6 @@ Route::prefix('v1')->group(function () {
         Route::delete('/trips/{trip}', [TripController::class, 'destroy']);
         Route::patch('/trips/{trip}/start-location', [TripController::class, 'updateStartLocation']);
 
-
         // ---- Invites ----
         Route::post  ('/trips/{trip}/members/invite', [TripUserController::class, 'invite']);
         Route::post  ('/trips/{trip}/accept',         [TripUserController::class, 'accept']);
@@ -61,6 +60,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'index']);
         Route::get('/trips/{trip}/preferences/aggregate', [ItineraryController::class, 'aggregatePreferences']);
         Route::get('/trips/{trip}/itinerary/generate', [ItineraryController::class, 'generate']);
+        Route::get('/trips/{trip}/itinerary/full', [ItineraryController::class, 'full']);
 
         // ---- Trip Places ----
         Route::get   ('/trips/{trip}/places',             [TripPlaceController::class, 'index']);

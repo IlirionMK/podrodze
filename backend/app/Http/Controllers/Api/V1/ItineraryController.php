@@ -6,15 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Models\Trip;
 use App\Models\UserPreference;
 use App\Models\Place;
+use App\Models\TripItinerary;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\Services\PreferenceAggregatorService;
 
 class ItineraryController extends Controller
 {
     use AuthorizesRequests;
 
+    /**
+     * @group Trips / Itinerary
+     *
+     * Get aggregated group preferences (simplified)
+     */
     public function index(Request $request, Trip $trip)
     {
         $this->authorize('view', $trip);
@@ -35,7 +42,7 @@ class ItineraryController extends Controller
             ->groupBy('category_id')
             ->with('category:id,slug,translations')
             ->get()
-            ->filter(fn ($pref) => $pref->category)
+            ->filter(fn($pref) => $pref->category)
             ->map(function ($pref) {
                 return [
                     'category'  => $pref->category->slug,
@@ -74,6 +81,9 @@ class ItineraryController extends Controller
      * Generate a recommended itinerary for a trip.
      *
      * Combines group preferences, start location, and nearby places using PostGIS.
+     * Uses two-level caching:
+     *   - Level 1: external (Google/Places/etc.) data, TTL 12h
+     *   - Level 2: generated itinerary, TTL 6h
      */
     public function generate(Trip $trip, PreferenceAggregatorService $aggregator)
     {
@@ -85,50 +95,127 @@ class ItineraryController extends Controller
             ], 400);
         }
 
-        $prefs = $aggregator->getGroupPreferences($trip);
-        if (empty($prefs)) {
-            return response()->json(['message' => 'No group preferences available'], 200);
-        }
+        $itineraryCacheKey = "itinerary:trip:{$trip->id}";
 
-        $centerLat = $trip->start_latitude;
-        $centerLon = $trip->start_longitude;
-        $radius = 2000;
+        return Cache::remember($itineraryCacheKey, now()->addHours(6), function () use ($trip, $aggregator) {
+            $prefs = $aggregator->getGroupPreferences($trip);
+            if (empty($prefs)) {
+                return response()->json(['message' => 'No group preferences available'], 200);
+            }
 
-        $places = Place::select([
-            'places.id',
-            'places.name',
-            'places.category_slug',
-            'places.rating',
-            DB::raw("ST_Distance(location::geography, ST_SetSRID(ST_MakePoint($centerLon, $centerLat), 4326)::geography) AS distance_m")
-        ])
-            ->whereRaw("ST_DWithin(location::geography, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?)", [$centerLon, $centerLat, $radius])
-            ->get()
-            ->map(function ($place) use ($prefs) {
+            $centerLat = $trip->start_latitude;
+            $centerLon = $trip->start_longitude;
+            $radius = 2000;
+
+            $placesCacheKey = "places:trip:{$trip->id}";
+
+            $places = Cache::remember($placesCacheKey, now()->addHours(12), function () use ($trip, $centerLon, $centerLat, $radius) {
+                return Place::select([
+                    'places.id',
+                    'places.name',
+                    'places.category_slug',
+                    'places.rating',
+                    DB::raw("ST_Distance(location::geography, ST_SetSRID(ST_MakePoint($centerLon, $centerLat), 4326)::geography) AS distance_m")
+                ])
+                    ->whereRaw("ST_DWithin(location::geography, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?)", [$centerLon, $centerLat, $radius])
+                    ->get();
+            });
+
+            $scored = $places->map(function ($place) use ($prefs) {
                 $prefScore = $prefs[$place->category_slug] ?? 0.5;
                 $place->score = round(
                     ($prefScore * 2.0) +
-                    ($place->rating * 0.8) -
+                    (($place->rating ?? 0) * 0.8) -
                     ($place->distance_m / 1500),
                     2
                 );
                 return $place;
-            })
-            ->sortByDesc('score')
-            ->values();
+            })->sortByDesc('score')->values();
+
+            return response()->json([
+                'trip_id' => $trip->id,
+                'center' => [
+                    'lat' => $centerLat,
+                    'lon' => $centerLon,
+                ],
+                'suggested_places' => $scored->take(10)->map(fn($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'category_slug' => $p->category_slug,
+                    'score' => $p->score,
+                    'distance_m' => round($p->distance_m),
+                ]),
+                'cache_info' => [
+                    'itinerary_ttl_h' => 6,
+                    'places_ttl_h' => 12,
+                ]
+            ]);
+        });
+    }
+
+    /**
+     * @group Trips / Itinerary
+     *
+     * Generate and persist full itinerary for a trip.
+     *
+     * Creates clustered day-by-day plan and saves it into trip_itineraries table.
+     */
+    public function full(Trip $trip)
+    {
+        $this->authorize('view', $trip);
+
+        $itinerary = Cache::remember("itinerary:trip:{$trip->id}:full", now()->addHours(6), function () use ($trip) {
+            $places = Cache::get("places:trip:{$trip->id}");
+            if (!$places) {
+                return response()->json(['message' => 'No cached places for this trip'], 404);
+            }
+
+            // Simple clustering by coordinates (~1km grouping)
+            $clusters = [];
+            foreach ($places as $place) {
+                $grouped = false;
+                foreach ($clusters as &$cluster) {
+                    if (abs($cluster['lat'] - $place['lat']) < 0.01 && abs($cluster['lon'] - $place['lon']) < 0.01) {
+                        $cluster['places'][] = $place;
+                        $grouped = true;
+                        break;
+                    }
+                }
+                if (!$grouped) {
+                    $clusters[] = [
+                        'lat' => $place['lat'],
+                        'lon' => $place['lon'],
+                        'places' => [$place],
+                    ];
+                }
+            }
+
+            // Build schedule
+            $schedule = [];
+            $day = 1;
+            foreach ($clusters as $cluster) {
+                $schedule[] = [
+                    'day' => $day++,
+                    'stops' => $cluster['places'],
+                ];
+            }
+
+            // Save to DB
+            return TripItinerary::updateOrCreate(
+                ['trip_id' => $trip->id],
+                [
+                    'schedule' => $schedule,
+                    'day_count' => count($schedule),
+                    'generated_at' => now(),
+                ]
+            );
+        });
 
         return response()->json([
             'trip_id' => $trip->id,
-            'center' => [
-                'lat' => $centerLat,
-                'lon' => $centerLon,
-            ],
-            'suggested_places' => $places->take(10)->map(fn($p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'category_slug' => $p->category_slug,
-                'score' => $p->score,
-                'distance_m' => round($p->distance_m),
-            ]),
+            'day_count' => $itinerary->day_count ?? 0,
+            'schedule' => $itinerary->schedule ?? [],
+            'cached' => true,
         ]);
     }
 }
