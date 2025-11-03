@@ -13,7 +13,7 @@ use App\Http\Controllers\Api\V1\TripUserController;
 use App\Http\Controllers\Api\V1\PreferenceController;
 use App\Http\Controllers\Api\V1\ItineraryController;
 use App\Http\Controllers\Api\V1\TripPlaceController;
-use App\Http\Controllers\Api\V1\PlaceController; // ✅ добавлено
+use App\Http\Controllers\Api\V1\PlaceController;
 
 Route::prefix('v1')->group(function () {
 
@@ -35,6 +35,8 @@ Route::prefix('v1')->group(function () {
         Route::put   ('/trips/{trip}', [TripController::class, 'update']);
         Route::patch ('/trips/{trip}', [TripController::class, 'update']);
         Route::delete('/trips/{trip}', [TripController::class, 'destroy']);
+        Route::patch('/trips/{trip}/start-location', [TripController::class, 'updateStartLocation']);
+
 
         // ---- Invites ----
         Route::post  ('/trips/{trip}/members/invite', [TripUserController::class, 'invite']);
@@ -57,6 +59,8 @@ Route::prefix('v1')->group(function () {
 
         // ---- Itinerary ----
         Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'index']);
+        Route::get('/trips/{trip}/preferences/aggregate', [ItineraryController::class, 'aggregatePreferences']);
+        Route::get('/trips/{trip}/itinerary/generate', [ItineraryController::class, 'generate']);
 
         // ---- Trip Places ----
         Route::get   ('/trips/{trip}/places',             [TripPlaceController::class, 'index']);
@@ -64,7 +68,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/trips/{trip}/places/{place}',     [TripPlaceController::class, 'destroy']);
 
         // ---- Places ----
-        Route::get('/places/nearby', [PlaceController::class, 'nearby']); // ✅ добавлено
+        Route::get('/places/nearby', [PlaceController::class, 'nearby']);
 
         // ---- User info ----
         Route::get('/user', fn (Request $r) => $r->user());

@@ -159,4 +159,43 @@ class TripController extends Controller
             'status'  => 'pending',
         ], 201);
     }
+    /**
+     * @group Trips
+     *
+     * Set or update the start location of a trip.
+     *
+     * Allows the trip owner (or editor) to define the starting point
+     * used later for itinerary generation and nearby place searches.
+     *
+     * @authenticated
+     * @urlParam trip int required Trip ID. Example: 1
+     * @bodyParam start_latitude float required Example: 51.1079
+     * @bodyParam start_longitude float required Example: 17.0385
+     *
+     * @response 200 scenario="Example" {
+     *   "trip_id": 1,
+     *   "start_latitude": 51.1079,
+     *   "start_longitude": 17.0385,
+     *   "message": "Start location updated successfully."
+     * }
+     */
+    public function updateStartLocation(Request $request, Trip $trip)
+    {
+        $this->authorize('update', $trip);
+
+        $data = $request->validate([
+            'start_latitude'  => ['required', 'numeric', 'between:-90,90'],
+            'start_longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $trip->update($data);
+
+        return response()->json([
+            'trip_id'        => $trip->id,
+            'start_latitude' => $trip->start_latitude,
+            'start_longitude'=> $trip->start_longitude,
+            'message'        => 'Start location updated successfully.',
+        ]);
+    }
+
 }

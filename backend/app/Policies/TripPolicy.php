@@ -15,8 +15,14 @@ class TripPolicy
      */
     public function view(User $user, Trip $trip): bool
     {
-        return $trip->owner_id === $user->id
-            || $trip->members()->where('users.id', $user->id)->exists();
+        if ($trip->owner_id === $user->id) {
+            return true;
+        }
+
+        return $trip->members()
+            ->wherePivotIn('status', ['accepted', 'pending'])
+            ->where('users.id', $user->id)
+            ->exists();
     }
 
     /**
