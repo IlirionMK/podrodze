@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripUserController;
 use App\Http\Controllers\Api\V1\PreferenceController;
 use App\Http\Controllers\Api\V1\ItineraryController;
+use App\Http\Controllers\Api\V1\TripPlaceController;
+use App\Http\Controllers\Api\V1\PlaceController; // ✅ добавлено
 
 Route::prefix('v1')->group(function () {
 
@@ -55,6 +57,14 @@ Route::prefix('v1')->group(function () {
 
         // ---- Itinerary ----
         Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'index']);
+
+        // ---- Trip Places ----
+        Route::get   ('/trips/{trip}/places',             [TripPlaceController::class, 'index']);
+        Route::post  ('/trips/{trip}/places',             [TripPlaceController::class, 'store']);
+        Route::delete('/trips/{trip}/places/{place}',     [TripPlaceController::class, 'destroy']);
+
+        // ---- Places ----
+        Route::get('/places/nearby', [PlaceController::class, 'nearby']); // ✅ добавлено
 
         // ---- User info ----
         Route::get('/user', fn (Request $r) => $r->user());

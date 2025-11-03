@@ -36,14 +36,14 @@ services:
       - app
 
   db:
-    image: postgres:18-bookworm
+    image: postgis/postgis:18-3.6
     container_name: travel_app-db
     environment:
       - POSTGRES_DB=${DB_DATABASE}
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql/18/main
     ports:
       - "5434:5432"
 

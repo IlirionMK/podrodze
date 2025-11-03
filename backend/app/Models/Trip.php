@@ -27,4 +27,11 @@ class Trip extends Model
     {
         return $this->belongsTo(\App\Models\User::class, 'owner_id');
     }
+    public function places()
+    {
+        return $this->belongsToMany(Place::class, 'trip_place')
+            ->withPivot(['order_index', 'status', 'note'])
+            ->withTimestamps();
+    }
+
 }

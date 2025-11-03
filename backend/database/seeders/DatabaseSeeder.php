@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             TripSeeder::class,
             UserPreferenceSeeder::class,
+            PlaceSeeder::class,
         ]);
     }
 }
