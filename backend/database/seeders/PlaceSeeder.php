@@ -9,7 +9,7 @@ class PlaceSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('places')->truncate();
+        DB::statement('TRUNCATE TABLE places RESTART IDENTITY CASCADE');
 
         $centerLat = 51.1079;
         $centerLon = 17.0385;
@@ -27,7 +27,7 @@ class PlaceSeeder extends Seeder
             ['name' => 'Szczytnicki Park', 'category_slug' => 'nature', 'rating' => 4.9],
         ];
 
-        foreach ($places as $i => $place) {
+        foreach ($places as $place) {
             $lat = $centerLat + (rand(-30, 30) / 1000.0);
             $lon = $centerLon + (rand(-30, 30) / 1000.0);
 
@@ -36,15 +36,12 @@ class PlaceSeeder extends Seeder
                 'category_slug' => $place['category_slug'],
                 'rating' => $place['rating'],
                 'meta' => json_encode(['source' => 'seeder']),
+                'latitude' => $lat,
+                'longitude' => $lon,
+                'location' => DB::raw("ST_SetSRID(ST_MakePoint($lon, $lat), 4326)::geography"),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-
-            DB::statement("
-                UPDATE places
-                SET location = ST_SetSRID(ST_MakePoint($lon, $lat), 4326)::geography
-                WHERE name = '{$place['name']}'
-            ");
         }
     }
 }

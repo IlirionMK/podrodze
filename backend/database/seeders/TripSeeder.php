@@ -11,6 +11,9 @@ class TripSeeder extends Seeder
 {
     public function run(): void
     {
+        DB::statement('TRUNCATE TABLE trip_user RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE trips RESTART IDENTITY CASCADE');
+
         $users = User::all();
 
         if ($users->count() === 0) {
@@ -21,11 +24,24 @@ class TripSeeder extends Seeder
         foreach (range(1, 30) as $i) {
             $owner = $users->random();
 
+            /** @var \App\Models\Trip $trip */
             $trip = Trip::factory()->create([
                 'owner_id' => $owner->id,
+                'name' => 'Trip #' . $i . ' — ' . fake()->city(),
             ]);
 
-            $members = $users->where('id', '!=', $owner->id)->random(rand(2, 5));
+            DB::table('trip_user')->insert([
+                'trip_id'    => $trip->id,
+                'user_id'    => $owner->id,
+                'role'       => 'owner',
+                'status'     => 'accepted',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $members = $users
+                ->where('id', '!=', $owner->id)
+                ->random(rand(2, min(5, $users->count() - 1)));
 
             foreach ($members as $member) {
                 DB::table('trip_user')->insert([
@@ -38,5 +54,7 @@ class TripSeeder extends Seeder
                 ]);
             }
         }
+
+        $this->command->info('Trips and trip_user relations seeded successfully.');
     }
 }
