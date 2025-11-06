@@ -9,6 +9,7 @@ class PlaceSeeder extends Seeder
 {
     public function run(): void
     {
+        DB::statement('CREATE EXTENSION IF NOT EXISTS postgis;');
         DB::statement('TRUNCATE TABLE places RESTART IDENTITY CASCADE');
 
         $centerLat = 51.1079;
@@ -36,8 +37,6 @@ class PlaceSeeder extends Seeder
                 'category_slug' => $place['category_slug'],
                 'rating' => $place['rating'],
                 'meta' => json_encode(['source' => 'seeder']),
-                'latitude' => $lat,
-                'longitude' => $lon,
                 'location' => DB::raw("ST_SetSRID(ST_MakePoint($lon, $lat), 4326)::geography"),
                 'created_at' => now(),
                 'updated_at' => now(),

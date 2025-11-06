@@ -8,23 +8,13 @@ services:
     volumes:
       - ./backend:/var/www/backend
       - composer_cache:/tmp/composer
-    environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - LOG_CHANNEL=stack
-      - DB_CONNECTION=pgsql
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_DATABASE=${DB_DATABASE}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     env_file:
       - ./backend/.env
     depends_on:
       - db
       - redis
+      - mailpit
+    restart: unless-stopped
 
   caddy:
     image: caddy:2.10
@@ -36,6 +26,7 @@ services:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile
     depends_on:
       - app
+    restart: unless-stopped
 
   db:
     image: postgis/postgis:18-3.6
@@ -45,21 +36,25 @@ services:
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/18/main
+      - pgdata:/var/lib/postgresql/data
     ports:
       - "5434:5432"
+    restart: unless-stopped
 
   redis:
     image: redis:8.2.2-alpine
     container_name: travel_app-redis
     ports:
       - "6379:6379"
+    restart: unless-stopped
+
   mailpit:
     image: axllent/mailpit:v1.20.5
     container_name: travel_app-mailpit
     ports:
       - "8025:8025"
       - "1025:1025"
+    restart: unless-stopped
 
   node:
     build:
@@ -67,15 +62,15 @@ services:
       dockerfile: docker/node/Dockerfile
     container_name: travel_app-node
     working_dir: /usr/src/frontend
-    command: sh -lc "npm install && npm run dev -- --host"
+    command: sh -lc "npm run dev -- --host"
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/usr/src/frontend
       - node_modules:/usr/src/frontend/node_modules
     depends_on:
-      - caddy
-
+      - app
+    restart: unless-stopped
 
 volumes:
   pgdata:
