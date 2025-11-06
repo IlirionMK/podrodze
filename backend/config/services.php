@@ -17,6 +17,9 @@ return [
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
+    'google' => [
+        'maps_key' => env('GOOGLE_MAPS_KEY'),
+    ],
 
     'resend' => [
         'key' => env('RESEND_KEY'),

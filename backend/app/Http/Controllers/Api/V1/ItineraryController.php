@@ -12,6 +12,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Services\PreferenceAggregatorService;
+use App\Services\PlacesSyncService;
 
 class ItineraryController extends Controller
 {
@@ -79,11 +80,6 @@ class ItineraryController extends Controller
      * @group Trips / Itinerary
      *
      * Generate a recommended itinerary for a trip.
-     *
-     * Combines group preferences, start location, and nearby places using PostGIS.
-     * Uses two-level caching:
-     *   - Level 1: external (Google/Places/etc.) data, TTL 12h
-     *   - Level 2: generated itinerary, TTL 6h
      */
     public function generate(Trip $trip, PreferenceAggregatorService $aggregator)
     {
@@ -157,8 +153,6 @@ class ItineraryController extends Controller
      * @group Trips / Itinerary
      *
      * Generate and persist full itinerary for a trip.
-     *
-     * Creates clustered day-by-day plan and saves it into trip_itineraries table.
      */
     public function full(Trip $trip)
     {
@@ -170,7 +164,6 @@ class ItineraryController extends Controller
                 return response()->json(['message' => 'No cached places for this trip'], 404);
             }
 
-            // Simple clustering by coordinates (~1km grouping)
             $clusters = [];
             foreach ($places as $place) {
                 $grouped = false;
@@ -190,7 +183,6 @@ class ItineraryController extends Controller
                 }
             }
 
-            // Build schedule
             $schedule = [];
             $day = 1;
             foreach ($clusters as $cluster) {
@@ -200,7 +192,6 @@ class ItineraryController extends Controller
                 ];
             }
 
-            // Save to DB
             return TripItinerary::updateOrCreate(
                 ['trip_id' => $trip->id],
                 [
@@ -216,6 +207,79 @@ class ItineraryController extends Controller
             'day_count' => $itinerary->day_count ?? 0,
             'schedule' => $itinerary->schedule ?? [],
             'cached' => true,
+        ]);
+    }
+
+    /**
+     * @group Trips / Itinerary
+     *
+     * Generate full itinerary based on preferences, votes, and fixed places.
+     */
+    public function generateFullRoute(
+        Request $request,
+        Trip $trip,
+        PreferenceAggregatorService $aggregator,
+        PlacesSyncService $sync
+    ) {
+        $this->authorize('view', $trip);
+
+        if (!$trip->start_latitude || !$trip->start_longitude) {
+            return response()->json(['message' => 'Trip has no start location set.'], 400);
+        }
+
+        $days = (int) $request->input('days', 2);
+        $radius = (int) $request->input('radius', 2000);
+
+        $existingPlaces = Place::near($trip->start_latitude, $trip->start_longitude, $radius)->count();
+        $syncedCount = 0;
+        if ($existingPlaces < 10) {
+            $syncedCount = $sync->fetchAndStore($trip->start_latitude, $trip->start_longitude, $radius);
+        }
+
+        $prefs = $aggregator->getGroupPreferences($trip);
+
+        $votes = DB::table('trip_place_votes')
+            ->select('place_id', DB::raw('AVG(score) as avg_score'))
+            ->where('trip_id', $trip->id)
+            ->groupBy('place_id')
+            ->pluck('avg_score', 'place_id');
+
+        $fixedPlaces = $trip->places()->wherePivot('is_fixed', true)->get(['places.id', 'places.name', 'places.category_slug']);
+
+        $places = Place::near($trip->start_latitude, $trip->start_longitude, $radius)->get();
+
+        $scored = $places->map(function ($place) use ($prefs, $votes) {
+            $prefScore = $prefs[$place->category_slug] ?? 0.5;
+            $voteScore = $votes[$place->id] ?? 0;
+            $place->score = round(($prefScore * 2.0) + ($voteScore * 1.0) + (($place->rating ?? 0) * 0.8), 2);
+            return $place;
+        })->sortByDesc('score')->values();
+
+        $perDay = (int) ceil(max(1, $scored->count()) / max(1, $days));
+        $schedule = [];
+        for ($day = 1; $day <= $days; $day++) {
+            $anchors = $fixedPlaces->slice($day - 1, 1)->values()->all();
+            $chunk = $scored->slice(($day - 1) * $perDay, $perDay)->values()->all();
+            $schedule[] = [
+                'day' => $day,
+                'stops' => array_values(array_merge($anchors, $chunk)),
+            ];
+        }
+
+        $itinerary = TripItinerary::updateOrCreate(
+            ['trip_id' => $trip->id],
+            [
+                'schedule' => $schedule,
+                'day_count' => $days,
+                'generated_at' => now(),
+            ]
+        );
+
+        return response()->json([
+            'trip_id' => $trip->id,
+            'days' => $days,
+            'synced_places' => $syncedCount,
+            'schedule' => $schedule,
         ]);
     }
 }

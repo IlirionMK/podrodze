@@ -61,11 +61,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/trips/{trip}/preferences/aggregate', [ItineraryController::class, 'aggregatePreferences']);
         Route::get('/trips/{trip}/itinerary/generate', [ItineraryController::class, 'generate']);
         Route::get('/trips/{trip}/itinerary/full', [ItineraryController::class, 'full']);
+        Route::post('/trips/{trip}/itinerary/generate-full', [ItineraryController::class, 'generateFullRoute']);
 
         // ---- Trip Places ----
         Route::get   ('/trips/{trip}/places',             [TripPlaceController::class, 'index']);
         Route::post  ('/trips/{trip}/places',             [TripPlaceController::class, 'store']);
+        Route::patch ('/trips/{trip}/places/{place}',     [TripPlaceController::class, 'update']);
         Route::delete('/trips/{trip}/places/{place}',     [TripPlaceController::class, 'destroy']);
+        Route::post  ('/trips/{trip}/places/{place}/vote',[TripPlaceController::class, 'vote']);
 
         // ---- Places ----
         Route::get('/places/nearby', [PlaceController::class, 'nearby']);

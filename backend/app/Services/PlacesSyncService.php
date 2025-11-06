@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Place;
+use App\Services\External\GooglePlacesService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class PlacesSyncService
+{
+    public function __construct(
+        protected GooglePlacesService $googlePlaces
+    ) {}
+
+    /**
+     * Fetch and store nearby interesting places from Google API.
+     *
+     * @return array ['added' => int, 'updated' => int]
+     */
+    public function fetchAndStore(float $lat, float $lon, int $radius = 3000): array
+    {
+        $places = $this->googlePlaces->fetchNearby($lat, $lon, $radius);
+        $added = 0;
+        $updated = 0;
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($places as $item) {
+                if (empty($item['place_id']) || empty($item['lat']) || empty($item['lon'])) {
+                    continue;
+                }
+
+                $locationWKT = sprintf("SRID=4326;POINT(%f %f)", $item['lon'], $item['lat']);
+
+                $existing = Place::where('google_place_id', $item['place_id'])
+                    ->orWhereNull('google_place_id')
+                    ->where('name', $item['name'])
+                    ->first();
+
+                $payload = [
+                    'name' => $item['name'],
+                    'category_slug' => $item['category_slug'],
+                    'rating' => $item['rating'],
+                    'meta' => $item['meta'] ?? [],
+                    'location' => DB::raw("ST_GeomFromText('$locationWKT')"),
+                ];
+
+                if ($existing) {
+                    $existing->update(array_merge($payload, [
+                        'google_place_id' => $item['place_id'],
+                    ]));
+                    $updated++;
+                } else {
+                    $payload['google_place_id'] = $item['place_id'];
+                    Place::create($payload);
+                    $added++;
+                }
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('[PlacesSyncService] Error syncing places', [
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+
+        Log::info("[PlacesSyncService] Synced {$added} added / {$updated} updated places");
+
+        return ['added' => $added, 'updated' => $updated];
+    }
+}
