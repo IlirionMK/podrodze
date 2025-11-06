@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Response;
+use App\Services\PlaceService;
 
 class PlaceController extends Controller
 {
+    public function __construct(protected PlaceService $placeService) {}
+
     /**
      * @group Places
      *
@@ -32,34 +34,12 @@ class PlaceController extends Controller
             'radius' => 'nullable|integer|min:10|max:50000',
         ]);
 
-        $lat = $validated['lat'];
-        $lon = $validated['lon'];
-        $radius = $validated['radius'] ?? 2000;
+        $lat = (float) $validated['lat'];
+        $lon = (float) $validated['lon'];
+        $radius = (int) ($validated['radius'] ?? 2000);
 
-        $places = DB::select("
-            SELECT id, name, category_slug, rating,
-                   ST_Distance(
-                       location,
-                       ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography
-                   ) AS distance_m
-            FROM places
-            WHERE ST_DWithin(
-                location,
-                ST_SetSRID(ST_MakePoint(:lon2, :lat2), 4326)::geography,
-                :radius
-            )
-            ORDER BY distance_m ASC
-            LIMIT 50
-        ", [
-            'lat' => $lat,
-            'lon' => $lon,
-            'lat2' => $lat,
-            'lon2' => $lon,
-            'radius' => $radius,
-        ]);
+        $places = $this->placeService->findNearby($lat, $lon, $radius);
 
-        return response()->json([
-            'data' => $places,
-        ], Response::HTTP_OK);
+        return response()->json(['data' => $places], Response::HTTP_OK);
     }
 }
