@@ -6,6 +6,6 @@ class ItineraryDay
 {
     public function __construct(
         public int $day,
-        public array $stops = []
+        public array $places = []
     ) {}
 }

@@ -11,9 +11,12 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - db
-      - redis
-      - mailpit
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailpit:
+        condition: service_started
     restart: unless-stopped
 
   caddy:
@@ -25,21 +28,28 @@ services:
       - ./backend:/var/www/backend
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile
     depends_on:
-      - app
+      app:
+        condition: service_started
     restart: unless-stopped
 
   db:
     image: postgis/postgis:18-3.6
     container_name: travel_app-db
     environment:
-      - POSTGRES_DB=${DB_DATABASE}
-      - POSTGRES_USER=${DB_USERNAME}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     ports:
       - "5434:5432"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE} || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
 
   redis:
     image: redis:8.2.2-alpine
@@ -69,7 +79,8 @@ services:
       - ./frontend:/usr/src/frontend
       - node_modules:/usr/src/frontend/node_modules
     depends_on:
-      - app
+      app:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

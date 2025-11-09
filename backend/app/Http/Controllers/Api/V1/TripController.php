@@ -3,73 +3,115 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\TripResource;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use App\Models\Trip;
+use App\Interfaces\TripInterface;
+use Illuminate\Http\JsonResponse;
 
 class TripController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index(Request $request)
+    public function __construct(
+        protected TripInterface $tripService
+    ) {}
+
+    /**
+     * @group Trips
+     *
+     * Get trips where the user is an owner or a member.
+     *
+     * @authenticated
+     * @response 200 scenario="Example" {
+     *   "data": [
+     *     {"id": 1, "name": "Weekend in Kraków", "owner_id": 5},
+     *     {"id": 2, "name": "Roadtrip Baltic Sea", "owner_id": 5}
+     *   ]
+     * }
+     */
+    public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $trips = $this->tripService->list($request);
 
-        $trips = Trip::query()
-            ->where('owner_id', $user->id)
-            ->orWhereHas('members', function ($query) use ($user) {
-                $query->where('trip_user.user_id', $user->id);
-            })
-            ->with(['members:id,name,email'])
-            ->latest()
-            ->paginate(10);
-
-        return response()->json($trips);
+        // Пагинация через Resource Collection
+        return response()->json(TripResource::collection($trips));
     }
 
-    public function store(Request $request)
+    /**
+     * @group Trips
+     *
+     * Create a new trip.
+     *
+     * @authenticated
+     * @bodyParam name string required Example: "Weekend in Kraków"
+     * @bodyParam start_date date optional Example: "2025-04-10"
+     * @bodyParam end_date date optional Example: "2025-04-12"
+     *
+     * @response 201 scenario="Example" {
+     *   "id": 1,
+     *   "name": "Weekend in Kraków",
+     *   "owner_id": 5
+     * }
+     */
+    public function store(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'name'       => ['required', 'string', 'max:255'],
-            'start_date' => ['nullable', 'date'],
-            'end_date'   => ['nullable', 'date', 'after_or_equal:start_date'],
-        ]);
+        $trip = $this->tripService->create($request);
 
-        $trip = Trip::create([
-            'name'       => $data['name'],
-            'start_date' => $data['start_date'] ?? null,
-            'end_date'   => $data['end_date'] ?? null,
-            'owner_id'   => $request->user()->id,
-        ]);
-
-        return response()->json($trip, 201);
+        return response()->json(new TripResource($trip), 201);
     }
 
-    public function show(Request $request, Trip $trip)
+    /**
+     * @group Trips
+     *
+     * Get details of a specific trip.
+     *
+     * @authenticated
+     * @urlParam trip integer required Example: 1
+     */
+    public function show(Request $request, Trip $trip): JsonResponse
     {
         $this->authorize('view', $trip);
-        return $trip;
+
+        $trip->load(['members', 'owner']);
+
+        return response()->json(new TripResource($trip));
     }
 
-    public function update(Request $request, Trip $trip)
+    /**
+     * @group Trips
+     *
+     * Update trip details.
+     *
+     * @authenticated
+     * @urlParam trip integer required Example: 1
+     * @bodyParam name string optional Example: "Updated name"
+     * @bodyParam start_date date optional Example: "2025-04-11"
+     * @bodyParam end_date date optional Example: "2025-04-13"
+     */
+    public function update(Request $request, Trip $trip): JsonResponse
     {
         $this->authorize('update', $trip);
 
-        $data = $request->validate([
-            'name'       => ['sometimes', 'string', 'max:255'],
-            'start_date' => ['sometimes', 'nullable', 'date'],
-            'end_date'   => ['sometimes', 'nullable', 'date', 'after_or_equal:start_date'],
-        ]);
+        $updatedTrip = $this->tripService->update($request, $trip);
 
-        $trip->update($data);
-
-        return $trip->fresh();
+        return response()->json(new TripResource($updatedTrip));
     }
 
-    public function destroy(Request $request, Trip $trip)
+    /**
+     * @group Trips
+     *
+     * Delete a trip.
+     *
+     * @authenticated
+     * @urlParam trip integer required Example: 1
+     * @response 204
+     */
+    public function destroy(Request $request, Trip $trip): \Illuminate\Http\Response
     {
         $this->authorize('delete', $trip);
-        $trip->delete();
+        $this->tripService->delete($trip);
 
         return response()->noContent();
     }
@@ -77,7 +119,7 @@ class TripController extends Controller
     /**
      * @group Trips / Members
      *
-     * Invite user to a trip
+     * Invite user to a trip.
      *
      * Sends an invitation to a user with the given `user_id`.
      * Sets `status = pending`. Handles resending, duplicates and declined invitations.
@@ -90,75 +132,17 @@ class TripController extends Controller
      *
      * @response 201 {"message":"User invited","status":"pending"}
      * @response 200 {"message":"Invite already pending"}
-     * @response 200 {"message":"Already a member"}
-     * @response 200 {"message":"Invite re-sent (pending)","status":"pending"}
      * @response 400 {"message":"Owner is already a member"}
-     * @response 401 {"message":"Unauthenticated"}
      */
-    public function invite(Request $request, Trip $trip)
+    public function invite(Request $request, Trip $trip): JsonResponse
     {
         $this->authorize('update', $trip);
 
-        $data = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'role'    => ['sometimes', 'string', 'in:member,editor'],
-        ]);
+        $result = $this->tripService->invite($request, $trip);
 
-        $userId = (int) $data['user_id'];
-        $role   = $data['role'] ?? 'member';
-
-        if ($trip->owner_id === $userId) {
-            return response()->json(['message' => 'Owner is already a member'], 400);
-        }
-
-        $existing = $trip->members()
-            ->withPivot(['role', 'status'])
-            ->where('users.id', $userId)
-            ->first();
-
-        if ($existing) {
-            $status = $existing->pivot->status ?? null;
-
-            if ($status === 'accepted') {
-                return response()->json(['message' => 'Already a member'], 200);
-            }
-
-            if ($status === 'pending') {
-                return response()->json(['message' => 'Invite already pending'], 200);
-            }
-
-            if ($status === 'declined') {
-                $trip->members()->updateExistingPivot($userId, [
-                    'role'   => $role,
-                    'status' => 'pending',
-                ]);
-
-                return response()->json([
-                    'message' => 'Invite re-sent (pending)',
-                    'status'  => 'pending',
-                ], 200);
-            }
-
-            $trip->members()->updateExistingPivot($userId, [
-                'role'   => $role,
-                'status' => 'pending',
-            ]);
-
-            return response()->json([
-                'message' => 'Invite set to pending',
-                'status'  => 'pending',
-            ], 200);
-        }
-
-        $trip->members()->syncWithoutDetaching([
-            $userId => ['role' => $role, 'status' => 'pending'],
-        ]);
-
-        return response()->json([
-            'message' => 'User invited',
-            'status'  => 'pending',
-        ], 201);
+        return response()->json($result['body'], $result['status']);
     }
+
     /**
      * @group Trips
      *
@@ -179,23 +163,12 @@ class TripController extends Controller
      *   "message": "Start location updated successfully."
      * }
      */
-    public function updateStartLocation(Request $request, Trip $trip)
+    public function updateStartLocation(Request $request, Trip $trip): JsonResponse
     {
         $this->authorize('update', $trip);
 
-        $data = $request->validate([
-            'start_latitude'  => ['required', 'numeric', 'between:-90,90'],
-            'start_longitude' => ['required', 'numeric', 'between:-180,180'],
-        ]);
+        $result = $this->tripService->updateStartLocation($request, $trip);
 
-        $trip->update($data);
-
-        return response()->json([
-            'trip_id'        => $trip->id,
-            'start_latitude' => $trip->start_latitude,
-            'start_longitude'=> $trip->start_longitude,
-            'message'        => 'Start location updated successfully.',
-        ]);
+        return response()->json($result);
     }
-
 }

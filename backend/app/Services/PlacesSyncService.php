@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
+use App\Interfaces\PlacesSyncInterface;
 use App\Models\Place;
 use App\Services\External\GooglePlacesService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class PlacesSyncService
+class PlacesSyncService implements PlacesSyncInterface
 {
     public function __construct(
         protected GooglePlacesService $googlePlaces
@@ -16,6 +17,9 @@ class PlacesSyncService
     /**
      * Fetch and store nearby interesting places from Google API.
      *
+     * @param float $lat
+     * @param float $lon
+     * @param int $radius
      * @return array ['added' => int, 'updated' => int]
      */
     public function fetchAndStore(float $lat, float $lon, int $radius = 3000): array
@@ -32,12 +36,9 @@ class PlacesSyncService
                     continue;
                 }
 
-                $locationWKT = sprintf("SRID=4326;POINT(%f %f)", $item['lon'], $item['lat']);
+                $locationWKT = "SRID=4326;POINT({$item['lon']} {$item['lat']})";
 
-                $existing = Place::where('google_place_id', $item['place_id'])
-                    ->orWhereNull('google_place_id')
-                    ->where('name', $item['name'])
-                    ->first();
+                $existing = Place::where('google_place_id', $item['place_id'])->first();
 
                 $payload = [
                     'name' => $item['name'],
@@ -48,9 +49,7 @@ class PlacesSyncService
                 ];
 
                 if ($existing) {
-                    $existing->update(array_merge($payload, [
-                        'google_place_id' => $item['place_id'],
-                    ]));
+                    $existing->update($payload);
                     $updated++;
                 } else {
                     $payload['google_place_id'] = $item['place_id'];

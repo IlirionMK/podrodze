@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\DTO\Trip\TripVote;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\DTO\TripVote;
 
 /** @mixin TripVote */
 class TripVoteResource extends JsonResource

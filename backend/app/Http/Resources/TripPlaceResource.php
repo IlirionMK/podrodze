@@ -3,8 +3,8 @@
 
 namespace App\Http\Resources;
 
+use App\DTO\Trip\TripPlace;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\DTO\TripPlace;
 
 /** @mixin TripPlace */
 class TripPlaceResource extends JsonResource
