@@ -5,15 +5,17 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TripPlaceResource;
 use App\Http\Resources\TripVoteResource;
+use App\Interfaces\PlaceInterface;
 use App\Models\Trip;
 use App\Models\Place;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use App\Interfaces\PlaceInterface;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class TripPlaceController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected PlaceInterface $placeService
     ) {}
@@ -32,10 +34,13 @@ class TripPlaceController extends Controller
      *   ]
      * }
      */
-    public function index(Trip $trip): Response
+    public function index(Trip $trip): JsonResponse
     {
+        $this->authorize('view', $trip);
+
         $places = $this->placeService->listForTrip($trip);
-        return response([
+
+        return response()->json([
             'data' => TripPlaceResource::collection($places),
         ]);
     }
@@ -53,8 +58,10 @@ class TripPlaceController extends Controller
      * @response 201 {"message":"Place added to trip"}
      * @response 409 {"message":"This place is already attached to the trip."}
      */
-    public function store(Request $request, Trip $trip): Response
+    public function store(Request $request, Trip $trip): JsonResponse
     {
+        $this->authorize('update', $trip);
+
         $validated = $request->validate([
             'place_id'    => 'required|exists:places,id',
             'status'      => 'nullable|string|in:proposed,selected,rejected,planned',
@@ -66,9 +73,7 @@ class TripPlaceController extends Controller
 
         $result = $this->placeService->attachToTrip($trip, $validated, $request->user());
 
-        return response([
-            'message' => $result['message'],
-        ], $result['status']);
+        return response()->json(['message' => $result['message']], $result['status']);
     }
 
     /**
@@ -82,8 +87,10 @@ class TripPlaceController extends Controller
      * @response 200 {"message":"Trip place updated"}
      * @response 404 {"message":"Place not found in this trip."}
      */
-    public function update(Request $request, Trip $trip, Place $place): Response
+    public function update(Request $request, Trip $trip, Place $place): JsonResponse
     {
+        $this->authorize('update', $trip);
+
         $validated = $request->validate([
             'status'      => 'nullable|string|in:proposed,selected,rejected,planned',
             'is_fixed'    => 'nullable|boolean',
@@ -94,9 +101,7 @@ class TripPlaceController extends Controller
 
         $result = $this->placeService->updateTripPlace($trip, $place, $validated);
 
-        return response([
-            'message' => $result['message'],
-        ], $result['status']);
+        return response()->json(['message' => $result['message']], $result['status']);
     }
 
     /**
@@ -110,13 +115,13 @@ class TripPlaceController extends Controller
      * @response 200 {"message":"Place removed from trip"}
      * @response 404 {"message":"Place not found in this trip."}
      */
-    public function destroy(Trip $trip, Place $place): Response
+    public function destroy(Trip $trip, Place $place): JsonResponse
     {
+        $this->authorize('update', $trip);
+
         $result = $this->placeService->detachFromTrip($trip, $place);
 
-        return response([
-            'message' => $result['message'],
-        ], $result['status']);
+        return response()->json(['message' => $result['message']], $result['status']);
     }
 
     /**
@@ -132,6 +137,8 @@ class TripPlaceController extends Controller
      */
     public function vote(Request $request, Trip $trip, Place $place): JsonResponse
     {
+        $this->authorize('view', $trip);
+
         $validated = $request->validate([
             'score' => ['required', 'integer', 'min:1', 'max:5'],
         ]);
@@ -140,7 +147,7 @@ class TripPlaceController extends Controller
             $trip,
             $place,
             $request->user(),
-            (int)$validated['score']
+            (int) $validated['score']
         );
 
         return TripVoteResource::make($vote)

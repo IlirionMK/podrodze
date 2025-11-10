@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ItineraryResource;
 use App\Interfaces\ItineraryServiceInterface;
+use App\Interfaces\PreferenceAggregatorServiceInterface;
 use App\Models\Trip;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use App\Services\PreferenceAggregatorService;
 
 class ItineraryController extends Controller
 {
@@ -16,9 +16,8 @@ class ItineraryController extends Controller
 
     public function __construct(
         protected ItineraryServiceInterface $itineraryService,
-        protected PreferenceAggregatorService $aggregator
+        protected PreferenceAggregatorServiceInterface $aggregator
     ) {}
-
     /**
      * @group Trips / Itinerary
      *

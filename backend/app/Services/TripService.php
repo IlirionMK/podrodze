@@ -5,13 +5,20 @@ namespace App\Services;
 use App\Interfaces\TripInterface;
 use App\Models\Trip;
 use App\Models\User;
+use App\DTO\Trip\Invite;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 class TripService implements TripInterface
 {
-    // --- Trip CRUD ---
+    // -------------------------------
+    // Trip CRUD
+    // -------------------------------
+
+    /**
+     * List trips owned or joined by the user.
+     */
     public function list(Request $request): LengthAwarePaginator
     {
         $user = $request->user();
@@ -24,6 +31,9 @@ class TripService implements TripInterface
             ->paginate(10);
     }
 
+    /**
+     * Create a new trip.
+     */
     public function create(Request $request): Trip
     {
         $data = $request->validate([
@@ -40,6 +50,9 @@ class TripService implements TripInterface
         ]);
     }
 
+    /**
+     * Update existing trip.
+     */
     public function update(Request $request, Trip $trip): Trip
     {
         $data = $request->validate([
@@ -49,14 +62,21 @@ class TripService implements TripInterface
         ]);
 
         $trip->update($data);
+
         return $trip->fresh();
     }
 
+    /**
+     * Delete a trip permanently.
+     */
     public function delete(Trip $trip): void
     {
         $trip->delete();
     }
 
+    /**
+     * Update the start location of a trip.
+     */
     public function updateStartLocation(Request $request, Trip $trip): array
     {
         $data = $request->validate([
@@ -74,14 +94,15 @@ class TripService implements TripInterface
         ];
     }
 
-    // --- Invites (TripController) ---
-    public function invite(Request $request, Trip $trip): array
-    {
-        $data = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'role'    => ['sometimes', 'string', 'in:member,editor'],
-        ]);
+    // -------------------------------
+    // Invitations management
+    // -------------------------------
 
+    /**
+     * Invite another user to the trip.
+     */
+    public function inviteUser(Trip $trip, User $actor, array $data): array
+    {
         $userId = (int)$data['user_id'];
         $role   = $data['role'] ?? 'member';
 
@@ -105,6 +126,7 @@ class TripService implements TripInterface
                 return ['status' => 200, 'body' => ['message' => 'Invite already pending']];
             }
 
+            // previously declined — resend
             $trip->members()->updateExistingPivot($userId, [
                 'role'   => $role,
                 'status' => 'pending',
@@ -120,25 +142,66 @@ class TripService implements TripInterface
         return ['status' => 201, 'body' => ['message' => 'User invited', 'status' => 'pending']];
     }
 
-    public function accept(Trip $trip): array
+    /**
+     * Accept a pending invitation.
+     */
+    public function acceptInvite(Trip $trip, User $user): array
     {
-        $user = auth()->user();
+        $pivot = $trip->members()->where('users.id', $user->id)->first()?->pivot;
+
+        if (!$pivot) {
+            return ['status' => 404, 'body' => ['message' => 'You are not invited to this trip']];
+        }
+
+        if ($pivot->status === 'accepted') {
+            return ['status' => 200, 'body' => ['message' => 'Already accepted']];
+        }
+
+        if ($pivot->status !== 'pending') {
+            return ['status' => 403, 'body' => ['message' => 'Invitation is not pending']];
+        }
+
         $trip->members()->updateExistingPivot($user->id, ['status' => 'accepted']);
+
         return ['status' => 200, 'body' => ['message' => 'Invitation accepted']];
     }
 
-    public function decline(Trip $trip): array
+    /**
+     * Decline a pending invitation.
+     */
+    public function declineInvite(Trip $trip, User $user): array
     {
-        $user = auth()->user();
+        $pivot = $trip->members()->where('users.id', $user->id)->first()?->pivot;
+
+        if (!$pivot) {
+            return ['status' => 404, 'body' => ['message' => 'You are not invited to this trip']];
+        }
+
+        if ($pivot->status === 'declined') {
+            return ['status' => 200, 'body' => ['message' => 'Already declined']];
+        }
+
+        if ($pivot->status !== 'pending') {
+            return ['status' => 403, 'body' => ['message' => 'Invitation is not pending']];
+        }
+
         $trip->members()->updateExistingPivot($user->id, ['status' => 'declined']);
+
         return ['status' => 200, 'body' => ['message' => 'Invitation declined']];
     }
 
-    // --- Members management ---
+    // -------------------------------
+    // Members management
+    // -------------------------------
+
+    /**
+     * List all members of the trip (including owner).
+     */
     public function listMembers(Trip $trip): Collection
     {
         $members = $trip->members()
             ->withPivot(['role', 'status'])
+            ->orderBy('users.name')
             ->get(['users.id', 'users.name', 'users.email'])
             ->map(fn($u) => tap($u, fn($x) => $x->is_owner = false));
 
@@ -153,114 +216,49 @@ class TripService implements TripInterface
         return $owner->merge($members);
     }
 
+    /**
+     * Update a member's role.
+     */
     public function updateMemberRole(Trip $trip, User $user, string $role, ?User $actor = null): array
     {
         $trip->members()->updateExistingPivot($user->id, ['role' => $role]);
         return ['status' => 200, 'body' => ['message' => 'Role updated']];
     }
 
+    /**
+     * Remove a member from the trip.
+     */
     public function removeMember(Trip $trip, User $user, ?User $actor = null): array
     {
         $trip->members()->detach($user->id);
         return ['status' => 200, 'body' => ['message' => 'Member removed']];
     }
 
-    // --- Extended Invites (TripUserController) ---
-    public function inviteUser(Trip $trip, User $actor, array $data): array
-    {
-        $userId = (int)$data['user_id'];
-        $role = $data['role'] ?? 'member';
+    // -------------------------------
+    // Invitation listings
+    // -------------------------------
 
-        if ($trip->owner_id === $userId) {
-            return ['status' => 400, 'body' => ['message' => 'Owner is already a member']];
-        }
-
-        $existing = $trip->members()->withPivot(['role', 'status'])->where('users.id', $userId)->first();
-
-        if ($existing) {
-            $status = $existing->pivot->status ?? null;
-
-            if ($status === 'accepted') {
-                return ['status' => 200, 'body' => ['message' => 'Already a member']];
-            }
-
-            if ($status === 'pending') {
-                return ['status' => 200, 'body' => ['message' => 'Invite already pending']];
-            }
-
-            $trip->members()->updateExistingPivot($userId, [
-                'role' => $role,
-                'status' => 'pending',
-            ]);
-
-            return ['status' => 200, 'body' => ['message' => 'Invite re-sent (pending)', 'status' => 'pending']];
-        }
-
-        $trip->members()->syncWithoutDetaching([$userId => ['role' => $role, 'status' => 'pending']]);
-        return ['status' => 201, 'body' => ['message' => 'User invited', 'status' => 'pending']];
-    }
-
-    public function acceptInvite(Trip $trip, User $user): array
-    {
-        $pivot = $trip->members()->where('users.id', $user->id)->first()?->pivot;
-
-        if (!$pivot || $pivot->status !== 'pending') {
-            return ['status' => 403, 'body' => ['message' => 'No pending invite']];
-        }
-
-        $trip->members()->updateExistingPivot($user->id, ['status' => 'accepted']);
-        return ['status' => 200, 'body' => ['message' => 'Invite accepted']];
-    }
-
-    public function declineInvite(Trip $trip, User $user): array
-    {
-        $pivot = $trip->members()->where('users.id', $user->id)->first()?->pivot;
-
-        if (!$pivot || $pivot->status !== 'pending') {
-            return ['status' => 403, 'body' => ['message' => 'No pending invite']];
-        }
-
-        $trip->members()->updateExistingPivot($user->id, ['status' => 'declined']);
-        return ['status' => 200, 'body' => ['message' => 'Invite declined']];
-    }
-
-    // --- Lists (User Invitations) ---
+    /**
+     * List invitations for the authenticated user (DTOs).
+     */
     public function listUserInvites(User $user): Collection
     {
         return $user->joinedTrips()
             ->with(['owner:id,name,email'])
             ->get(['trips.id', 'trips.name', 'trips.start_date', 'trips.end_date', 'trips.owner_id'])
-            ->map(function ($trip) {
-                return [
-                    'trip_id'    => $trip->id,
-                    'name'       => $trip->name,
-                    'start_date' => $trip->start_date,
-                    'end_date'   => $trip->end_date,
-                    'role'       => $trip->pivot->role,
-                    'status'     => $trip->pivot->status,
-                    'owner'      => $trip->owner,
-                ];
-            });
+            ->map(fn(Trip $trip) => Invite::fromModel($trip));
     }
 
+    /**
+     * List invitations sent by the owner (DTOs).
+     */
     public function listSentInvites(User $owner): Collection
     {
-        $trips = $owner->trips()->with(['members:id,name,email'])->get();
-
-        return collect($trips)->flatMap(function ($trip) {
-            return $trip->members->map(fn($m) => [
-                'trip_id'      => $trip->id,
-                'trip_name'    => $trip->name,
-                'start_date'   => $trip->start_date,
-                'end_date'     => $trip->end_date,
-                'invited_user' => [
-                    'id'    => $m->id,
-                    'name'  => $m->name,
-                    'email' => $m->email,
-                ],
-                'role'   => $m->pivot->role,
-                'status' => $m->pivot->status,
-            ]);
-        });
+        return $owner->trips()
+            ->with(['members:id,name,email'])
+            ->get()
+            ->flatMap(function (Trip $trip) {
+                return $trip->members->map(fn($m) => Invite::fromModel($trip));
+            });
     }
 }

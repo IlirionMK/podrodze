@@ -2,10 +2,21 @@
 
 namespace App\DTO\Itinerary;
 
-class ItineraryDay
+final class ItineraryDay implements \JsonSerializable
 {
+    /**
+     * @param ItineraryPlace[] $places
+     */
     public function __construct(
-        public int $day,
-        public array $places = []
+        public readonly int $day,
+        public readonly array $places = [],
     ) {}
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'day'    => $this->day,
+            'places' => $this->places,
+        ];
+    }
 }

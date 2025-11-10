@@ -2,13 +2,24 @@
 
 namespace App\DTO\Itinerary;
 
-class ItineraryPlace
+final class ItineraryPlace implements \JsonSerializable
 {
     public function __construct(
-        public int $id,
-        public string $name,
-        public string $category_slug,
-        public float $score,
-        public float $distance_m
+        public readonly int $id,
+        public readonly string $name,
+        public readonly string $category_slug,
+        public readonly float $score,
+        public readonly float $distance_m,
     ) {}
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'id'            => $this->id,
+            'name'          => $this->name,
+            'category_slug' => $this->category_slug,
+            'score'         => $this->score,
+            'distance_m'    => $this->distance_m,
+        ];
+    }
 }

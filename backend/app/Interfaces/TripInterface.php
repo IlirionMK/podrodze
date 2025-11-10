@@ -17,22 +17,17 @@ interface TripInterface
     public function delete(Trip $trip): void;
     public function updateStartLocation(Request $request, Trip $trip): array;
 
-    // --- Invites (TripController) ---
-    public function invite(Request $request, Trip $trip): array;
-    public function accept(Trip $trip): array;
-    public function decline(Trip $trip): array;
-
-    // --- Members management (TripUserController) ---
+    // --- Members management ---
     public function listMembers(Trip $trip): Collection;
     public function updateMemberRole(Trip $trip, User $user, string $role, ?User $actor = null): array;
     public function removeMember(Trip $trip, User $user, ?User $actor = null): array;
 
-    // --- Extended Invites (TripUserController) ---
+    // --- Invitations ---
     public function inviteUser(Trip $trip, User $actor, array $data): array;
     public function acceptInvite(Trip $trip, User $user): array;
     public function declineInvite(Trip $trip, User $user): array;
 
-    // --- Lists (User Invitations) ---
+    // --- Invitation listings ---
     public function listUserInvites(User $user): Collection;
     public function listSentInvites(User $owner): Collection;
 }

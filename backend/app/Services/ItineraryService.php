@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Interfaces\ItineraryServiceInterface;
 use App\Models\Trip;
 use App\Models\Place;
 use App\Models\TripItinerary;
@@ -11,7 +12,7 @@ use App\DTO\Itinerary\Itinerary;
 use App\DTO\Itinerary\ItineraryDay;
 use App\DTO\Itinerary\ItineraryPlace;
 
-class ItineraryService
+class ItineraryService implements ItineraryServiceInterface
 {
     public function __construct(
         protected PreferenceAggregatorService $aggregator,
