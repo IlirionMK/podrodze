@@ -5,11 +5,11 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Auth\Notifications\ResetPassword;
 use App\Interfaces\{ItineraryServiceInterface,
+    PlaceInterface,
     PreferenceAggregatorServiceInterface,
     PreferenceServiceInterface,
-    TripInterface
-    };
-use App\Services\{ItineraryService, PreferenceAggregatorService, PreferenceService, TripService};
+    TripInterface};
+use App\Services\{ItineraryService, PlaceService, PreferenceAggregatorService, PreferenceService, TripService};
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ItineraryServiceInterface::class, ItineraryService::class);
         $this->app->bind(PreferenceServiceInterface::class, PreferenceService::class);
         $this->app->bind(TripInterface::class, TripService::class);
+        $this->app->bind(PlaceInterface::class, PlaceService::class);
         $this->app->bind(PreferenceAggregatorServiceInterface::class, PreferenceAggregatorService::class);
     }
 

@@ -123,29 +123,38 @@ class PlaceService implements PlaceInterface
      */
     public function findNearby(float $lat, float $lon, int $radius = 2000, int $limit = 50): Collection
     {
-        $rows = DB::select("
-            SELECT id, name, category_slug, rating,
-                   ST_Distance(
-                       location::geography,
-                       ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography
-                   ) AS distance_m
-            FROM places
-            WHERE ST_DWithin(
-                location::geography,
-                ST_SetSRID(ST_MakePoint(:lon2, :lat2), 4326)::geography,
-                :radius
-            )
-            ORDER BY distance_m ASC
-            LIMIT :limit
-        ", [
+        $sql = "
+        SELECT id, name, category_slug, rating,
+               ST_Distance(
+                   location::geography,
+                   ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography
+               ) AS distance_m
+        FROM places
+        WHERE ST_DWithin(
+            location::geography,
+            ST_SetSRID(ST_MakePoint(:lon2, :lat2), 4326)::geography,
+            :radius
+        )
+        ORDER BY distance_m ASC
+        LIMIT $limit
+    ";
+
+        $rows = DB::select($sql, [
             'lat' => $lat,
             'lon' => $lon,
             'lat2' => $lat,
             'lon2' => $lon,
             'radius' => $radius,
-            'limit' => $limit,
         ]);
 
-        return collect($rows);
+        return collect($rows)->map(function ($row) {
+            return [
+                'id' => $row->id,
+                'name' => $row->name,
+                'category_slug' => $row->category_slug,
+                'rating' => $row->rating,
+                'distance_m' => round($row->distance_m, 2),
+            ];
+        });
     }
 }
