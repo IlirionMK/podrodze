@@ -17,6 +17,26 @@ final class Invite implements \JsonSerializable
         public readonly User $owner,
     ) {}
 
+    /** Create DTO from pivot relationship */
+    public static function fromPivot(Trip $trip, User $user): self
+    {
+        $pivot = $trip->members()
+            ->where('users.id', $user->id)
+            ->first()
+            ?->pivot;
+
+        return new self(
+            trip_id: $trip->id,
+            name: $trip->name,
+            start_date: $trip->start_date,
+            end_date: $trip->end_date,
+            role: $pivot?->role ?? 'member',
+            status: $pivot?->status ?? 'pending',
+            owner: $trip->owner
+        );
+    }
+
+    /** Create DTO from trip model (used for listUserInvites) */
     public static function fromModel(Trip $trip): self
     {
         return new self(

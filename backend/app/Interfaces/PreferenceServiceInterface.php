@@ -3,10 +3,16 @@
 namespace App\Interfaces;
 
 use App\DTO\Preference\Preference;
-use Illuminate\Http\Request;
+use App\Models\User;
 
 interface PreferenceServiceInterface
 {
-    public function getPreferences(Request $request): Preference;
-    public function updatePreferences(Request $request): array;
+    public function getPreferences(User $user): Preference;
+
+    /**
+     * @param User $user
+     * @param array<string,int> $preferences
+     * @return array{status: string}
+     */
+    public function updatePreferences(User $user, array $preferences): array;
 }

@@ -7,7 +7,7 @@ use App\Models\Trip;
 interface PreferenceAggregatorServiceInterface
 {
     /**
-     * Calculate average preferences of all trip members (including owner).
+     * Aggregate average user preferences across all members of a trip.
      *
      * @param Trip $trip
      * @return array<string, float>

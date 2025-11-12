@@ -20,23 +20,10 @@ class PreferenceController extends Controller
      * Get available categories and user's current preferences.
      *
      * @authenticated
-     * @response 200 scenario="Example" {
-     *   "data": {
-     *     "categories": [
-     *       {"slug": "museum", "name": "Muzea"},
-     *       {"slug": "food", "name": "Jedzenie"}
-     *     ],
-     *     "user": {
-     *       "museum": 2,
-     *       "food": 1,
-     *       "nature": 0
-     *     }
-     *   }
-     * }
      */
     public function index(Request $request): PreferenceResource
     {
-        $dto = $this->preferenceService->getPreferences($request);
+        $dto = $this->preferenceService->getPreferences($request->user());
         return new PreferenceResource($dto);
     }
 
@@ -46,12 +33,18 @@ class PreferenceController extends Controller
      * Update user's preferences.
      *
      * @authenticated
-     * @bodyParam preferences object required Example: {"museum":2,"food":1,"nature":0}
-     * @response 200 scenario="Success" {"status": "ok"}
      */
     public function update(Request $request): JsonResponse
     {
-        $result = $this->preferenceService->updatePreferences($request);
+        $data = $request->validate([
+            'preferences' => ['required', 'array'],
+        ]);
+
+        $result = $this->preferenceService->updatePreferences(
+            $request->user(),
+            $data['preferences']
+        );
+
         return response()->json($result, 200);
     }
 }

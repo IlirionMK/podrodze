@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\InviteTripRequest;
 use App\Http\Resources\TripUserResource;
-use App\Http\Resources\TripResource;
 use App\Http\Resources\InviteResource;
 use App\Interfaces\TripInterface;
 use App\Models\Trip;
@@ -18,16 +18,12 @@ class TripUserController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(
-        protected TripInterface $tripService
-    ) {}
+    public function __construct(protected TripInterface $tripService) {}
 
     /**
      * @group Members
      *
-     * Get members of a trip.
-     *
-     * Returns all trip members (including owner).
+     * Get members of a trip (including owner).
      */
     public function index(Request $request, Trip $trip): JsonResponse
     {
@@ -45,19 +41,20 @@ class TripUserController extends Controller
      *
      * Invite a user to a trip.
      */
-    public function invite(Request $request, Trip $trip): JsonResponse
+    public function invite(InviteTripRequest $request, Trip $trip): JsonResponse
     {
         $this->authorize('update', $trip);
 
-        $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id', Rule::notIn([$trip->owner_id ?? null])],
-            'role'    => ['required', Rule::in(['member', 'editor'])],
-            'resend'  => ['sometimes', 'boolean'],
-        ]);
+        $invite = $this->tripService->inviteUser(
+            $trip,
+            $request->user(),
+            $request->validated()
+        );
 
-        $result = $this->tripService->inviteUser($trip, $request->user(), $data);
-
-        return response()->json($result['body'], $result['status']);
+        return response()->json([
+            'data' => new InviteResource($invite),
+            'message' => 'Invitation sent successfully.',
+        ], 201);
     }
 
     /**
@@ -69,13 +66,13 @@ class TripUserController extends Controller
     {
         $this->authorize('update', $trip);
 
-        $data = $request->validate([
+        $validated = $request->validate([
             'role' => ['required', Rule::in(['member', 'editor'])],
         ]);
 
-        $result = $this->tripService->updateMemberRole($trip, $user, $data['role'], $request->user());
+        $this->tripService->updateMemberRole($trip, $user, $validated['role'], $request->user());
 
-        return response()->json($result['body'], $result['status']);
+        return response()->json(['message' => 'Role updated.']);
     }
 
     /**
@@ -87,9 +84,9 @@ class TripUserController extends Controller
     {
         $this->authorize('update', $trip);
 
-        $result = $this->tripService->removeMember($trip, $user, $request->user());
+        $this->tripService->removeMember($trip, $user, $request->user());
 
-        return response()->json($result['body'], $result['status']);
+        return response()->json(['message' => 'Member removed.']);
     }
 
     /**
@@ -101,9 +98,9 @@ class TripUserController extends Controller
     {
         $this->authorize('accept', $trip);
 
-        $result = $this->tripService->acceptInvite($trip, $request->user());
+        $this->tripService->acceptInvite($trip, $request->user());
 
-        return response()->json($result['body'], $result['status']);
+        return response()->json(['message' => 'Invitation accepted.']);
     }
 
     /**
@@ -115,17 +112,15 @@ class TripUserController extends Controller
     {
         $this->authorize('decline', $trip);
 
-        $result = $this->tripService->declineInvite($trip, $request->user());
+        $this->tripService->declineInvite($trip, $request->user());
 
-        return response()->json($result['body'], $result['status']);
+        return response()->json(['message' => 'Invitation declined.']);
     }
 
     /**
      * @group Members / Invites
      *
      * List user's invitations.
-     *
-     * Returns all trips where the authenticated user is invited.
      */
     public function myInvites(Request $request): JsonResponse
     {
@@ -139,9 +134,7 @@ class TripUserController extends Controller
     /**
      * @group Members / Invites
      *
-     * List sent invitations (owner view).
-     *
-     * Returns all invitations sent by the current user (trip owner).
+     * List sent invitations (for owner).
      */
     public function sentInvites(Request $request): JsonResponse
     {

@@ -6,38 +6,47 @@ use App\DTO\Trip\TripPlace;
 use App\DTO\Trip\TripVote;
 use App\Interfaces\PlaceInterface;
 use App\Models\Place;
-
 use App\Models\Trip;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use DomainException;
 
 class PlaceService implements PlaceInterface
 {
     /**
      * Return all places attached to the trip as DTO collection.
+     *
+     * @return Collection<int, TripPlace>
      */
     public function listForTrip(Trip $trip): Collection
     {
         return $trip->places()
             ->withPivot(['status', 'is_fixed', 'day', 'order_index', 'note', 'added_by'])
             ->get()
-            ->map(fn (Place $p) => TripPlace::fromModel($p));
+            ->map(fn(Place $p) => TripPlace::fromModel($p));
     }
 
     /**
      * Attach a place to a trip.
+     *
+     * @throws ModelNotFoundException
+     * @throws DomainException
      */
-    public function attachToTrip(Trip $trip, array $data, User $user): array
+    public function attachToTrip(Trip $trip, array $data, User $user): TripPlace
     {
         $placeId = (int) $data['place_id'];
 
-        $exists = $trip->places()->where('places.id', $placeId)->exists();
-        if ($exists) {
-            return [
-                'message' => 'This place is already attached to the trip.',
-                'status'  => 409,
-            ];
+        /** @var Place|null $place */
+        $place = Place::find($placeId);
+
+        if (! $place) {
+            throw new ModelNotFoundException("Place #{$placeId} not found.");
+        }
+
+        if ($trip->places()->where('places.id', $placeId)->exists()) {
+            throw new DomainException('This place is already attached to the trip.');
         }
 
         $trip->places()->attach($placeId, [
@@ -49,50 +58,50 @@ class PlaceService implements PlaceInterface
             'added_by'    => $user->id,
         ]);
 
-        return [
-            'message' => 'Place added to trip',
-            'status'  => 201,
-        ];
+        /** @var Place $attached */
+        $attached = $trip->places()
+            ->withPivot(['status', 'is_fixed', 'day', 'order_index', 'note', 'added_by'])
+            ->findOrFail($placeId);
+
+        return TripPlace::fromModel($attached);
     }
 
     /**
      * Update a place entry within a trip.
+     *
+     * @throws ModelNotFoundException
      */
-    public function updateTripPlace(Trip $trip, Place $place, array $data): array
+    public function updateTripPlace(Trip $trip, Place $place, array $data): TripPlace
     {
-        if (! $trip->places()->where('places.id', $place->id)->exists()) {
-            return [
-                'message' => 'Place not found in this trip.',
-                'status'  => 404,
-            ];
+        /** @var Place|null $attached */
+        $attached = $trip->places()->where('places.id', $place->id)->first();
+
+        if (! $attached) {
+            throw new ModelNotFoundException('Place not found in this trip.');
         }
 
         $trip->places()->updateExistingPivot($place->id, $data);
 
-        return [
-            'message' => 'Trip place updated',
-            'status'  => 200,
-        ];
+        /** @var Place $updated */
+        $updated = $trip->places()
+            ->withPivot(['status', 'is_fixed', 'day', 'order_index', 'note', 'added_by'])
+            ->findOrFail($place->id);
+
+        return TripPlace::fromModel($updated);
     }
 
     /**
      * Detach a place from a trip.
+     *
+     * @throws ModelNotFoundException
      */
-    public function detachFromTrip(Trip $trip, Place $place): array
+    public function detachFromTrip(Trip $trip, Place $place): void
     {
         if (! $trip->places()->where('places.id', $place->id)->exists()) {
-            return [
-                'message' => 'Place not found in this trip.',
-                'status'  => 404,
-            ];
+            throw new ModelNotFoundException('Place not found in this trip.');
         }
 
         $trip->places()->detach($place->id);
-
-        return [
-            'message' => 'Place removed from trip',
-            'status'  => 200,
-        ];
     }
 
     /**
@@ -109,52 +118,13 @@ class PlaceService implements PlaceInterface
             ['score' => $score]
         );
 
+        /** @var object{avg_score: float|null, votes: int} $aggregate */
         $aggregate = DB::table('trip_place_votes')
             ->selectRaw('AVG(score) as avg_score, COUNT(*) as votes')
             ->where('trip_id', $trip->id)
             ->where('place_id', $place->id)
-            ->first();;
+            ->first();
 
         return TripVote::fromAggregate($aggregate);
-    }
-
-    /**
-     * Find nearby places using PostGIS.
-     */
-    public function findNearby(float $lat, float $lon, int $radius = 2000, int $limit = 50): Collection
-    {
-        $sql = "
-        SELECT id, name, category_slug, rating,
-               ST_Distance(
-                   location::geography,
-                   ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography
-               ) AS distance_m
-        FROM places
-        WHERE ST_DWithin(
-            location::geography,
-            ST_SetSRID(ST_MakePoint(:lon2, :lat2), 4326)::geography,
-            :radius
-        )
-        ORDER BY distance_m ASC
-        LIMIT $limit
-    ";
-
-        $rows = DB::select($sql, [
-            'lat' => $lat,
-            'lon' => $lon,
-            'lat2' => $lat,
-            'lon2' => $lon,
-            'radius' => $radius,
-        ]);
-
-        return collect($rows)->map(function ($row) {
-            return [
-                'id' => $row->id,
-                'name' => $row->name,
-                'category_slug' => $row->category_slug,
-                'rating' => $row->rating,
-                'distance_m' => round($row->distance_m, 2),
-            ];
-        });
     }
 }

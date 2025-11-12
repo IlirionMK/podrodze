@@ -32,6 +32,13 @@ class TripPolicy
             return true;
         }
 
+        // Optimization: if 'members' relation already loaded, avoid extra SQL
+        if ($trip->relationLoaded('members')) {
+            return $trip->members->contains(fn ($m) =>
+                $m->id === $user->id && in_array($m->pivot->status, ['accepted', 'pending'])
+            );
+        }
+
         return $trip->members()
             ->where('users.id', $user->id)
             ->wherePivotIn('status', ['accepted', 'pending'])
@@ -46,6 +53,13 @@ class TripPolicy
     {
         if ($trip->owner_id === $user->id) {
             return true;
+        }
+
+        // Optimization: check loaded relation if available
+        if ($trip->relationLoaded('members')) {
+            return $trip->members->contains(fn ($m) =>
+                $m->id === $user->id && $m->pivot->role === 'editor'
+            );
         }
 
         return $trip->members()
@@ -64,11 +78,27 @@ class TripPolicy
     }
 
     /**
+     * Determine whether the user can create a trip.
+     * Currently open to all authenticated users.
+     */
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    /**
      * Shared helper — check if user can respond to an invite.
      * (status must be 'pending')
      */
     protected function canRespond(User $user, Trip $trip): bool
     {
+        // Optimization: if relation already loaded, check in-memory
+        if ($trip->relationLoaded('members')) {
+            return $trip->members->contains(fn ($m) =>
+                $m->id === $user->id && $m->pivot->status === 'pending'
+            );
+        }
+
         return $trip->members()
             ->where('users.id', $user->id)
             ->wherePivot('status', 'pending')
