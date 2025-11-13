@@ -16,8 +16,6 @@ use DomainException;
 class PlaceService implements PlaceInterface
 {
     /**
-     * Return all places attached to the trip as DTO collection.
-     *
      * @return Collection<int, TripPlace>
      */
     public function listForTrip(Trip $trip): Collection
@@ -29,8 +27,6 @@ class PlaceService implements PlaceInterface
     }
 
     /**
-     * Attach a place to a trip.
-     *
      * @throws ModelNotFoundException
      * @throws DomainException
      */
@@ -38,7 +34,6 @@ class PlaceService implements PlaceInterface
     {
         $placeId = (int) $data['place_id'];
 
-        /** @var Place|null $place */
         $place = Place::find($placeId);
 
         if (! $place) {
@@ -58,7 +53,6 @@ class PlaceService implements PlaceInterface
             'added_by'    => $user->id,
         ]);
 
-        /** @var Place $attached */
         $attached = $trip->places()
             ->withPivot(['status', 'is_fixed', 'day', 'order_index', 'note', 'added_by'])
             ->findOrFail($placeId);
@@ -67,13 +61,10 @@ class PlaceService implements PlaceInterface
     }
 
     /**
-     * Update a place entry within a trip.
-     *
      * @throws ModelNotFoundException
      */
     public function updateTripPlace(Trip $trip, Place $place, array $data): TripPlace
     {
-        /** @var Place|null $attached */
         $attached = $trip->places()->where('places.id', $place->id)->first();
 
         if (! $attached) {
@@ -82,7 +73,6 @@ class PlaceService implements PlaceInterface
 
         $trip->places()->updateExistingPivot($place->id, $data);
 
-        /** @var Place $updated */
         $updated = $trip->places()
             ->withPivot(['status', 'is_fixed', 'day', 'order_index', 'note', 'added_by'])
             ->findOrFail($place->id);
@@ -91,8 +81,6 @@ class PlaceService implements PlaceInterface
     }
 
     /**
-     * Detach a place from a trip.
-     *
      * @throws ModelNotFoundException
      */
     public function detachFromTrip(Trip $trip, Place $place): void
@@ -104,9 +92,6 @@ class PlaceService implements PlaceInterface
         $trip->places()->detach($place->id);
     }
 
-    /**
-     * Save or update a user's vote for a place in a trip.
-     */
     public function saveTripVote(Trip $trip, Place $place, User $user, int $score): TripVote
     {
         DB::table('trip_place_votes')->updateOrInsert(
@@ -118,7 +103,6 @@ class PlaceService implements PlaceInterface
             ['score' => $score]
         );
 
-        /** @var object{avg_score: float|null, votes: int} $aggregate */
         $aggregate = DB::table('trip_place_votes')
             ->selectRaw('AVG(score) as avg_score, COUNT(*) as votes')
             ->where('trip_id', $trip->id)
@@ -126,5 +110,35 @@ class PlaceService implements PlaceInterface
             ->first();
 
         return TripVote::fromAggregate($aggregate);
+    }
+
+    /**
+     * Find nearby places using PostGIS (clean service layer).
+     *
+     * @return Collection<int, Place>
+     */
+    public function findNearby(float $lat, float $lon, int $radius = 2000): Collection
+    {
+        return Place::query()
+            ->select('places.*')
+            ->addSelect([
+                DB::raw('ST_Y(location::geometry) AS lat'),
+                DB::raw('ST_X(location::geometry) AS lon'),
+                DB::raw("
+                    ST_Distance(
+                        location::geography,
+                        ST_SetSRID(ST_MakePoint({$lon}, {$lat}), 4326)::geography
+                    ) AS distance_m
+                "),
+            ])
+            ->whereRaw("
+                ST_DWithin(
+                    location::geography,
+                    ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
+                    ?
+                )
+            ", [$lon, $lat, $radius])
+            ->orderBy('distance_m')
+            ->get();
     }
 }

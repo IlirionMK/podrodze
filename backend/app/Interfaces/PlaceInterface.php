@@ -21,4 +21,11 @@ interface PlaceInterface
     public function detachFromTrip(Trip $trip, Place $place): void;
 
     public function saveTripVote(Trip $trip, Place $place, User $user, int $score): TripVote;
+
+    /**
+     * Find nearby places using PostGIS (lat/lon/distance).
+     *
+     * @return Collection<int, Place>
+     */
+    public function findNearby(float $lat, float $lon, int $radius = 2000): Collection;
 }
