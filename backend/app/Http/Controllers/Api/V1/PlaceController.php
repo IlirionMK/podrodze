@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use App\Services\PlacesSyncService;
 use App\Interfaces\PlaceInterface;
 use App\Http\Resources\PlaceResource;
+use DomainException;
 
 class PlaceController extends Controller
 {
@@ -24,8 +25,8 @@ class PlaceController extends Controller
     public function nearby(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'lat' => ['required', 'numeric', 'between:-90,90'],
-            'lon' => ['required', 'numeric', 'between:-180,180'],
+            'lat'    => ['required', 'numeric', 'between:-90,90'],
+            'lon'    => ['required', 'numeric', 'between:-180,180'],
             'radius' => ['nullable', 'integer', 'min:10', 'max:50000'],
         ]);
 
@@ -33,16 +34,24 @@ class PlaceController extends Controller
         $lon = (float) $validated['lon'];
         $radius = (int) ($validated['radius'] ?? 2000);
 
-        // Sync Google places into DB (cached requests)
-        $summary = $this->placesSync->fetchAndStore($lat, $lon, $radius);
+        try {
+            // Sync Google Places → DB (cached)
+            $summary = $this->placesSync->fetchAndStore($lat, $lon, $radius);
 
-        // Fetch nearby places using PostGIS via service
-        $places = $this->placeService->findNearby($lat, $lon, $radius);
+            // Fetch PostGIS nearby places
+            $places = $this->placeService->findNearby($lat, $lon, $radius);
 
-        return response()->json([
-            'message' => 'Nearby places synchronized successfully.',
-            'summary' => $summary,
-            'data'    => PlaceResource::collection($places),
-        ]);
+        } catch (DomainException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+
+        return (PlaceResource::collection($places))
+            ->additional([
+                'message' => 'Nearby places synchronized successfully',
+                'summary' => $summary,
+            ])
+            ->response();
     }
 }

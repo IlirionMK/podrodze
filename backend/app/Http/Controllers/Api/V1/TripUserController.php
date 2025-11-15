@@ -45,16 +45,22 @@ class TripUserController extends Controller
     {
         $this->authorize('update', $trip);
 
-        $invite = $this->tripService->inviteUser(
-            $trip,
-            $request->user(),
-            $request->validated()
-        );
+        try {
+            $invite = $this->tripService->inviteUser(
+                $trip,
+                $request->user(),
+                $request->validated()
+            );
+        } catch (\DomainException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 400);
+        }
 
         return response()->json([
             'data' => new InviteResource($invite),
             'message' => 'Invitation sent successfully.',
-        ], 201);
+        ]);
     }
 
     /**
@@ -70,7 +76,18 @@ class TripUserController extends Controller
             'role' => ['required', Rule::in(['member', 'editor'])],
         ]);
 
-        $this->tripService->updateMemberRole($trip, $user, $validated['role'], $request->user());
+        try {
+            $this->tripService->updateMemberRole(
+                $trip,
+                $user,
+                $validated['role'],
+                $request->user()
+            );
+        } catch (\DomainException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 400);
+        }
 
         return response()->json(['message' => 'Role updated.']);
     }
@@ -84,7 +101,17 @@ class TripUserController extends Controller
     {
         $this->authorize('update', $trip);
 
-        $this->tripService->removeMember($trip, $user, $request->user());
+        try {
+            $this->tripService->removeMember(
+                $trip,
+                $user,
+                $request->user()
+            );
+        } catch (\DomainException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 400);
+        }
 
         return response()->json(['message' => 'Member removed.']);
     }
@@ -98,7 +125,11 @@ class TripUserController extends Controller
     {
         $this->authorize('accept', $trip);
 
-        $this->tripService->acceptInvite($trip, $request->user());
+        try {
+            $this->tripService->acceptInvite($trip, $request->user());
+        } catch (\DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
 
         return response()->json(['message' => 'Invitation accepted.']);
     }
@@ -112,7 +143,11 @@ class TripUserController extends Controller
     {
         $this->authorize('decline', $trip);
 
-        $this->tripService->declineInvite($trip, $request->user());
+        try {
+            $this->tripService->declineInvite($trip, $request->user());
+        } catch (\DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
 
         return response()->json(['message' => 'Invitation declined.']);
     }
@@ -134,7 +169,7 @@ class TripUserController extends Controller
     /**
      * @group Members / Invites
      *
-     * List sent invitations (for owner).
+     * List sent invitations (only for trip owners).
      */
     public function sentInvites(Request $request): JsonResponse
     {

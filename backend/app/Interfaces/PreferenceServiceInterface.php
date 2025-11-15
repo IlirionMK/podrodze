@@ -12,7 +12,6 @@ interface PreferenceServiceInterface
     /**
      * @param User $user
      * @param array<string,int> $preferences
-     * @return array{status: string}
      */
-    public function updatePreferences(User $user, array $preferences): array;
+    public function updatePreferences(User $user, array $preferences): Preference;
 }

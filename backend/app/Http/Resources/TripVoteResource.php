@@ -10,7 +10,12 @@ class TripVoteResource extends JsonResource
 {
     public function toArray($request): array
     {
-        /** @var TripVote $this->resource */
-        return $this->resource->jsonSerialize();
+        /** @var TripVote $vote */
+        $vote = $this->resource;
+
+        return [
+            'avg_score' => $vote->avg_score,
+            'votes'     => $vote->votes,
+        ];
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Resources\PreferenceResource;
 use App\Interfaces\PreferenceServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use DomainException;
 
 class PreferenceController extends Controller
 {
@@ -36,15 +37,24 @@ class PreferenceController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $validated = $request->validate([
             'preferences' => ['required', 'array'],
         ]);
 
-        $result = $this->preferenceService->updatePreferences(
-            $request->user(),
-            $data['preferences']
-        );
+        try {
+            $dto = $this->preferenceService->updatePreferences(
+                $request->user(),
+                $validated['preferences']
+            );
+        } catch (DomainException $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 400);
+        }
 
-        return response()->json($result, 200);
+        return response()->json([
+            'data' => new PreferenceResource($dto),
+            'message' => 'Preferences updated',
+        ]);
     }
 }

@@ -8,17 +8,20 @@ use App\DTO\Itinerary\Itinerary;
 interface ItineraryServiceInterface
 {
     /**
-     * Generate recommended itinerary (cached)
+     * Generate simple one-day recommended itinerary (top places)
+     * based on group preferences and nearby places.
      */
     public function generate(Trip $trip): Itinerary;
 
     /**
-     * Build full itinerary from cached places
-     */
-    public function buildFull(Trip $trip): Itinerary;
-
-    /**
-     * Generate full route (uses sync + prefs + votes)
+     * Generate full multi-day route using synced places, preferences and votes.
      */
     public function generateFullRoute(Trip $trip, int $days, int $radius): Itinerary;
+
+    /**
+     * Aggregate group preferences for a given trip.
+     *
+     * @return array<string, float> e.g. ['museum' => 1.8, 'food' => 2.0]
+     */
+    public function aggregatePreferences(Trip $trip): array;
 }

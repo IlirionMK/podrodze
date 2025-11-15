@@ -44,7 +44,7 @@ class PreferenceService implements PreferenceServiceInterface
      * @param array<string,int> $preferences Example: ['museum' => 2, 'food' => 1]
      * @return array{status: string}
      */
-    public function updatePreferences(User $user, array $preferences): array
+    public function updatePreferences(User $user, array $preferences): Preference
     {
         $slugs = array_keys($preferences);
         $categories = Category::whereIn('slug', $slugs)->pluck('id', 'slug');
@@ -64,6 +64,6 @@ class PreferenceService implements PreferenceServiceInterface
             }
         });
 
-        return ['status' => 'ok'];
+        return $this->getPreferences($user);
     }
 }

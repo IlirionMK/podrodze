@@ -31,14 +31,14 @@ class TripService implements TripInterface
     public function create(array $data, User $owner): Trip
     {
         return Trip::create([
-            'name'         => $data['name'],
-            'start_date'   => $data['start_date'] ?? null,
-            'end_date'     => $data['end_date'] ?? null,
-            'owner_id'     => $owner->id,
+            'name'       => $data['name'],
+            'start_date' => $data['start_date'] ?? null,
+            'end_date'   => $data['end_date'] ?? null,
+            'owner_id'   => $owner->id,
         ]);
     }
 
-    /** Update existing trip. */
+    /** Update an existing trip. */
     public function update(array $data, Trip $trip): Trip
     {
         $trip->update($data);
@@ -80,21 +80,30 @@ class TripService implements TripInterface
             throw new \DomainException('Owner cannot invite themselves.');
         }
 
-        $existing = $trip->members()
+        $pivot = $trip->members()
             ->where('users.id', $user->id)
-            ->first();
+            ->first()?->pivot;
 
-        if ($existing && $existing->pivot->status === 'accepted') {
-            throw new \DomainException('This user is already a member.');
-        }
+        if ($pivot) {
+            if ($pivot->status === 'accepted') {
+                throw new \DomainException('This user is already a member of the trip.');
+            }
 
-        // (re)attach pending invite
-        $trip->members()->syncWithoutDetaching([
-            $user->id => [
+            if ($pivot->status === 'pending') {
+                throw new \DomainException('This user is already invited.');
+            }
+
+            // Resend invite for declined or unknown status
+            $trip->members()->updateExistingPivot($user->id, [
                 'role'   => $role,
                 'status' => 'pending',
-            ],
-        ]);
+            ]);
+        } else {
+            $trip->members()->attach($user->id, [
+                'role'   => $role,
+                'status' => 'pending',
+            ]);
+        }
 
         $trip->load('owner:id,name,email');
 
@@ -116,7 +125,9 @@ class TripService implements TripInterface
             throw new \DomainException('Invitation is not pending.');
         }
 
-        $trip->members()->updateExistingPivot($user->id, ['status' => 'accepted']);
+        $trip->members()->updateExistingPivot($user->id, [
+            'status' => 'accepted',
+        ]);
     }
 
     /** Decline a pending invitation. */
@@ -134,7 +145,9 @@ class TripService implements TripInterface
             throw new \DomainException('Invitation is not pending.');
         }
 
-        $trip->members()->updateExistingPivot($user->id, ['status' => 'declined']);
+        $trip->members()->updateExistingPivot($user->id, [
+            'status' => 'declined',
+        ]);
     }
 
     // -------------------------------
@@ -168,7 +181,29 @@ class TripService implements TripInterface
             throw new AuthorizationException('You cannot update member roles.');
         }
 
-        $trip->members()->updateExistingPivot($user->id, ['role' => $role]);
+        if ($user->id === $trip->owner_id) {
+            throw new \DomainException('Cannot change role of the trip owner.');
+        }
+
+        if ($actor->id === $user->id) {
+            throw new \DomainException('You cannot change your own role.');
+        }
+
+        $pivot = $trip->members()
+            ->where('users.id', $user->id)
+            ->first()?->pivot;
+
+        if (! $pivot) {
+            throw new \DomainException('This user is not a member of the trip.');
+        }
+
+        if ($pivot->status !== 'accepted') {
+            throw new \DomainException('Cannot change role of an inactive member.');
+        }
+
+        $trip->members()->updateExistingPivot($user->id, [
+            'role' => $role,
+        ]);
     }
 
     /** Remove a member from the trip. */
@@ -176,6 +211,26 @@ class TripService implements TripInterface
     {
         if (! $actor->can('update', $trip)) {
             throw new AuthorizationException('You cannot remove members.');
+        }
+
+        if ($user->id === $trip->owner_id) {
+            throw new \DomainException('Cannot remove the trip owner.');
+        }
+
+        if ($actor->id === $user->id) {
+            throw new \DomainException('You cannot remove yourself.');
+        }
+
+        $pivot = $trip->members()
+            ->where('users.id', $user->id)
+            ->first()?->pivot;
+
+        if (! $pivot) {
+            throw new \DomainException('This user is not a member of the trip.');
+        }
+
+        if ($pivot->status !== 'accepted') {
+            throw new \DomainException('Only active members can be removed.');
         }
 
         $trip->members()->detach($user->id);
@@ -198,13 +253,11 @@ class TripService implements TripInterface
     /** List invitations sent by the owner (pending only). */
     public function listSentInvites(User $owner): Collection
     {
-        return $owner->trips()
-            ->with(['members' => function ($q) {
-                $q->wherePivot('status', 'pending');
-            }, 'members:id,name,email'])
+        return Trip::where('owner_id', $owner->id)
+            ->with(['members' => fn($q) => $q->wherePivot('status', 'pending')])
             ->get()
-            ->flatMap(function (Trip $trip) {
-                return $trip->members->map(fn($m) => Invite::fromPivot($trip, $m));
-            });
+            ->flatMap(fn(Trip $trip) =>
+            $trip->members->map(fn($m) => Invite::fromPivot($trip, $m))
+            );
     }
 }

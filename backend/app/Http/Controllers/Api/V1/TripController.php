@@ -11,6 +11,7 @@ use App\Models\Trip;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use DomainException;
 
 class TripController extends Controller
 {
@@ -18,79 +19,60 @@ class TripController extends Controller
 
     public function __construct(protected TripInterface $tripService) {}
 
-    /**
-     * @group Trips
-     * Get all trips of the authenticated user.
-     */
     public function index(Request $request): JsonResponse
     {
         $trips = $this->tripService->list($request->user());
-
-        return response()->json([
-            'data' => TripResource::collection($trips),
-        ]);
+        return TripResource::collection($trips)->response();
     }
 
-    /**
-     * @group Trips
-     * Create a new trip.
-     */
     public function store(StoreTripRequest $request): JsonResponse
     {
         $trip = $this->tripService->create($request->validated(), $request->user());
 
         return response()->json([
             'data' => new TripResource($trip),
-            'message' => 'Trip created successfully.',
+            'message' => 'Trip created successfully',
         ], 201);
     }
 
-    /**
-     * @group Trips
-     * Get details of a specific trip.
-     */
     public function show(Trip $trip): JsonResponse
     {
         $this->authorize('view', $trip);
-        $trip->load(['members', 'owner']);
+
+        $trip->load(['owner', 'members']);
 
         return response()->json([
             'data' => new TripResource($trip),
         ]);
     }
 
-    /**
-     * @group Trips
-     * Update a trip.
-     */
     public function update(UpdateTripRequest $request, Trip $trip): JsonResponse
     {
         $this->authorize('update', $trip);
 
-        $updatedTrip = $this->tripService->update($request->validated(), $trip);
+        try {
+            $updatedTrip = $this->tripService->update($request->validated(), $trip);
+        } catch (DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
 
         return response()->json([
             'data' => new TripResource($updatedTrip),
-            'message' => 'Trip updated successfully.',
+            'message' => 'Trip updated successfully',
         ]);
     }
 
-    /**
-     * @group Trips
-     * Delete a trip.
-     */
     public function destroy(Trip $trip): JsonResponse
     {
         $this->authorize('delete', $trip);
+
         $this->tripService->delete($trip);
 
-        return response()->noContent();
+        return response()->json([
+            'message' => 'Trip deleted successfully'
+        ], 200);
     }
 
-    /**
-     * @group Trips
-     * Update trip start location (latitude, longitude).
-     */
     public function updateStartLocation(Request $request, Trip $trip): JsonResponse
     {
         $this->authorize('update', $trip);
@@ -100,11 +82,15 @@ class TripController extends Controller
             'start_longitude' => ['required', 'numeric', 'between:-180,180'],
         ]);
 
-        $updated = $this->tripService->updateStartLocation($validated, $trip);
+        try {
+            $updated = $this->tripService->updateStartLocation($validated, $trip);
+        } catch (DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
 
         return response()->json([
             'data' => new TripResource($updated),
-            'message' => 'Start location updated.',
+            'message' => 'Start location updated',
         ]);
     }
 }
