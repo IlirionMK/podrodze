@@ -10,7 +10,7 @@ use function Knuckles\Scribe\Config\{removeStrategies, configureStrategy};
 return [
     // The HTML <title> for the generated documentation.
     'title' => 'Podrodze API Documentation',
-    'description' => 'Dokumentacja REST API dla aplikacji planowania podróży.',
+    'description' => 'Dokumentacja REST API dla aplikacji planowania podróży 1.',
 
     // Text to place in the "Introduction" section, right after the `description`. Markdown and HTML are supported.
     'intro_text' => <<<INTRO
@@ -51,7 +51,7 @@ return [
     // - "static" will generate a static HTMl page in the /public/docs folder,
     // - "laravel" will generate the documentation as a Blade view, so you can add routing and authentication.
     // - "external_static" and "external_laravel" do the same as above, but pass the OpenAPI spec as a URL to an external UI template
-    'type' => 'laravel',
+    'type' => 'static',
 
     // See https://scribe.knuckles.wtf/laravel/reference/config#theme for supported options
     'theme' => 'default',
@@ -150,16 +150,15 @@ return [
     // For 'static' docs, the collection will be generated to public/docs/openapi.yaml.
     // For 'laravel' docs, it will be generated to storage/app/scribe/openapi.yaml.
     // Setting `laravel.add_routes` to true (above) will also add a route for the spec.
+
     'openapi' => [
         'enabled' => true,
-
-        'overrides' => [
-            // 'info.version' => '2.0.0',
+        'output' => 'public/docs/openapi.yaml',
+        'routes' => [
+            'yaml' => '/docs/openapi.yaml',
+            'json' => '/docs/openapi.json',
         ],
-
-        // Additional generators to use when generating the OpenAPI spec.
-        // Should extend `Knuckles\Scribe\Writing\OpenApiSpecGenerators\OpenApiGenerator`.
-        'generators' => [],
+        'overrides' => [],
     ],
 
     'groups' => [

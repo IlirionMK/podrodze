@@ -57,10 +57,10 @@ Route::prefix('v1')->group(function () {
         Route::put('/users/me/preferences', [PreferenceController::class, 'update']);
 
         // ---- Itinerary ----
-        Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'index']);
+        //Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'index']);
         Route::get('/trips/{trip}/preferences/aggregate', [ItineraryController::class, 'aggregatePreferences']);
         Route::get('/trips/{trip}/itinerary/generate', [ItineraryController::class, 'generate']);
-        Route::get('/trips/{trip}/itinerary/full', [ItineraryController::class, 'full']);
+        //Route::get('/trips/{trip}/itinerary/full', [ItineraryController::class, 'full']);
         Route::post('/trips/{trip}/itinerary/generate-full', [ItineraryController::class, 'generateFullRoute']);
 
         // ---- Trip Places ----

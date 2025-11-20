@@ -20,11 +20,12 @@ class InviteResource extends JsonResource
             'end_date'   => $invite->end_date,
             'role'       => $invite->role,
             'status'     => $invite->status,
-            'owner'      => [
+
+            'owner' => $invite->owner ? [
                 'id'    => $invite->owner->id,
                 'name'  => $invite->owner->name,
                 'email' => $invite->owner->email,
-            ],
+            ] : null,
         ];
     }
 }

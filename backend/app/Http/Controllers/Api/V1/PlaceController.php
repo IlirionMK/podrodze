@@ -19,8 +19,43 @@ class PlaceController extends Controller
 
     /**
      * @group Places
+     * @authenticated
+     * @operationId findNearbyPlaces
      *
-     * Find nearby places using Google sync + PostGIS distance.
+     * Find nearby places using Google Places API (synchronizes) and PostGIS (distance filter).
+     *
+     * @queryParam lat number required Latitude between -90 and 90. Example: 51.21
+     * @queryParam lon number required Longitude between -180 and 180. Example: 16.16
+     * @queryParam radius integer The search radius in meters (10–50000). Example: 2000
+     *
+     * @response 200 {
+     *   "message": "Nearby places synchronized successfully",
+     *   "summary": {
+     *       "added": 3,
+     *       "updated": 17
+     *   },
+     *   "data": [
+     *     {
+     *       "id": 237,
+     *       "google_place_id": "ChIJvRWwnIUTD0cRy2PMOWG2D3Q",
+     *       "name": "Speakeasy Bar | Legnica",
+     *       "category_slug": "bar",
+     *       "rating": 5,
+     *       "meta": {
+     *         "icon": "...",
+     *         "types": ["bar", "night_club"],
+     *         "address": "Rycerska 2, Legnica"
+     *       },
+     *       "lat": 51.209053,
+     *       "lon": 16.160364,
+     *       "distance_m": 108.4
+     *     }
+     *   ]
+     * }
+     *
+     * @response 400 {
+     *   "error": "Google Places quota exceeded"
+     * }
      */
     public function nearby(Request $request): JsonResponse
     {
@@ -35,12 +70,8 @@ class PlaceController extends Controller
         $radius = (int) ($validated['radius'] ?? 2000);
 
         try {
-            // Sync Google Places → DB (cached)
             $summary = $this->placesSync->fetchAndStore($lat, $lon, $radius);
-
-            // Fetch PostGIS nearby places
             $places = $this->placeService->findNearby($lat, $lon, $radius);
-
         } catch (DomainException $e) {
             return response()->json([
                 'error' => $e->getMessage(),

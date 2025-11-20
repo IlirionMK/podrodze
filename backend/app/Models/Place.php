@@ -13,11 +13,13 @@ class Place extends Model
         'rating',
         'meta',
         'location',
+
     ];
 
     protected $casts = [
         'meta' => 'array',
         'rating' => 'float',
+        'opening_hours' => 'array',
     ];
 
     public function trips()

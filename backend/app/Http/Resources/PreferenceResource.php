@@ -5,16 +5,14 @@ namespace App\Http\Resources;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\DTO\Preference\Preference;
 
+/** @mixin Preference */
 class PreferenceResource extends JsonResource
 {
-    /** @var Preference */
-    public $resource;
-
     public function toArray($request): array
     {
         return [
-            'categories' => $this->resource->categories,
-            'user'       => $this->resource->user,
+            'categories' => array_values($this->resource->categories),
+            'user'       => (object) $this->resource->user,
         ];
     }
 }

@@ -108,7 +108,7 @@ class ItineraryService implements ItineraryServiceInterface
 
         return DB::table('places')
             ->selectRaw(
-                'id, ST_DistanceSphere(location, ST_SetSRID(ST_MakePoint(?, ?), 4326)) as distance_m',
+                'id, ST_DistanceSphere(location::geometry, ST_SetSRID(ST_MakePoint(?, ?), 4326)) as distance_m',
                 [$lon, $lat]
             )
             ->whereIn('id', $placeIds)

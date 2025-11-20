@@ -14,8 +14,11 @@ class TripVoteResource extends JsonResource
         $vote = $this->resource;
 
         return [
-            'avg_score' => $vote->avg_score,
-            'votes'     => $vote->votes,
+            'avg_score' => $vote->avg_score !== null
+                ? (float) $vote->avg_score
+                : null,
+
+            'votes' => (int) $vote->votes,
         ];
     }
 }

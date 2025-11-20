@@ -44,8 +44,10 @@ class PlacesSyncService implements PlacesSyncInterface
                     'name'          => $item['name'],
                     'category_slug' => $item['category_slug'],
                     'rating'        => $item['rating'],
-                    'meta'          => $item['meta'] ?? [],
+                    'meta'          => json_encode($item['meta'] ?? []),
+                    'opening_hours' => json_encode($item['opening_hours'] ?? null),
                     'location'      => DB::raw("ST_GeomFromText('$locationWKT')"),
+                    'updated_at'    => now(),
                 ];
 
                 $existing = Place::where('google_place_id', $item['place_id'])->first();
@@ -55,12 +57,15 @@ class PlacesSyncService implements PlacesSyncInterface
                     $updated++;
                 } else {
                     $payload['google_place_id'] = $item['place_id'];
+                    $payload['created_at'] = now();
+
                     Place::create($payload);
                     $added++;
                 }
             }
 
             DB::commit();
+
         } catch (Throwable $e) {
             DB::rollBack();
 

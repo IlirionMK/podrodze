@@ -1,0 +1,1644 @@
+{
+    "variable": [
+        {
+            "id": "baseUrl",
+            "key": "baseUrl",
+            "type": "string",
+            "name": "string",
+            "value": "http:\/\/localhost:8081"
+        }
+    ],
+    "info": {
+        "name": "Podrodze API Documentation",
+        "_postman_id": "bd73830a-3783-4081-b5e7-11f93d69c431",
+        "description": "Dokumentacja REST API dla aplikacji planowania podr\u00f3\u017cy 1.",
+        "schema": "https:\/\/schema.getpostman.com\/json\/collection\/v2.1.0\/collection.json"
+    },
+    "item": [
+        {
+            "name": "Endpoints",
+            "description": "",
+            "item": [
+                {
+                    "name": "Handle an incoming registration request (API Sanctum).",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/register",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/register"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"b\",\"email\":\"zbailey@example.net\",\"password\":\"architecto\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Handle an incoming authentication request (API, Sanctum).",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/login",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/login"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"gbailey@example.net\",\"password\":\"|]|{+-\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Handle an incoming password reset link request.",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/forgot-password",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/forgot-password"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"gbailey@example.net\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Handle an incoming new password request.",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/reset-password",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/reset-password"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"token\":\"architecto\",\"email\":\"zbailey@example.net\",\"password\":\"architecto\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET api\/v1\/user",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/user",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/user"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [
+                                {
+                                    "key": "cache-control",
+                                    "value": "no-cache, private"
+                                },
+                                {
+                                    "key": "content-type",
+                                    "value": "application\/json"
+                                },
+                                {
+                                    "key": "access-control-allow-origin",
+                                    "value": "http:\/\/localhost:5173"
+                                },
+                                {
+                                    "key": "access-control-allow-credentials",
+                                    "value": "true"
+                                }
+                            ],
+                            "code": 401,
+                            "body": "{\"message\":\"Unauthenticated.\"}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "Destroy an authenticated session (revoke current Sanctum token).",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/logout",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/logout"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Itinerary",
+            "description": "",
+            "item": [
+                {
+                    "name": "GET api\/v1\/trips\/{trip}\/preferences\/aggregate",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/preferences\/aggregate",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/preferences\/aggregate",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "4",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": {\n    \"museum\": 1.5,\n    \"food\": 2.0,\n    \"nature\": 0.7,\n    \"nightlife\": 1.3\n  },\n  \"message\": \"Aggregated preferences calculated.\"\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "GET api\/v1\/trips\/{trip}\/itinerary\/generate",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/itinerary\/generate",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/itinerary\/generate",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "12",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": {\n    \"trip_id\": 12,\n    \"day_count\": 1,\n    \"schedule\": [\n      {\n        \"day\": 1,\n        \"places\": [\n          {\n            \"id\": 44,\n            \"name\": \"Whiskey in the Jar\",\n            \"category_slug\": \"bar\",\n            \"score\": 4.5,\n            \"distance_m\": 1200\n          }\n        ]\n      }\n    ],\n    \"cache_info\": {\n      \"cached\": false,\n      \"expires_in\": 7200\n    }\n  }\n}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{\n  \"error\": \"Unable to generate itinerary\"\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "POST api\/v1\/trips\/{trip}\/itinerary\/generate-full",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/itinerary\/generate-full",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/itinerary\/generate-full",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "12",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"days\":3,\"radius\":2000}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": {\n    \"trip_id\": 12,\n    \"day_count\": 3,\n    \"schedule\": [\n      {\n        \"day\": 1,\n        \"places\": [\"...\"]\n      }\n    ],\n    \"cache_info\": {\n      \"cached\": false,\n      \"expires_in\": 7200\n    }\n  }\n}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{\n  \"error\": \"Unable to generate itinerary\"\n}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Members",
+            "description": "",
+            "item": [
+                {
+                    "name": "GET api\/v1\/trips\/{trip}\/members",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/members",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/members",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "12",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": [...]\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "PUT api\/v1\/trips\/{trip}\/members\/{user}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/members\/:user",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/members\/:user",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "user",
+                                    "key": "user",
+                                    "value": "architecto",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "7",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "user_id",
+                                    "key": "user_id",
+                                    "value": "44",
+                                    "description": ""
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"role\":\"architecto\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Role updated.\" }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{ \"error\": \"Cannot update owner role\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "PATCH api\/v1\/trips\/{trip}\/members\/{user}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/members\/:user",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/members\/:user",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "user",
+                                    "key": "user",
+                                    "value": "architecto",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "7",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "user_id",
+                                    "key": "user_id",
+                                    "value": "44",
+                                    "description": ""
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"role\":\"architecto\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Role updated.\" }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{ \"error\": \"Cannot update owner role\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "DELETE api\/v1\/trips\/{trip}\/members\/{user}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/members\/:user",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/members\/:user",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "user",
+                                    "key": "user",
+                                    "value": "architecto",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "10",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "user_id",
+                                    "key": "user_id",
+                                    "value": "18",
+                                    "description": ""
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Member removed.\" }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{ \"error\": \"You cannot remove the owner\" }",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Members_Invites",
+            "description": "",
+            "item": [
+                {
+                    "name": "POST api\/v1\/trips\/{trip}\/members\/invite",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/members\/invite",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/members\/invite",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "5",
+                                    "description": ""
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"gbailey@example.net\",\"role\":\"architecto\",\"message\":\"architecto\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Invitation sent successfully.\", \"data\": {...} }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{ \"error\": \"User is already a member\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "POST api\/v1\/trips\/{trip}\/accept",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/accept",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/accept",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "5",
+                                    "description": ""
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Invitation accepted.\" }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{ \"error\": \"Invitation already processed\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "POST api\/v1\/trips\/{trip}\/decline",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/decline",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/decline",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "9",
+                                    "description": ""
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Invitation declined.\" }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{ \"error\": \"Invitation already processed\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "GET api\/v1\/users\/me\/invites",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/users\/me\/invites",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/users\/me\/invites"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": [...]\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "GET api\/v1\/users\/me\/invites\/sent",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/users\/me\/invites\/sent",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/users\/me\/invites\/sent"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": [...]\n}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Places",
+            "description": "",
+            "item": [
+                {
+                    "name": "GET api\/v1\/places\/nearby",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/places\/nearby",
+                            "query": [
+                                {
+                                    "key": "lat",
+                                    "value": "51.21",
+                                    "description": "Latitude between -90 and 90.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "lon",
+                                    "value": "16.16",
+                                    "description": "Longitude between -180 and 180.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "radius",
+                                    "value": "2000",
+                                    "description": "The search radius in meters (10\u201350000).",
+                                    "disabled": false
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/v1\/places\/nearby?lat=51.21&lon=16.16&radius=2000"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"lat\":-89,\"lon\":-179,\"radius\":7}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"message\": \"Nearby places synchronized successfully\",\n  \"summary\": {\n      \"added\": 3,\n      \"updated\": 17\n  },\n  \"data\": [\n    {\n      \"id\": 237,\n      \"google_place_id\": \"ChIJvRWwnIUTD0cRy2PMOWG2D3Q\",\n      \"name\": \"Speakeasy Bar | Legnica\",\n      \"category_slug\": \"bar\",\n      \"rating\": 5,\n      \"meta\": {\n        \"icon\": \"...\",\n        \"types\": [\"bar\", \"night_club\"],\n        \"address\": \"Rycerska 2, Legnica\"\n      },\n      \"lat\": 51.209053,\n      \"lon\": 16.160364,\n      \"distance_m\": 108.4\n    }\n  ]\n}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{\n  \"error\": \"Google Places quota exceeded\"\n}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Preferences",
+            "description": "",
+            "item": [
+                {
+                    "name": "GET api\/v1\/preferences",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/preferences",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/preferences"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": {\n    \"categories\": [\n      { \"slug\": \"museum\", \"name\": \"Muzeum\" },\n      { \"slug\": \"food\", \"name\": \"Jedzenie\" }\n    ],\n    \"user\": {\n      \"museum\": 2,\n      \"food\": 1,\n      \"nature\": 0,\n      \"nightlife\": 2\n    }\n  }\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "PUT api\/v1\/users\/me\/preferences",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/users\/me\/preferences",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/users\/me\/preferences"
+                        },
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"preferences\":{\"museum\":2,\"food\":1,\"nature\":0,\"nightlife\":1}}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"message\": \"Preferences updated\",\n  \"data\": {\n    \"categories\": [\n      { \"slug\": \"museum\", \"name\": \"Muzeum\" },\n      { \"slug\": \"food\", \"name\": \"Jedzenie\" }\n    ],\n    \"user\": {\n      \"museum\": 2,\n      \"food\": 1,\n      \"nature\": 0,\n      \"nightlife\": 1\n    }\n  }\n}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{\n  \"error\": \"Invalid preferences payload\"\n}",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "TripPlaces",
+            "description": "",
+            "item": [
+                {
+                    "name": "GET api\/v1\/trips\/{trip}\/places",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/places",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/places",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "12",
+                                    "description": "ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": [...]\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "POST api\/v1\/trips\/{trip}\/places",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/places",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/places",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "12",
+                                    "description": "ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"place_id\":237,\"status\":\"proposed\",\"is_fixed\":false,\"day\":16,\"order_index\":16,\"note\":\"architecto\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 201,
+                            "body": "{\n  \"message\": \"Place added to trip\",\n  \"data\": {...}\n}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{ \"message\": \"Place not found\" }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 409,
+                            "body": "{ \"message\": \"Place already attached or invalid state\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "PATCH api\/v1\/trips\/{trip}\/places\/{place}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/places\/:place",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/places\/:place",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "place",
+                                    "key": "place",
+                                    "value": "1",
+                                    "description": "The place."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "12",
+                                    "description": "ID of the trip."
+                                },
+                                {
+                                    "id": "place_id",
+                                    "key": "place_id",
+                                    "value": "237",
+                                    "description": "ID of the place."
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"status\":\"planned\",\"is_fixed\":false,\"day\":16,\"order_index\":39,\"note\":\"g\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Trip place updated\", \"data\": {...} }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{ \"message\": \"Place not found\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "DELETE api\/v1\/trips\/{trip}\/places\/{place}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/places\/:place",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/places\/:place",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "place",
+                                    "key": "place",
+                                    "value": "1",
+                                    "description": "The place."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "16",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "place_id",
+                                    "key": "place_id",
+                                    "value": "16",
+                                    "description": ""
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Place removed from trip\" }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{ \"message\": \"Place not found\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "POST api\/v1\/trips\/{trip}\/places\/{place}\/vote",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/places\/:place\/vote",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/places\/:place\/vote",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "place",
+                                    "key": "place",
+                                    "value": "1",
+                                    "description": "The place."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "12",
+                                    "description": ""
+                                },
+                                {
+                                    "id": "place_id",
+                                    "key": "place_id",
+                                    "value": "237",
+                                    "description": ""
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"score\":4}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Vote saved\", \"data\": {...} }",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{ \"message\": \"Invalid vote\" }",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Trips",
+            "description": "",
+            "item": [
+                {
+                    "name": "GET api\/v1\/trips",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": [...]\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "POST api\/v1\/trips",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"\\\"Weekend in Wroc\u0142aw\\\"\",\"start_date\":\"\\\"2025-11-29\\\"\",\"end_date\":\"\\\"2025-12-02\\\"\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 201,
+                            "body": "{\n  \"message\": \"Trip created successfully\",\n  \"data\": {...}\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "GET api\/v1\/trips\/{trip}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "5",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"data\": {...}\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "PUT api\/v1\/trips\/{trip}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "5",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"\\\"Updated trip name\\\"\",\"start_date\":\"\\\"2025-11-30\\\"\",\"end_date\":\"\\\"2025-12-21\\\"\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"message\": \"Trip updated successfully\",\n  \"data\": {...}\n}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{\n  \"error\": \"Invalid update payload\"\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "PATCH api\/v1\/trips\/{trip}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "5",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"\\\"Updated trip name\\\"\",\"start_date\":\"\\\"2025-11-30\\\"\",\"end_date\":\"\\\"2025-12-21\\\"\"}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"message\": \"Trip updated successfully\",\n  \"data\": {...}\n}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{\n  \"error\": \"Invalid update payload\"\n}",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "DELETE api\/v1\/trips\/{trip}",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "5",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{ \"message\": \"Trip deleted successfully\" }",
+                            "name": ""
+                        }
+                    ]
+                },
+                {
+                    "name": "PATCH api\/v1\/trips\/{trip}\/start-location",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/v1\/trips\/:trip\/start-location",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/v1\/trips\/:trip\/start-location",
+                            "variable": [
+                                {
+                                    "id": "trip",
+                                    "key": "trip",
+                                    "value": "1",
+                                    "description": "The trip."
+                                },
+                                {
+                                    "id": "trip_id",
+                                    "key": "trip_id",
+                                    "value": "5",
+                                    "description": "The ID of the trip."
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"start_latitude\":51.21,\"start_longitude\":16.16}"
+                        },
+                        "description": ""
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\n  \"message\": \"Start location updated\",\n  \"data\": {...}\n}",
+                            "name": ""
+                        },
+                        {
+                            "header": [],
+                            "code": 400,
+                            "body": "{ \"error\": \"Invalid coordinates\" }",
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "Authorization",
+                "type": "string"
+            }
+        ]
+    }
+}
