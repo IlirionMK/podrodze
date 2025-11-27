@@ -1,4 +1,4 @@
-FROM node:25-alpine
+FROM node:25-slim
 
 WORKDIR /usr/src/frontend
 
