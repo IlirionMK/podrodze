@@ -2,10 +2,9 @@ FROM node:25-slim
 
 WORKDIR /usr/src/frontend
 
-COPY frontend/package*.json ./
+COPY package*.json ./
+RUN npm install
 
-RUN npm ci || npm install
-
-COPY frontend .
+COPY . .
 
 CMD ["npm", "run", "dev", "--", "--host"]

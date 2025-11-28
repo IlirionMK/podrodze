@@ -68,19 +68,15 @@ services:
 
   node:
     build:
-      context: .
-      dockerfile: docker/node/Dockerfile
-    container_name: travel_app-node
+      context: ./frontend
+      dockerfile: ../docker/node/Dockerfile
     working_dir: /usr/src/frontend
-    command: sh -lc "npm run dev -- --host"
+    command: npm run dev -- --host
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/usr/src/frontend
-      - node_modules:/usr/src/frontend/node_modules
-    depends_on:
-      app:
-        condition: service_started
+      - /usr/src/frontend/node_modules
     restart: unless-stopped
 
 volumes:
