@@ -1,6 +1,18 @@
 :8081 {
     root * /var/www/backend/public
     encode gzip
+
+    handle_path /api/* {
+        php_fastcgi app:9000
+    }
+
     php_fastcgi app:9000
+
+    # SPA fallback
+    try_files {path} /index.html
+
     file_server
 }
+
+
+

@@ -29,6 +29,10 @@ const router = createRouter({
             children: [
                 { path: 'home', name: 'home', component: HomePage },
             ]
+        },
+        {
+            path: '/app/profile',
+            component: () => import('@/pages/app/Profile.vue')
         }
     ]
 })
