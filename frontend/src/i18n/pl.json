@@ -1,0 +1,29 @@
+{
+  "app": {
+    "name": "PoDrodze",
+    "guest": {
+      "title": "PoDrodze — Gość"
+    }
+  },
+
+  "nav": {
+    "dashboard": "Dashboard",
+    "trips": "Wycieczki",
+    "logout": "Wyloguj"
+  },
+
+  "auth": {
+    "email": "Email",
+    "password": "Hasło",
+
+    "login": {
+      "title": "Logowanie",
+      "submit": "Zaloguj się"
+    },
+
+    "register": {
+      "title": "Rejestracja",
+      "submit": "Załóż konto"
+    }
+  }
+}

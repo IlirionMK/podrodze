@@ -1,0 +1,29 @@
+{
+  "app": {
+    "name": "PoDrodze",
+    "guest": {
+      "title": "PoDrodze — Guest"
+    }
+  },
+
+  "nav": {
+    "dashboard": "Dashboard",
+    "trips": "Trips",
+    "logout": "Logout"
+  },
+
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+
+    "login": {
+      "title": "Login",
+      "submit": "Sign in"
+    },
+
+    "register": {
+      "title": "Register",
+      "submit": "Sign up"
+    }
+  }
+}
