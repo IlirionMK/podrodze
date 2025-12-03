@@ -1,87 +1,173 @@
 <script setup>
-import { ref } from 'vue'
-import { useAuth } from '@/composables/useAuth'
+import { ref } from "vue"
+import { useRouter } from "vue-router"
+import { useAuth } from "@/composables/useAuth"
 
-const { setToken } = useAuth()
+import BaseInput from "@/components/forms/BaseInput.vue"
 
-console.log('API_URL:', import.meta.env.VITE_API_URL)
+const router = useRouter()
+const { setToken, setUser } = useAuth()
 
-const email = ref('')
-const password = ref('')
-const errorMessage = ref('')
+const email = ref("")
+const password = ref("")
+const errorMessage = ref(null)
+const loading = ref(false)
 
-const t = {
-  title: "auth.login.title",
-  email: "auth.email",
-  password: "auth.password",
-  button: "auth.login.submit",
+// -------------------------------------
+// Validation
+// -------------------------------------
+function validateForm() {
+  if (!email.value) {
+    errorMessage.value = "auth.errors.email_required"
+    return false
+  }
+
+  if (!email.value.includes("@")) {
+    errorMessage.value = "auth.errors.invalid_email"
+    return false
+  }
+
+  if (!password.value) {
+    errorMessage.value = "auth.errors.password_required"
+    return false
+  }
+
+  return true
 }
 
+// -------------------------------------
+// Regular Login
+// -------------------------------------
 async function onSubmit() {
-  errorMessage.value = ''
+  errorMessage.value = null
+
+  if (!validateForm()) return
+
+  loading.value = true
 
   try {
-    const res = await fetch(import.meta.env.VITE_API_URL + '/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch(import.meta.env.VITE_API_URL + "/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: email.value,
-        password: password.value,
+        password: password.value
       })
     })
 
     const data = await res.json()
 
     if (!res.ok) {
-      errorMessage.value = data.message || 'Login failed'
+      errorMessage.value = data.message || "auth.errors.login_failed"
+      loading.value = false
       return
     }
 
-    console.log('LOGIN SUCCESS:', data)
+    // Save token and fake user
     setToken(data.token)
-    alert('✔ Login OK')
-    window.location.href = '/app/profile'
+    setUser({ name: email.value.split("@")[0] })
+
+    loading.value = false
+
+    // Redirect to intended route
+    const intended = localStorage.getItem("intended")
+    if (intended) {
+      localStorage.removeItem("intended")
+      return router.push(intended)
+    }
+
+    router.push({ name: "home" })
 
   } catch (e) {
     console.error(e)
-    errorMessage.value = 'Network error'
+    errorMessage.value = "auth.errors.network"
+  } finally {
+    loading.value = false
   }
+}
+
+// -------------------------------------
+// Social Login Stubs
+// -------------------------------------
+function loginGoogleStub() {
+  loading.value = true
+  setTimeout(() => {
+    setToken("google_stub_token_123")
+    setUser({ name: "GoogleUser" })
+    loading.value = false
+    router.push({ name: "home" })
+  }, 500)
+}
+
+function loginFacebookStub() {
+  loading.value = true
+  setTimeout(() => {
+    setToken("facebook_stub_token_123")
+    setUser({ name: "FacebookUser" })
+    loading.value = false
+    router.push({ name: "home" })
+  }, 500)
 }
 </script>
 
 <template>
   <div class="max-w-md w-full bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-4">{{ t.title }}</h1>
+
+    <h1 class="text-2xl font-bold mb-4">
+      {{ $t("auth.login.title") }}
+    </h1>
 
     <form class="space-y-4" @submit.prevent="onSubmit">
-      <div>
-        <label class="block text-sm mb-1">{{ t.email }}</label>
-        <input
-            v-model="email"
-            type="email"
-            class="w-full border rounded px-3 py-2"
-        />
-      </div>
 
-      <div>
-        <label class="block text-sm mb-1">{{ t.password }}</label>
-        <input
-            v-model="password"
-            type="password"
-            class="w-full border rounded px-3 py-2"
-        />
-      </div>
+      <BaseInput
+          v-model="email"
+          :label="$t('auth.email')"
+          type="email"
+          :error="errorMessage && errorMessage.includes('email') ? $t(errorMessage) : null"
+      />
 
-      <p v-if="errorMessage" class="text-red-600 text-sm">
-        {{ errorMessage }}
+      <BaseInput
+          v-model="password"
+          :label="$t('auth.password')"
+          type="password"
+          :error="errorMessage && errorMessage.includes('password') ? $t(errorMessage) : null"
+      />
+
+      <!-- GLOBAL ERROR MESSAGE -->
+      <p v-if="errorMessage && !errorMessage.includes('email') && !errorMessage.includes('password')"
+         class="text-red-600 text-sm">
+        {{ $t(errorMessage) }}
       </p>
 
-      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">
-        {{ t.button }}
+      <button
+          type="submit"
+          :disabled="loading"
+          class="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
+      >
+        {{ loading ? $t("auth.loading") : $t("auth.login.submit") }}
       </button>
     </form>
+
+    <!-- Social Login Buttons -->
+    <div class="mt-6 flex flex-col gap-3">
+
+      <button
+          @click="loginGoogleStub"
+          :disabled="loading"
+          class="w-full bg-red-600 text-white py-2 rounded disabled:opacity-50"
+      >
+        {{ $t("auth.login.google") }}
+      </button>
+
+      <button
+          @click="loginFacebookStub"
+          :disabled="loading"
+          class="w-full bg-blue-700 text-white py-2 rounded disabled:opacity-50"
+      >
+        {{ $t("auth.login.facebook") }}
+      </button>
+
+    </div>
+
   </div>
 </template>
-
-
-

@@ -2,28 +2,63 @@
   "app": {
     "name": "PoDrodze",
     "guest": {
-      "title": "PoDrodze — Gość"
+      "title": "PoDrodze — Guest"
     }
   },
 
   "nav": {
     "dashboard": "Dashboard",
-    "trips": "Wycieczki",
-    "logout": "Wyloguj"
+    "trips": "Trips",
+    "logout": "Logout"
+  },
+
+  "header": {
+    "hello": "Hello",
+    "profile": "Profile"
   },
 
   "auth": {
     "email": "Email",
-    "password": "Hasło",
+    "password": "Password",
+    "password_confirm": "Confirm password",
+
+    "loading": "Please wait...",
 
     "login": {
-      "title": "Logowanie",
-      "submit": "Zaloguj się"
+      "title": "Login",
+      "submit": "Sign in",
+      "google": "Sign in with Google",
+      "facebook": "Sign in with Facebook"
     },
 
     "register": {
-      "title": "Rejestracja",
-      "submit": "Załóż konto"
+      "title": "Register",
+      "submit": "Sign up",
+      "google": "Register with Google",
+      "facebook": "Register with Facebook"
+    },
+
+    "logout": "Logout",
+
+    "errors": {
+      "email_required": "Email is required",
+      "invalid_email": "Invalid email format",
+      "password_required": "Password is required",
+      "password_too_short": "Password must be at least 6 characters",
+      "password_mismatch": "Passwords do not match",
+      "login_failed": "Login failed. Incorrect email or password.",
+      "network": "Network error. Please try again later."
     }
+  },
+
+  "hero": {
+    "title": "Plan your trip easily",
+    "subtitle": "Fast and easy way to organize a journey with friends",
+    "cta": "Get started"
+  },
+
+  "home": {
+    "welcome": "Welcome back!",
+    "intro": "This is your home dashboard inside the app."
   }
 }
