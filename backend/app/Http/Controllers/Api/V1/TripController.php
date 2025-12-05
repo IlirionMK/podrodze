@@ -35,7 +35,6 @@ class TripController extends Controller
     public function index(Request $request): JsonResponse
     {
         $trips = $this->tripService->list($request->user());
-
         return TripResource::collection($trips)->response();
     }
 
@@ -47,8 +46,8 @@ class TripController extends Controller
      * Create a new trip.
      *
      * @bodyParam name string required Trip name. Example: "Weekend in Wrocław"
-     * @bodyParam start_date string nullable Trip start date. Example: "2025-11-29"
-     * @bodyParam end_date string nullable Trip end date. Example: "2025-12-02"
+     * @bodyParam start_date string nullable Example: "2025-11-29"
+     * @bodyParam end_date string nullable Example: "2025-12-02"
      *
      * @response 201 {
      *   "message": "Trip created successfully",
@@ -72,20 +71,20 @@ class TripController extends Controller
      *
      * Get a single trip by ID.
      *
-     * @urlParam trip_id integer required The ID of the trip. Example: 5
+     * @urlParam trip integer required The ID of the trip. Example: 10
      *
      * @response 200 {
      *   "data": {...}
      * }
      */
-    public function show(Trip $trip_id): JsonResponse
+    public function show(Trip $trip): JsonResponse
     {
-        $this->authorize('view', $trip_id);
+        $this->authorize('view', $trip);
 
-        $trip_id->load(['owner', 'members']);
+        $trip->load(['owner', 'members']);
 
         return response()->json([
-            'data' => (new TripResource($trip_id))->resolve(),
+            'data' => (new TripResource($trip))->resolve(),
         ]);
     }
 
@@ -96,9 +95,9 @@ class TripController extends Controller
      *
      * Update an existing trip.
      *
-     * @urlParam trip_id integer required The ID of the trip. Example: 5
+     * @urlParam trip integer required The ID of the trip. Example: 10
      *
-     * @bodyParam name string Trip name. Example: "Updated trip name"
+     * @bodyParam name string Example: "Updated trip name"
      * @bodyParam start_date string nullable Example: "2025-11-30"
      * @bodyParam end_date string nullable Example: "2025-12-21"
      *
@@ -106,17 +105,13 @@ class TripController extends Controller
      *   "message": "Trip updated successfully",
      *   "data": {...}
      * }
-     *
-     * @response 400 {
-     *   "error": "Invalid update payload"
-     * }
      */
-    public function update(UpdateTripRequest $request, Trip $trip_id): JsonResponse
+    public function update(UpdateTripRequest $request, Trip $trip): JsonResponse
     {
-        $this->authorize('update', $trip_id);
+        $this->authorize('update', $trip);
 
         try {
-            $updated = $this->tripService->update($request->validated(), $trip_id);
+            $updated = $this->tripService->update($request->validated(), $trip);
         } catch (DomainException $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
@@ -134,15 +129,15 @@ class TripController extends Controller
      *
      * Delete a trip.
      *
-     * @urlParam trip_id integer required The ID of the trip. Example: 5
+     * @urlParam trip integer required The ID of the trip. Example: 10
      *
      * @response 200 { "message": "Trip deleted successfully" }
      */
-    public function destroy(Trip $trip_id): JsonResponse
+    public function destroy(Trip $trip): JsonResponse
     {
-        $this->authorize('delete', $trip_id);
+        $this->authorize('delete', $trip);
 
-        $this->tripService->delete($trip_id);
+        $this->tripService->delete($trip);
 
         return response()->json([
             'message' => 'Trip deleted successfully'
@@ -156,21 +151,19 @@ class TripController extends Controller
      *
      * Update the starting location of the trip.
      *
-     * @urlParam trip_id integer required The ID of the trip. Example: 5
+     * @urlParam trip integer required Example: 10
      *
-     * @bodyParam start_latitude number required Latitude. Example: 51.21
-     * @bodyParam start_longitude number required Longitude. Example: 16.16
+     * @bodyParam start_latitude number required Example: 51.21
+     * @bodyParam start_longitude number required Example: 16.16
      *
      * @response 200 {
      *   "message": "Start location updated",
      *   "data": {...}
      * }
-     *
-     * @response 400 { "error": "Invalid coordinates" }
      */
-    public function updateStartLocation(Request $request, Trip $trip_id): JsonResponse
+    public function updateStartLocation(Request $request, Trip $trip): JsonResponse
     {
-        $this->authorize('update', $trip_id);
+        $this->authorize('update', $trip);
 
         $validated = $request->validate([
             'start_latitude'  => ['required', 'numeric', 'between:-90,90'],
@@ -178,7 +171,7 @@ class TripController extends Controller
         ]);
 
         try {
-            $updated = $this->tripService->updateStartLocation($validated, $trip_id);
+            $updated = $this->tripService->updateStartLocation($validated, $trip);
         } catch (DomainException $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }

@@ -2,17 +2,13 @@
     root * /var/www/backend/public
     encode gzip
 
-    handle_path /api/* {
-        php_fastcgi app:9000
+    @api path /api/*
+    handle @api {
+        reverse_proxy app:9000
     }
 
+    try_files {path} /index.php
     php_fastcgi app:9000
-
-    # SPA fallback
-    try_files {path} /index.html
 
     file_server
 }
-
-
-

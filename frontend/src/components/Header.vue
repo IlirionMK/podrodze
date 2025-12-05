@@ -1,6 +1,6 @@
 <script setup>
 import { useAuth } from "@/composables/useAuth"
-import { computed, ref, onMounted, onUnmounted } from "vue"
+import { ref, onMounted, onUnmounted } from "vue"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 
@@ -83,7 +83,6 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
               </span>
             </button>
 
-            <!-- Dropdown -->
             <transition
                 enter-active-class="transition-opacity duration-150"
                 enter-from-class="opacity-0"
@@ -97,11 +96,19 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
                   class="absolute right-0 mt-2 w-48 bg-white border border-gray-200
                        rounded-lg shadow-xl py-2 z-50"
               >
+
                 <router-link
                     to="/app/profile"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
                 >
                   {{ t("header.profile") }}
+                </router-link>
+
+                <router-link
+                    to="/app/trips"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                >
+                  Trips
                 </router-link>
 
                 <button
@@ -110,11 +117,13 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
                 >
                   {{ t("auth.logout") }}
                 </button>
+
               </div>
             </transition>
 
           </div>
         </template>
+
       </div>
     </div>
   </header>

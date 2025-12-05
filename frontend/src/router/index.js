@@ -13,9 +13,8 @@ import AuthRegisterPage from "../pages/auth/Register.vue"
 const router = createRouter({
     history: createWebHistory(),
     routes: [
-        // -------------------------
-        // GUEST
-        // -------------------------
+
+        // Guest routes
         {
             path: "/",
             component: GuestLayout,
@@ -27,9 +26,7 @@ const router = createRouter({
             ]
         },
 
-        // -------------------------
-        // AUTH USERS
-        // -------------------------
+        // Authenticated user routes
         {
             path: "/app",
             component: UserLayout,
@@ -37,6 +34,25 @@ const router = createRouter({
             children: [
                 { path: "", redirect: { name: "app.home" } },
                 { path: "home", name: "app.home", component: HomePage },
+
+                // Trips module
+                {
+                    path: "trips",
+                    name: "app.trips",
+                    component: () => import("../pages/app/trips/TripsList.vue"),
+                },
+                {
+                    path: "trips/create",
+                    name: "app.trips.create",
+                    component: () => import("../pages/app/trips/TripCreate.vue"),
+                },
+                {
+                    path: "trips/:id",
+                    name: "app.trips.show",
+                    component: () => import("../pages/app/trips/TripDetail.vue"),
+                    props: true,
+                },
+
                 {
                     path: "profile",
                     name: "app.profile",
@@ -45,9 +61,7 @@ const router = createRouter({
             ]
         },
 
-        // -------------------------
-        // ADMIN
-        // -------------------------
+        // Admin routes
         {
             path: "/admin",
             component: AdminLayout,
@@ -61,9 +75,7 @@ const router = createRouter({
             ]
         },
 
-        // -------------------------
-        // ERRORS
-        // -------------------------
+        // Error pages
         {
             path: "/403",
             name: "error.403",
@@ -77,29 +89,26 @@ const router = createRouter({
     ]
 })
 
-
-// -------------------------------------
-// GLOBAL GUARD
-// -------------------------------------
+// Global route guard
 router.beforeEach((to, from, next) => {
     const token = localStorage.getItem("token")
     const role = localStorage.getItem("role")
     const isAuthenticated = !!token
     const isAdmin = role === "admin"
 
-    // Guest-only routes
+    // Guest restrictions
     if (to.meta.guest && isAuthenticated) {
         if (isAdmin) return next({ name: "admin.dashboard" })
         return next({ name: "app.home" })
     }
 
-    // Auth-only routes
+    // Auth protection
     if (to.meta.auth && !isAuthenticated) {
         localStorage.setItem("intended", to.fullPath)
         return next({ name: "auth.login" })
     }
 
-    // Admin-only routes
+    // Admin protection
     if (to.meta.admin) {
         if (!isAuthenticated) return next({ name: "auth.login" })
         if (!isAdmin) return next({ name: "error.403" })
