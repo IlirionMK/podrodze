@@ -5,7 +5,7 @@ import en from "./en.json"
 
 const savedLang = localStorage.getItem("lang") || "pl"
 
-export const i18n = createI18n({
+export default createI18n({
     legacy: false,
     globalInjection: true,
     locale: savedLang,

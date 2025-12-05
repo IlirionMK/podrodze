@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed } from "vue"
 
-// Props
 const props = defineProps({
   modelValue: {
     type: [String, Number],
@@ -22,13 +21,19 @@ const props = defineProps({
   placeholder: {
     type: String,
     default: ""
+  },
+  name: {
+    type: String,
+    default: ""
+  },
+  autocomplete: {
+    type: String,
+    default: "off"
   }
 })
 
-// Emits
 const emit = defineEmits(["update:modelValue"])
 
-// Password visibility toggle
 const showPassword = ref(false)
 
 const inputType = computed(() => {
@@ -41,45 +46,46 @@ function togglePassword() {
 }
 </script>
 
-
 <template>
   <div class="flex flex-col gap-1">
 
     <!-- LABEL -->
     <label
         v-if="label"
-        class="text-sm font-medium text-gray-700"
+        class="text-sm font-medium"
+        :class="error ? 'text-red-300' : 'text-white/90'"
     >
       {{ label }}
     </label>
 
-    <!-- INPUT WRAPPER -->
-    <div
-        class="relative"
-    >
+    <!-- INPUT -->
+    <div class="relative">
       <input
           :type="inputType"
           :value="modelValue"
           :placeholder="placeholder"
+          :autocomplete="autocomplete"
           @input="emit('update:modelValue', $event.target.value)"
-          class="w-full border rounded px-3 py-2 pr-10 transition
-               focus:ring-2 focus:ring-blue-300 focus:border-blue-500
-               placeholder-gray-400
-               border-gray-300
-               text-gray-900
-               disabled:bg-gray-100 disabled:text-gray-500"
-          :class="{ 'border-red-500': error }"
-          aria-invalid="error ? 'true' : 'false'"
+
+          class="w-full rounded-lg px-3 py-2 pr-10 transition border
+               bg-white/10 backdrop-blur-xl
+               text-white placeholder-white/40
+               border-white/30
+               focus:ring-2 focus:ring-blue-300 focus:border-blue-400
+               disabled:opacity-70"
+
+          :class="{ 'border-red-400': error }"
+          :aria-invalid="!!error"
       />
 
-      <!-- PASSWORD TOGGLE BUTTON -->
+      <!-- PASSWORD TOGGLE -->
       <button
           v-if="type === 'password'"
           type="button"
           @click="togglePassword"
-          class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          class="absolute right-3 top-1/2 -translate-y-1/2
+               text-white/60 hover:text-white"
       >
-        <!-- Eye icon -->
         <svg
             v-if="!showPassword"
             xmlns="http://www.w3.org/2000/svg"
@@ -93,7 +99,6 @@ function togglePassword() {
           <circle cx="12" cy="12" r="3" stroke-width="1.5" />
         </svg>
 
-        <!-- Eye off icon -->
         <svg
             v-else
             xmlns="http://www.w3.org/2000/svg"
@@ -108,8 +113,8 @@ function togglePassword() {
       </button>
     </div>
 
-    <!-- ERROR MESSAGE -->
-    <p v-if="error" class="text-sm text-red-600">
+    <!-- ERROR -->
+    <p v-if="error" class="text-sm text-red-300">
       {{ error }}
     </p>
 

@@ -7,18 +7,16 @@ import { useI18n } from "vue-i18n"
 import LogoIcon from "@/components/icons/LogoIcon.vue"
 import LanguageSwitcher from "@/components/LanguageSwitcher.vue"
 
-const { token, user, clearAuth } = useAuth()
-const { t } = useI18n()
+const { t } = useI18n({ useScope: "global" })
 const router = useRouter()
 
-const isLogged = computed(() => !!token.value)
+const { isAuthenticated, user, logout } = useAuth()
 
 const showMenu = ref(false)
 const menuRef = ref(null)
 
 function handleLogout() {
-  clearAuth()
-  router.push("/")
+  logout(router)
 }
 
 function clickOutside(e) {
@@ -32,13 +30,16 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
 </script>
 
 <template>
-  <header class="w-full border-b bg-white/80 backdrop-blur">
-    <div class="max-w-7xl mx-auto flex justify-between items-center p-4">
+  <header class="w-full border-b bg-white shadow-sm">
+    <div class="max-w-7xl mx-auto flex justify-between items-center px-4 py-3">
 
-      <!-- Brand -->
-      <router-link to="/" class="flex items-center gap-3 font-semibold text-lg">
-        <LogoIcon class="w-8 h-8 text-blue-600" />
-        <span>PoDrodze</span>
+      <!-- Logo -->
+      <router-link
+          to="/"
+          class="flex items-center gap-3 font-semibold text-xl hover:opacity-90 transition"
+      >
+        <LogoIcon class="w-9 h-9 text-blue-600" />
+        <span class="tracking-wide">PoDrodze</span>
       </router-link>
 
       <div class="flex items-center gap-4">
@@ -46,14 +47,19 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
         <LanguageSwitcher />
 
         <!-- Guest -->
-        <template v-if="!isLogged">
-          <router-link to="/login" class="text-sm hover:text-blue-600">
+        <template v-if="!isAuthenticated">
+          <router-link
+              to="/login"
+              class="text-sm text-gray-700 hover:text-blue-600 transition"
+          >
             {{ t("auth.login.title") }}
           </router-link>
 
           <router-link
               to="/register"
-              class="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded shadow hover:opacity-95"
+              class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600
+                   text-white rounded-lg shadow-md hover:shadow-lg
+                   hover:brightness-105 transition-all active:scale-[0.98]"
           >
             {{ t("auth.register.title") }}
           </router-link>
@@ -62,44 +68,53 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
         <!-- Authenticated -->
         <template v-else>
           <div class="relative" ref="menuRef">
+
             <button
                 @click="showMenu = !showMenu"
-                class="flex items-center gap-3 px-3 py-1 rounded hover:bg-gray-100 transition"
+                class="flex items-center gap-3 px-3 py-1 rounded-lg hover:bg-gray-100 transition group"
             >
               <img
-                  :src="`https://api.dicebear.com/7.x/thumbs/svg?seed=${user?.name || 'user'}`"
-                  class="w-8 h-8 rounded-full"
+                  :src="`https://api.dicebear.com/7.x/thumbs/svg?seed=${user?.name}`"
+                  class="w-9 h-9 rounded-full ring-1 ring-gray-200 shadow-sm group-hover:ring-blue-300 transition"
               />
-
-              <span class="text-sm">
+              <span class="text-sm text-gray-700 hidden sm:inline">
                 {{ t("header.hello") }},
-                <strong>{{ user?.name || "User" }}</strong>
+                <strong>{{ user?.name }}</strong>
               </span>
             </button>
 
             <!-- Dropdown -->
-            <div
-                v-if="showMenu"
-                class="absolute right-0 mt-2 w-40 bg-white border rounded shadow-md py-2"
+            <transition
+                enter-active-class="transition-opacity duration-150"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition-opacity duration-150"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
             >
-              <router-link
-                  to="/app/profile"
-                  class="block px-4 py-2 text-sm hover:bg-gray-100"
+              <div
+                  v-if="showMenu"
+                  class="absolute right-0 mt-2 w-48 bg-white border border-gray-200
+                       rounded-lg shadow-xl py-2 z-50"
               >
-                {{ t("header.profile") }}
-              </router-link>
+                <router-link
+                    to="/app/profile"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                >
+                  {{ t("header.profile") }}
+                </router-link>
 
-              <button
-                  @click="handleLogout"
-                  class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-              >
-                {{ t("auth.logout") }}
-              </button>
-            </div>
+                <button
+                    @click="handleLogout"
+                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                >
+                  {{ t("auth.logout") }}
+                </button>
+              </div>
+            </transition>
 
           </div>
         </template>
-
       </div>
     </div>
   </header>

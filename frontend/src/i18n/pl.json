@@ -2,63 +2,107 @@
   "app": {
     "name": "PoDrodze",
     "guest": {
-      "title": "PoDrodze — Guest"
+      "title": "PoDrodze — Gość"
+    },
+    "user": {
+      "title": "Panel użytkownika",
+      "dashboard": "Panel",
+      "trips": "Podróże",
+      "profile": "Profil"
+    },
+    "admin": {
+      "title": "Panel administratora",
+      "users": "Użytkownicy",
+      "trips": "Podróże",
+      "places": "Miejsca",
+      "settings": "Ustawienia"
     }
   },
 
   "nav": {
-    "dashboard": "Dashboard",
-    "trips": "Trips",
-    "logout": "Logout"
+    "dashboard": "Panel",
+    "trips": "Podróże",
+    "logout": "Wyloguj"
   },
 
   "header": {
-    "hello": "Hello",
-    "profile": "Profile"
+    "hello": "Cześć",
+    "profile": "Profil"
   },
 
   "auth": {
     "email": "Email",
-    "password": "Password",
-    "password_confirm": "Confirm password",
-
-    "loading": "Please wait...",
+    "password": "Hasło",
+    "password_confirm": "Potwierdź hasło",
+    "loading": "Proszę czekać...",
+    "logout": "Wyloguj",
 
     "login": {
-      "title": "Login",
-      "submit": "Sign in",
-      "google": "Sign in with Google",
-      "facebook": "Sign in with Facebook"
+      "title": "Logowanie",
+      "submit": "Zaloguj się",
+      "google": "Zaloguj się przez Google",
+      "facebook": "Zaloguj się przez Facebook"
     },
 
     "register": {
-      "title": "Register",
-      "submit": "Sign up",
-      "google": "Register with Google",
-      "facebook": "Register with Facebook"
+      "title": "Rejestracja",
+      "submit": "Utwórz konto",
+      "google": "Zarejestruj przez Google",
+      "facebook": "Zarejestruj przez Facebook"
     },
 
-    "logout": "Logout",
+    "hints": {
+      "email_format": "Wprowadź poprawny adres email",
+      "password_min": "Hasło musi mieć co najmniej 6 znaków",
+      "password_confirm": "Powtórz to samo hasło"
+    },
 
     "errors": {
-      "email_required": "Email is required",
-      "invalid_email": "Invalid email format",
-      "password_required": "Password is required",
-      "password_too_short": "Password must be at least 6 characters",
-      "password_mismatch": "Passwords do not match",
-      "login_failed": "Login failed. Incorrect email or password.",
-      "network": "Network error. Please try again later."
+      "incorrect_data": "Niepoprawne dane logowania.",
+      "email_required": "Email jest wymagany",
+      "invalid_email": "Niepoprawny format adresu email",
+      "password_required": "Hasło jest wymagane",
+      "password_too_short": "Hasło musi mieć co najmniej 6 znaków",
+      "password_mismatch": "Hasła nie są takie same",
+      "login_failed": "Logowanie nie powiodło się. Niepoprawny email lub hasło.",
+      "network": "Błąd połączenia. Spróbuj ponownie później."
     }
   },
 
   "hero": {
-    "title": "Plan your trip easily",
-    "subtitle": "Fast and easy way to organize a journey with friends",
-    "cta": "Get started"
+    "title": "Planuj swoją podróż z łatwością",
+    "subtitle": "Szybki i prosty sposób na organizację wyjazdu ze znajomymi",
+    "cta": "Rozpocznij"
   },
 
   "home": {
-    "welcome": "Welcome back!",
-    "intro": "This is your home dashboard inside the app."
+    "welcome_title": "Witamy w PoDrodze",
+    "welcome_subtitle": "Planuj swoją kolejną przygodę z łatwością",
+    "features_title": "Główne funkcje",
+
+    "feature": {
+      "plan": "Planuj podróż",
+      "plan_desc": "Twórz trasy i organizuj wyjazdy bez wysiłku.",
+      "invite": "Zapraszaj znajomych",
+      "invite_desc": "Planuj podróże razem z grupą.",
+      "vote": "Głosuj na miejsca",
+      "vote_desc": "Wspólnie wybierajcie najlepsze punkty."
+    }
+  },
+
+  "footer": {
+    "description": "Projekt studencki do planowania podróży.",
+
+    "section": {
+      "project": "Projekt",
+      "team": "Zespół"
+    },
+
+    "links": {
+      "about_us": "O nas",
+      "contact": "Kontakt"
+    },
+
+    "student_project": "Projekt studencki"
   }
 }

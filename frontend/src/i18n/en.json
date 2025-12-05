@@ -3,6 +3,19 @@
     "name": "PoDrodze",
     "guest": {
       "title": "PoDrodze — Guest"
+    },
+    "user": {
+      "title": "User Panel",
+      "dashboard": "Dashboard",
+      "trips": "Trips",
+      "profile": "Profile"
+    },
+    "admin": {
+      "title": "Admin Panel",
+      "users": "Users",
+      "trips": "Trips",
+      "places": "Places",
+      "settings": "Settings"
     }
   },
 
@@ -21,8 +34,8 @@
     "email": "Email",
     "password": "Password",
     "password_confirm": "Confirm password",
-
     "loading": "Please wait...",
+    "logout": "Logout",
 
     "login": {
       "title": "Login",
@@ -38,9 +51,14 @@
       "facebook": "Register with Facebook"
     },
 
-    "logout": "Logout",
+    "hints": {
+      "email_format": "Enter a valid email address",
+      "password_min": "Password must be at least 6 characters long",
+      "password_confirm": "Repeat the same password"
+    },
 
     "errors": {
+      "incorrect_data": "Incorrect email or password.",
       "email_required": "Email is required",
       "invalid_email": "Invalid email format",
       "password_required": "Password is required",
@@ -53,12 +71,38 @@
 
   "hero": {
     "title": "Plan your trip easily",
-    "subtitle": "Fast and easy way to organize a journey with friends",
+    "subtitle": "Fast and simple way to organize a journey with friends",
     "cta": "Get started"
   },
 
   "home": {
-    "welcome": "Welcome back!",
-    "intro": "This is your home dashboard inside the app."
+    "welcome_title": "Welcome to PoDrodze",
+    "welcome_subtitle": "Plan your next adventure with ease",
+    "features_title": "Main features",
+
+    "feature": {
+      "plan": "Plan a trip",
+      "plan_desc": "Create itineraries and organize routes effortlessly.",
+      "invite": "Invite friends",
+      "invite_desc": "Plan trips together with your group.",
+      "vote": "Vote on places",
+      "vote_desc": "Choose the best spots together."
+    }
+  },
+
+  "footer": {
+    "description": "A student project for planning trips.",
+
+    "section": {
+      "project": "Project",
+      "team": "Team"
+    },
+
+    "links": {
+      "about_us": "About us",
+      "contact": "Contact"
+    },
+
+    "student_project": "Student project"
   }
 }

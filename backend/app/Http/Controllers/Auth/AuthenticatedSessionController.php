@@ -7,15 +7,37 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Handle an incoming authentication request (API, Sanctum).
+     * Authenticate user and return API token.
+     *
+     * @group Authentication
+     * @unauthenticated
+     *
+     * @bodyParam email string required The user's email.
+     * @bodyParam password string required The user's password.
+     *
+     * @response 200 {
+     *   "user": { "id": 1, "name": "John Doe", "email": "john@example.com" },
+     *   "token": "xxxxx"
+     * }
+     *
+     * @response 422 {
+     *   "message": "invalid_credentials"
+     * }
      */
     public function store(LoginRequest $request)
     {
-        $request->authenticate();
+        try {
+            $request->authenticate();
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'invalid_credentials'
+            ], 422);
+        }
 
         $user  = $request->user();
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -27,7 +49,12 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Destroy an authenticated session (revoke current Sanctum token).
+     * Logout the authenticated user and revoke the current API token.
+     *
+     * @group Authentication
+     * @authenticated
+     *
+     * @response 204
      */
     public function destroy(Request $request): Response
     {
@@ -40,8 +67,7 @@ class AuthenticatedSessionController extends Controller
 
         try {
             Auth::guard('web')->logout();
-        } catch (\Throwable $e) {
-        }
+        } catch (\Throwable $e) {}
 
         if ($request->hasSession()) {
             $request->session()->invalidate();

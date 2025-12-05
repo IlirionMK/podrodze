@@ -1,4 +1,4 @@
-import { ref } from "vue"
+import { ref, computed } from "vue"
 
 const token = ref(localStorage.getItem("token") || null)
 const user = ref(JSON.parse(localStorage.getItem("user")) || null)
@@ -23,11 +23,23 @@ export function useAuth() {
         localStorage.removeItem("intended")
     }
 
+    function logout(router) {
+        clearAuth()
+
+        if (router) {
+            router.push({ name: "guest.home" })
+        }
+    }
+
     return {
         token,
         user,
         setToken,
         setUser,
-        clearAuth
+        clearAuth,
+        logout,
+
+        isAuthenticated: computed(() => !!token.value),
+        isAdmin: computed(() => user.value?.role === "admin")
     }
 }

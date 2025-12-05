@@ -2,6 +2,7 @@
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { useAuth } from "@/composables/useAuth"
+import { useValidator } from "@/composables/useValidator"
 
 import BaseInput from "@/components/forms/BaseInput.vue"
 
@@ -11,173 +12,164 @@ const { setToken, setUser } = useAuth()
 const email = ref("")
 const password = ref("")
 const confirmPassword = ref("")
-
-const errorMessage = ref(null)
 const loading = ref(false)
+const globalError = ref(null)
 
+const { errors, validate } = useValidator()
 
-// -------------------------------------
-// Validation
-// -------------------------------------
-function validateForm() {
-  if (!email.value) {
-    errorMessage.value = "auth.errors.email_required"
-    return false
-  }
+async function onSubmit() {
+  globalError.value = null
 
-  if (!email.value.includes("@")) {
-    errorMessage.value = "auth.errors.invalid_email"
-    return false
-  }
+  const isValid = validate({
+    email: {
+      value: email.value,
+      required: true,
+      email: true,
+      messages: {
+        required: "auth.errors.incorrect_data",
+        email: "auth.errors.incorrect_data"
+      }
+    },
+    password: {
+      value: password.value,
+      required: true,
+      min: 6,
+      messages: {
+        required: "auth.errors.incorrect_data",
+        min: "auth.errors.incorrect_data"
+      }
+    },
+    confirmPassword: {
+      value: confirmPassword.value,
+      required: true,
+      messages: {
+        required: "auth.errors.incorrect_data"
+      }
+    }
+  })
 
-  if (!password.value) {
-    errorMessage.value = "auth.errors.password_required"
-    return false
-  }
-
-  if (password.value.length < 6) {
-    errorMessage.value = "auth.errors.password_too_short"
-    return false
-  }
+  if (!isValid) return
 
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = "auth.errors.password_mismatch"
-    return false
+    globalError.value = "auth.errors.incorrect_data"
+    return
   }
-
-  return true
-}
-
-
-// -------------------------------------
-// Register Stub
-// -------------------------------------
-async function onSubmit() {
-  errorMessage.value = null
-
-  if (!validateForm()) return
 
   loading.value = true
 
+  // --- STUB: emulate registration ---
   setTimeout(() => {
     const fakeToken = "register_stub_token_123"
 
     setToken(fakeToken)
-    setUser({ name: email.value.split("@")[0] })
 
-    loading.value = false
+    // Same structure as login
+    setUser({
+      name: email.value.split("@")[0],
+      role: "user"
+    })
 
+    // Redirect to intended page
     const intended = localStorage.getItem("intended")
     if (intended) {
       localStorage.removeItem("intended")
       return router.push(intended)
     }
 
-    router.push({ name: "home" })
+    // Default user home route
+    return router.push({ name: "app.home" })
 
-  }, 500)
-}
-
-
-// -------------------------------------
-// Social Register (Google / Facebook)
-// -------------------------------------
-function registerGoogleStub() {
-  loading.value = true
-  setTimeout(() => {
-    setToken("google_register_stub_token_123")
-    setUser({ name: "GoogleUser" })
-    loading.value = false
-    router.push({ name: "home" })
-  }, 500)
-}
-
-function registerFacebookStub() {
-  loading.value = true
-  setTimeout(() => {
-    setToken("facebook_register_stub_token_123")
-    setUser({ name: "FacebookUser" })
-    loading.value = false
-    router.push({ name: "home" })
-  }, 500)
+  }, 600)
 }
 </script>
 
-
-
-
 <template>
-  <div class="max-w-md w-full bg-white p-6 rounded shadow">
+  <div class="min-h-screen px-4 py-12 flex items-center justify-center bg-[#0d1117] relative">
 
-    <h1 class="text-2xl font-bold mb-4">
-      {{ $t("auth.register.title") }}
-    </h1>
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 blur-3xl opacity-40"></div>
 
-    <form class="space-y-4" @submit.prevent="onSubmit">
-
-      <!-- EMAIL -->
-      <BaseInput
-          v-model="email"
-          :label="$t('auth.email')"
-          type="email"
-          :error="errorMessage && errorMessage.includes('email') ? $t(errorMessage) : null"
-      />
-
-      <!-- PASSWORD -->
-      <BaseInput
-          v-model="password"
-          :label="$t('auth.password')"
-          type="password"
-          :error="errorMessage && errorMessage.includes('password') ? $t(errorMessage) : null"
-      />
-
-      <!-- CONFIRM PASSWORD -->
-      <BaseInput
-          v-model="confirmPassword"
-          :label="$t('auth.password_confirm')"
-          type="password"
-          :error="errorMessage && errorMessage.includes('mismatch') ? $t(errorMessage) : null"
-      />
-
-      <!-- GLOBAL ERROR -->
-      <p
-          v-if="errorMessage && !errorMessage.includes('email') && !errorMessage.includes('password')"
-          class="text-red-600 text-sm"
+    <Transition
+        appear
+        enter-active-class="transition duration-500 ease-out"
+        enter-from-class="opacity-0 translate-y-3"
+        enter-to-class="opacity-100 translate-y-0"
+    >
+      <div
+          v-if="true"
+          class="relative w-full max-w-md p-8 rounded-2xl border border-white/20 bg-white/10
+               backdrop-blur-xl shadow-2xl text-white"
       >
-        {{ $t(errorMessage) }}
-      </p>
+        <h1 class="text-3xl font-semibold mb-6 text-center drop-shadow">
+          {{ $t("auth.register.title") }}
+        </h1>
 
-      <!-- SUBMIT -->
-      <button
-          type="submit"
-          :disabled="loading"
-          class="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
-      >
-        {{ loading ? $t("auth.loading") : $t("auth.register.submit") }}
-      </button>
+        <form class="space-y-5" @submit.prevent="onSubmit">
 
-    </form>
+          <!-- EMAIL -->
+          <BaseInput
+              v-model="email"
+              :label="$t('auth.email')"
+              autocomplete="email"
+              :error="errors.email ? $t(errors.email) : null"
+          />
+          <p class="text-xs text-white/50 -mt-1">
+            {{ $t("auth.hints.email_format") }}
+          </p>
 
-    <!-- Social Buttons -->
-    <div class="mt-6 flex flex-col gap-3">
+          <!-- PASSWORD -->
+          <BaseInput
+              v-model="password"
+              :label="$t('auth.password')"
+              type="password"
+              autocomplete="new-password"
+              :error="errors.password ? $t(errors.password) : null"
+          />
+          <p class="text-xs text-white/50 -mt-1">
+            {{ $t("auth.hints.password_min") }}
+          </p>
 
-      <button
-          @click="registerGoogleStub"
-          :disabled="loading"
-          class="w-full bg-red-600 text-white py-2 rounded disabled:opacity-50"
-      >
-        {{ $t("auth.register.google") }}
-      </button>
+          <!-- CONFIRM PASSWORD -->
+          <BaseInput
+              v-model="confirmPassword"
+              :label="$t('auth.password_confirm')"
+              type="password"
+              autocomplete="new-password"
+              :error="errors.confirmPassword ? $t(errors.confirmPassword) : null"
+          />
+          <p class="text-xs text-white/50 -mt-1">
+            {{ $t("auth.hints.password_confirm") }}
+          </p>
 
-      <button
-          @click="registerFacebookStub"
-          :disabled="loading"
-          class="w-full bg-blue-700 text-white py-2 rounded disabled:opacity-50"
-      >
-        {{ $t("auth.register.facebook") }}
-      </button>
+          <!-- GLOBAL ERROR -->
+          <p v-if="globalError" class="text-red-300 text-center text-sm mt-2">
+            {{ $t(globalError) }}
+          </p>
 
-    </div>
+          <button
+              type="submit"
+              :disabled="loading"
+              class="w-full py-3 rounded-xl text-lg font-medium
+                     bg-gradient-to-r from-blue-500 to-purple-600
+                     hover:opacity-90 active:opacity-80 transition
+                     disabled:opacity-50 shadow-lg"
+          >
+            {{ loading ? $t("auth.loading") : $t("auth.register.submit") }}
+          </button>
+        </form>
+
+        <!-- Disabled social login -->
+        <div class="mt-8 flex flex-col gap-3">
+          <button disabled class="w-full py-3 rounded-xl bg-red-500/40 text-white/70 cursor-not-allowed shadow-inner">
+            {{ $t("auth.register.google") }}
+          </button>
+
+          <button disabled class="w-full py-3 rounded-xl bg-blue-600/40 text-white/70 cursor-not-allowed shadow-inner">
+            {{ $t("auth.register.facebook") }}
+          </button>
+        </div>
+
+      </div>
+    </Transition>
 
   </div>
 </template>
