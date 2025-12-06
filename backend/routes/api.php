@@ -27,6 +27,12 @@ Route::prefix('v1')->group(function () {
 
     // ---- Authenticated routes ----
     Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
+        // ---- Google Maps key ----
+        Route::get('/google/maps-key', function () {
+            return response()->json([
+                'key' => env('GOOGLE_MAPS_KEY'),
+            ]);
+        });
 
         // ---- Trips CRUD ----
         Route::get   ('/trips',        [TripController::class, 'index']);
