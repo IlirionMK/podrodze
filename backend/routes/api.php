@@ -25,14 +25,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/reset-password',  [NewPasswordController::class, 'store']);
     });
 
+    // ---- PUBLIC GOOGLE MAPS KEY ----
+    Route::get('/google/maps-key', function () {
+        return response()->json([
+            'key' => env('GOOGLE_MAPS_KEY'),
+        ]);
+    });
+
     // ---- Authenticated routes ----
     Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
-        // ---- Google Maps key ----
-        Route::get('/google/maps-key', function () {
-            return response()->json([
-                'key' => env('GOOGLE_MAPS_KEY'),
-            ]);
-        });
 
         // ---- Trips CRUD ----
         Route::get   ('/trips',        [TripController::class, 'index']);
@@ -63,10 +64,8 @@ Route::prefix('v1')->group(function () {
         Route::put('/users/me/preferences', [PreferenceController::class, 'update']);
 
         // ---- Itinerary ----
-        //Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'index']);
         Route::get('/trips/{trip}/preferences/aggregate', [ItineraryController::class, 'aggregatePreferences']);
         Route::get('/trips/{trip}/itinerary/generate', [ItineraryController::class, 'generate']);
-        //Route::get('/trips/{trip}/itinerary/full', [ItineraryController::class, 'full']);
         Route::post('/trips/{trip}/itinerary/generate-full', [ItineraryController::class, 'generateFullRoute']);
 
         // ---- Trip Places ----
@@ -86,3 +85,4 @@ Route::prefix('v1')->group(function () {
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
     });
 });
+;

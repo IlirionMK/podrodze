@@ -15,7 +15,39 @@ use Illuminate\Validation\ValidationException;
 class NewPasswordController extends Controller
 {
     /**
-     * Handle an incoming new password request.
+     * @OA\Post(
+     * path="/reset-password",
+     * summary="Handle an incoming new password request.",
+     * tags={"Authentication"},
+     * @OA\RequestBody(
+     * required=true,
+     * description="Credentials to reset the password.",
+     * @OA\JsonContent(
+     * required={"email", "password", "password_confirmation", "token"},
+     * @OA\Property(property="token", type="string", description="The password reset token received via email link.", example="architecto"),
+     * @OA\Property(property="email", type="string", format="email", description="The user's email.", example="zbailey@example.net"),
+     * @OA\Property(property="password", type="string", format="password", description="The new password.", example="secret123"),
+     * @OA\Property(property="password_confirmation", type="string", format="password", description="Confirmation of the new password.", example="secret123")
+     * )
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Password successfully reset.",
+     * @OA\JsonContent(
+     * @OA\Property(property="status", type="string", example="Your password has been reset!")
+     * )
+     * ),
+     * @OA\Response(
+     * response=422,
+     * description="Validation error (e.g., token expired, password mismatch, or invalid email).",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="The given data was invalid."),
+     * @OA\Property(property="errors", type="object",
+     * @OA\Property(property="email", type="array", @OA\Items(type="string", example="This password reset token is invalid."))
+     * )
+     * )
+     * )
+     * )
      *
      * @throws \Illuminate\Validation\ValidationException
      */

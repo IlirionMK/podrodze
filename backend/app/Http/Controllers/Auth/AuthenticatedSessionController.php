@@ -12,22 +12,39 @@ use Illuminate\Validation\ValidationException;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Authenticate user and return API token.
-     *
-     * @group Authentication
-     * @unauthenticated
-     *
-     * @bodyParam email string required The user's email.
-     * @bodyParam password string required The user's password.
-     *
-     * @response 200 {
-     *   "user": { "id": 1, "name": "John Doe", "email": "john@example.com" },
-     *   "token": "xxxxx"
-     * }
-     *
-     * @response 422 {
-     *   "message": "invalid_credentials"
-     * }
+     * @OA\Post(
+     * path="/login",
+     * summary="Authenticate user and return API token.",
+     * tags={"Authentication"},
+     * @OA\RequestBody(
+     * required=true,
+     * description="User credentials for login.",
+     * @OA\JsonContent(
+     * required={"email", "password"},
+     * @OA\Property(property="email", type="string", format="email", description="The user's email.", example="john@example.com"),
+     * @OA\Property(property="password", type="string", format="password", description="The user's password.", example="secret123")
+     * )
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="User authenticated successfully.",
+     * @OA\JsonContent(
+     * @OA\Property(property="user", type="object",
+     * @OA\Property(property="id", type="integer", example=1),
+     * @OA\Property(property="name", type="string", example="John Doe"),
+     * @OA\Property(property="email", type="string", example="john@example.com")
+     * ),
+     * @OA\Property(property="token", type="string", description="API Bearer Token.", example="xxxxx")
+     * )
+     * ),
+     * @OA\Response(
+     * response=422,
+     * description="Validation error or invalid credentials.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="invalid_credentials")
+     * )
+     * )
+     * )
      */
     public function store(LoginRequest $request)
     {
@@ -49,12 +66,17 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Logout the authenticated user and revoke the current API token.
-     *
-     * @group Authentication
-     * @authenticated
-     *
-     * @response 204
+     * @OA\Post(
+     * path="/logout",
+     * summary="Logout the authenticated user and revoke the current API token.",
+     * tags={"Authentication"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Response(
+     * response=204,
+     * description="User successfully logged out (No Content)."
+     * ),
+     * @OA\Response(response=401, description="Unauthenticated")
+     * )
      */
     public function destroy(Request $request): Response
     {

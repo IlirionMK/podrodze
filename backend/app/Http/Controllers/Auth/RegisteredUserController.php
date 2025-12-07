@@ -12,7 +12,44 @@ use Illuminate\Validation\Rules;
 class RegisteredUserController extends Controller
 {
     /**
-     * Handle an incoming registration request (API Sanctum).
+     * @OA\Post(
+     * path="/register",
+     * summary="Handle an incoming registration request (API Sanctum).",
+     * tags={"Authentication"},
+     * @OA\RequestBody(
+     * required=true,
+     * description="User details for registration.",
+     * @OA\JsonContent(
+     * required={"name", "email", "password", "password_confirmation"},
+     * @OA\Property(property="name", type="string", description="The user's full name.", example="John Doe", maxLength=255),
+     * @OA\Property(property="email", type="string", format="email", description="The user's email.", example="john@example.com", maxLength=255),
+     * @OA\Property(property="password", type="string", format="password", description="The desired password.", example="secret123"),
+     * @OA\Property(property="password_confirmation", type="string", format="password", description="Confirmation of the password.", example="secret123")
+     * )
+     * ),
+     * @OA\Response(
+     * response=201,
+     * description="User registered successfully.",
+     * @OA\JsonContent(
+     * @OA\Property(property="user", type="object",
+     * @OA\Property(property="id", type="integer", example=2),
+     * @OA\Property(property="name", type="string", example="John Doe"),
+     * @OA\Property(property="email", type="string", example="john@example.com")
+     * ),
+     * @OA\Property(property="token", type="string", description="API Bearer Token.", example="xxxxxxxxxxx")
+     * )
+     * ),
+     * @OA\Response(
+     * response=422,
+     * description="Validation error (e.g., email already taken or password mismatch).",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="The given data was invalid."),
+     * @OA\Property(property="errors", type="object",
+     * @OA\Property(property="email", type="array", @OA\Items(type="string", example="The email has already been taken."))
+     * )
+     * )
+     * )
+     * )
      */
     public function store(Request $request)
     {

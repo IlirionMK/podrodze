@@ -12,8 +12,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use DomainException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 
+/**
+ * @OA\Tag(
+ * name="TripPlaces",
+ * description="Operations for managing places attached to a specific trip."
+ * )
+ */
 class TripPlaceController extends Controller
 {
     use AuthorizesRequests;
@@ -23,56 +28,80 @@ class TripPlaceController extends Controller
     ) {}
 
     /**
-     * @group TripPlaces
-     * @authenticated
-     * @operationId listTripPlaces
-     *
-     * Get all places attached to a trip.
-     *
-     * @urlParam trip_id integer required ID of the trip. Example: 12
-     *
-     * @response 200 {
-     *   "data": [...]
-     * }
+     * @OA\Get(
+     * path="/trips/{trip}/places",
+     * summary="Get all places attached to a trip.",
+     * tags={"TripPlaces"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=12)
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Successful operation.",
+     * @OA\JsonContent(
+     * @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/TripPlaceResource"))
+     * )
+     * ),
+     * @OA\Response(response=401, description="Unauthenticated"),
+     * @OA\Response(response=403, description="Forbidden (Access denied).")
+     * )
      */
-    public function index(Trip $trip_id): JsonResponse
+    public function index(Trip $trip): JsonResponse
     {
-        $this->authorize('view', $trip_id);
+        $this->authorize('view', $trip);
 
-        $places = $this->placeService->listForTrip($trip_id);
+        $places = $this->placeService->listForTrip($trip);
 
         return response()->json([
-            'data' => TripPlaceResource::collection($places)->resolve()
+            'data' => TripPlaceResource::collection($places),
         ]);
     }
 
     /**
-     * @group TripPlaces
-     * @authenticated
-     * @operationId attachPlaceToTrip
-     *
-     * Attach a place to the trip.
-     *
-     * @urlParam trip_id integer required ID of the trip. Example: 12
-     *
-     * @bodyParam place_id integer required ID of the place. Example: 237
-     * @bodyParam status string Status of selection. Example: proposed
-     * @bodyParam is_fixed boolean Whether this place is fixed.
-     * @bodyParam day integer Day number.
-     * @bodyParam order_index integer Order index.
-     * @bodyParam note string Optional note.
-     *
-     * @response 201 {
-     *   "message": "Place added to trip",
-     *   "data": {...}
-     * }
-     *
-     * @response 404 { "message": "Place not found" }
-     * @response 409 { "message": "Place already attached or invalid state" }
+     * @OA\Post(
+     * path="/trips/{trip}/places",
+     * summary="Attach a place to a trip.",
+     * tags={"TripPlaces"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=12)
+     * ),
+     * @OA\RequestBody(
+     * required=true,
+     * @OA\JsonContent(
+     * required={"place_id"},
+     * @OA\Property(property="place_id", type="integer", description="The ID of the place to attach.", example=237),
+     * @OA\Property(property="status", type="string", description="Status of the place in the trip.", enum={"proposed", "selected", "rejected", "planned"}, example="proposed"),
+     * @OA\Property(property="is_fixed", type="boolean", description="Whether the place's schedule is fixed.", example=false),
+     * @OA\Property(property="day", type="integer", description="The day of the trip the place is planned for.", example=1, minimum=1),
+     * @OA\Property(property="order_index", type="integer", description="Order index within the day.", example=0, minimum=0),
+     * @OA\Property(property="note", type="string", description="Optional note about the place.", example="Must visit", maxLength=255),
+     * )
+     * ),
+     * @OA\Response(
+     * response=201,
+     * description="Place added to trip successfully.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="Place added to trip"),
+     * @OA\Property(property="data", ref="#/components/schemas/TripPlaceResource")
+     * )
+     * ),
+     * @OA\Response(response=409, description="Conflict (Place already attached to trip)."),
+     * @OA\Response(response=422, description="Validation error.")
+     * )
      */
-    public function store(Request $request, Trip $trip_id): JsonResponse
+    public function store(Request $request, Trip $trip): JsonResponse
     {
-        $this->authorize('update', $trip_id);
+        $this->authorize('update', $trip);
 
         $validated = $request->validate([
             'place_id'    => 'required|exists:places,id',
@@ -84,37 +113,61 @@ class TripPlaceController extends Controller
         ]);
 
         try {
-            $dto = $this->placeService->attachToTrip($trip_id, $validated, $request->user());
-
-            return response()->json([
-                'message' => 'Place added to trip',
-                'data' => (new TripPlaceResource($dto))->resolve()
-            ], 201);
-
+            $dto = $this->placeService->attachToTrip($trip, $validated, $request->user());
         } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 409);
-
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => $e->getMessage()], 404);
+            return response()->json(['message' => $e->getMessage()], 409); // 409 Conflict for existing resource
         }
+
+        return response()->json([
+            'message' => 'Place added to trip',
+            'data'    => new TripPlaceResource($dto),
+        ], 201);
     }
 
     /**
-     * @group TripPlaces
-     * @authenticated
-     * @operationId updateTripPlace
-     *
-     * Update a place entry belonging to the trip.
-     *
-     * @urlParam trip_id integer required ID of the trip. Example: 12
-     * @urlParam place_id integer required ID of the place. Example: 237
-     *
-     * @response 200 { "message": "Trip place updated", "data": {...} }
-     * @response 404 { "message": "Place not found" }
+     * @OA\Patch(
+     * path="/trips/{trip}/places/{place}",
+     * summary="Update pivot data (status, day, order) for a place in a trip.",
+     * tags={"TripPlaces"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=12)
+     * ),
+     * @OA\Parameter(
+     * name="place",
+     * in="path",
+     * required=true,
+     * description="The ID of the place.",
+     * @OA\Schema(type="integer", example=237)
+     * ),
+     * @OA\RequestBody(
+     * @OA\JsonContent(
+     * @OA\Property(property="status", type="string", description="New status.", enum={"proposed", "selected", "rejected", "planned"}, example="planned"),
+     * @OA\Property(property="is_fixed", type="boolean", description="Whether the schedule is fixed.", example=true),
+     * @OA\Property(property="day", type="integer", description="The new day of the trip.", example=1),
+     * @OA\Property(property="order_index", type="integer", description="New order index within the day.", example=0),
+     * @OA\Property(property="note", type="string", description="Updated note.", example="Checking times"),
+     * )
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Trip place updated successfully.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="Trip place updated"),
+     * @OA\Property(property="data", ref="#/components/schemas/TripPlaceResource")
+     * )
+     * ),
+     * @OA\Response(response=404, description="Not Found (Place is not attached to this trip)."),
+     * @OA\Response(response=422, description="Validation error.")
+     * )
      */
-    public function update(Request $request, Trip $trip_id, Place $place_id): JsonResponse
+    public function update(Request $request, Trip $trip, Place $place): JsonResponse
     {
-        $this->authorize('update', $trip_id);
+        $this->authorize('update', $trip);
 
         $validated = $request->validate([
             'status'      => 'nullable|string|in:proposed,selected,rejected,planned',
@@ -125,63 +178,104 @@ class TripPlaceController extends Controller
         ]);
 
         try {
-            $dto = $this->placeService->updateTripPlace($trip_id, $place_id, $validated);
-
-            return response()->json([
-                'message' => 'Trip place updated',
-                'data' => (new TripPlaceResource($dto))->resolve()
-            ]);
-
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => $e->getMessage()], 404);
+            $dto = $this->placeService->updateTripPlace($trip, $place, $validated);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 404); // 404 Not Found if pivot doesn't exist
         }
+
+        return response()->json([
+            'message' => 'Trip place updated',
+            'data'    => new TripPlaceResource($dto),
+        ]);
     }
 
     /**
-     * @group TripPlaces
-     * @authenticated
-     * @operationId removePlaceFromTrip
-     *
-     * Remove a place from the trip.
-     *
-     * @urlParam trip_id integer required
-     * @urlParam place_id integer required
-     *
-     * @response 200 { "message": "Place removed from trip" }
-     * @response 404 { "message": "Place not found" }
+     * @OA\Delete(
+     * path="/trips/{trip}/places/{place}",
+     * summary="Remove a place from a trip.",
+     * tags={"TripPlaces"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=12)
+     * ),
+     * @OA\Parameter(
+     * name="place",
+     * in="path",
+     * required=true,
+     * description="The ID of the place.",
+     * @OA\Schema(type="integer", example=237)
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Place removed successfully.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="Place removed from trip")
+     * )
+     * ),
+     * @OA\Response(response=404, description="Not Found (Place is not attached to this trip).")
+     * )
      */
-    public function destroy(Trip $trip_id, Place $place_id): JsonResponse
+    public function destroy(Trip $trip, Place $place): JsonResponse
     {
-        $this->authorize('update', $trip_id);
+        $this->authorize('update', $trip);
 
         try {
-            $this->placeService->detachFromTrip($trip_id, $place_id);
-
-            return response()->json(['message' => 'Place removed from trip']);
-
-        } catch (ModelNotFoundException $e) {
+            $this->placeService->detachFromTrip($trip, $place);
+        } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 404);
         }
+
+        return response()->json([
+            'message' => 'Place removed from trip',
+        ]);
     }
 
     /**
-     * @group TripPlaces
-     * @authenticated
-     * @operationId voteForTripPlace
-     *
-     * Submit or update a vote for a place within the trip.
-     *
-     * @urlParam trip_id integer required Example: 12
-     * @urlParam place_id integer required Example: 237
-     *
-     * @bodyParam score integer required Must be between 1 and 5. Example: 4
-     *
-     * @response 200 { "message": "Vote saved", "data": {...} }
-     * @response 400 { "message": "Invalid vote" }
+     * @OA\Post(
+     * path="/trips/{trip}/places/{place}/vote",
+     * summary="Submit or update a user's vote for a place in a trip.",
+     * tags={"TripPlaces"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=12)
+     * ),
+     * @OA\Parameter(
+     * name="place",
+     * in="path",
+     * required=true,
+     * description="The ID of the place.",
+     * @OA\Schema(type="integer", example=237)
+     * ),
+     * @OA\RequestBody(
+     * required=true,
+     * @OA\JsonContent(
+     * required={"score"},
+     * @OA\Property(property="score", type="integer", description="Vote score (1 to 5).", example=4, minimum=1, maximum=5)
+     * )
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Vote saved and aggregate score returned.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="Vote saved"),
+     * @OA\Property(property="data", ref="#/components/schemas/TripVoteResource")
+     * )
+     * ),
+     * @OA\Response(response=400, description="Bad Request (Domain error or validation)."),
+     * @OA\Response(response=422, description="Validation error.")
+     * )
      */
-    public function vote(Request $request, Trip $trip_id, Place $place_id): JsonResponse
+    public function vote(Request $request, Trip $trip, Place $place): JsonResponse
     {
-        $this->authorize('view', $trip_id);
+        $this->authorize('view', $trip);
 
         $validated = $request->validate([
             'score' => ['required', 'integer', 'min:1', 'max:5'],
@@ -189,19 +283,18 @@ class TripPlaceController extends Controller
 
         try {
             $vote = $this->placeService->saveTripVote(
-                $trip_id,
-                $place_id,
+                $trip,
+                $place,
                 $request->user(),
                 (int) $validated['score']
             );
-
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 400);
         }
 
         return response()->json([
             'message' => 'Vote saved',
-            'data' => (new TripVoteResource($vote))->resolve()
+            'data'    => new TripVoteResource($vote),
         ]);
     }
 }

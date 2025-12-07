@@ -10,7 +10,7 @@ use function Knuckles\Scribe\Config\{removeStrategies, configureStrategy};
 return [
     // The HTML <title> for the generated documentation.
     'title' => 'Podrodze API Documentation',
-    'description' => 'Dokumentacja REST API dla aplikacji planowania podróży 1.',
+    'description' => 'Dokumentacja REST API dla aplikacji planowania podróży.',
 
     // Text to place in the "Introduction" section, right after the `description`. Markdown and HTML are supported.
     'intro_text' => <<<INTRO
@@ -214,7 +214,7 @@ return [
             ]),
         ],
         'urlParameters' => [
-            ...Defaults::URL_PARAMETERS_STRATEGIES,
+            \Knuckles\Scribe\Extracting\Strategies\UrlParameters\GetFromUrlParamTag::class,
         ],
         'queryParameters' => [
             ...Defaults::QUERY_PARAMETERS_STRATEGIES,

@@ -4,11 +4,12 @@
 
     @api path /api/*
     handle @api {
-        reverse_proxy app:9000
+        php_fastcgi app:9000
     }
 
-    try_files {path} /index.php
-    php_fastcgi app:9000
-
     file_server
+
+    try_files {path} /index.php
+
+    php_fastcgi app:9000
 }

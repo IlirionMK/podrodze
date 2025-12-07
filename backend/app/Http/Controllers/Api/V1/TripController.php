@@ -13,6 +13,12 @@ use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use DomainException;
 
+/**
+ * @OA\Tag(
+ * name="Trips",
+ * description="CRUD operations and settings for user trips."
+ * )
+ */
 class TripController extends Controller
 {
     use AuthorizesRequests;
@@ -22,15 +28,20 @@ class TripController extends Controller
     ) {}
 
     /**
-     * @group Trips
-     * @authenticated
-     * @operationId listTrips
-     *
-     * List trips accessible for the current user.
-     *
-     * @response 200 {
-     *   "data": [...]
-     * }
+     * @OA\Get(
+     * path="/trips",
+     * summary="List trips accessible for the current user.",
+     * tags={"Trips"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Response(
+     * response=200,
+     * description="Successful operation.",
+     * @OA\JsonContent(
+     * @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/TripResource"))
+     * )
+     * ),
+     * @OA\Response(response=401, description="Unauthenticated")
+     * )
      */
     public function index(Request $request): JsonResponse
     {
@@ -39,20 +50,33 @@ class TripController extends Controller
     }
 
     /**
-     * @group Trips
-     * @authenticated
-     * @operationId createTrip
+     * @OA\Post(
+     * path="/trips",
+     * summary="Create a new trip.",
+     * tags={"Trips"},
+     * security={{"bearerAuth":{}}},
+     * @OA\RequestBody(
+     * required=true,
+     * @OA\JsonContent(
+     * required={"name"},
+     * @OA\Property(property="name", type="string", description="Trip name.", example="Weekend in Wrocław"),
+     * @OA\Property(property="start_date", type="string", format="date", nullable=true, example="2025-11-29"),
+     * @OA\Property(property="end_date", type="string", format="date", nullable=true, example="2025-12-02")
+     * )
+     * ),
+     * @OA\Response(
+     * response=201,
+     * description="Trip created successfully.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="Trip created successfully"),
+     * @OA\Property(property="data", ref="#/components/schemas/TripResource")
+     * )
+     * ),
+     * @OA\Response(response=422, description="Validation error."),
+     * @OA\Response(response=401, description="Unauthenticated")
+     * )
      *
-     * Create a new trip.
-     *
-     * @bodyParam name string required Trip name. Example: "Weekend in Wrocław"
-     * @bodyParam start_date string nullable Example: "2025-11-29"
-     * @bodyParam end_date string nullable Example: "2025-12-02"
-     *
-     * @response 201 {
-     *   "message": "Trip created successfully",
-     *   "data": {...}
-     * }
+     * @throws DomainException
      */
     public function store(StoreTripRequest $request): JsonResponse
     {
@@ -60,22 +84,34 @@ class TripController extends Controller
 
         return response()->json([
             'message' => 'Trip created successfully',
-            'data'    => (new TripResource($trip))->resolve(),
+            'data'    => new TripResource($trip),
         ], 201);
     }
 
     /**
-     * @group Trips
-     * @authenticated
-     * @operationId getTrip
-     *
-     * Get a single trip by ID.
-     *
-     * @urlParam trip integer required The ID of the trip. Example: 10
-     *
-     * @response 200 {
-     *   "data": {...}
-     * }
+     * @OA\Get(
+     * path="/trips/{trip}",
+     * summary="Get a specific trip by ID.",
+     * tags={"Trips"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=10)
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Successful operation.",
+     * @OA\JsonContent(
+     * @OA\Property(property="data", ref="#/components/schemas/TripResource")
+     * )
+     * ),
+     * @OA\Response(response=401, description="Unauthenticated"),
+     * @OA\Response(response=403, description="Forbidden"),
+     * @OA\Response(response=404, description="Trip not found.")
+     * )
      */
     public function show(Trip $trip): JsonResponse
     {
@@ -84,27 +120,44 @@ class TripController extends Controller
         $trip->load(['owner', 'members']);
 
         return response()->json([
-            'data' => (new TripResource($trip))->resolve(),
+            'data' => new TripResource($trip),
         ]);
     }
 
     /**
-     * @group Trips
-     * @authenticated
-     * @operationId updateTrip
+     * @OA\Put(
+     * path="/trips/{trip}",
+     * summary="Update an existing trip.",
+     * tags={"Trips"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=10)
+     * ),
+     * @OA\RequestBody(
+     * required=true,
+     * @OA\JsonContent(
+     * @OA\Property(property="name", type="string", description="New trip name.", example="Updated trip name"),
+     * @OA\Property(property="start_date", type="string", format="date", nullable=true, example="2025-11-30"),
+     * @OA\Property(property="end_date", type="string", format="date", nullable=true, example="2025-12-21")
+     * )
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Trip updated successfully.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="Trip updated successfully"),
+     * @OA\Property(property="data", ref="#/components/schemas/TripResource")
+     * )
+     * ),
+     * @OA\Response(response=400, description="Bad Request (Domain error)."),
+     * @OA\Response(response=422, description="Validation error.")
+     * )
      *
-     * Update an existing trip.
-     *
-     * @urlParam trip integer required The ID of the trip. Example: 10
-     *
-     * @bodyParam name string Example: "Updated trip name"
-     * @bodyParam start_date string nullable Example: "2025-11-30"
-     * @bodyParam end_date string nullable Example: "2025-12-21"
-     *
-     * @response 200 {
-     *   "message": "Trip updated successfully",
-     *   "data": {...}
-     * }
+     * @throws DomainException
      */
     public function update(UpdateTripRequest $request, Trip $trip): JsonResponse
     {
@@ -118,20 +171,33 @@ class TripController extends Controller
 
         return response()->json([
             'message' => 'Trip updated successfully',
-            'data'    => (new TripResource($updated))->resolve(),
+            'data'    => new TripResource($updated),
         ]);
     }
 
     /**
-     * @group Trips
-     * @authenticated
-     * @operationId deleteTrip
-     *
-     * Delete a trip.
-     *
-     * @urlParam trip integer required The ID of the trip. Example: 10
-     *
-     * @response 200 { "message": "Trip deleted successfully" }
+     * @OA\Delete(
+     * path="/trips/{trip}",
+     * summary="Delete a trip.",
+     * tags={"Trips"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=10)
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Trip successfully deleted.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="Trip deleted successfully")
+     * )
+     * ),
+     * @OA\Response(response=401, description="Unauthenticated"),
+     * @OA\Response(response=403, description="Forbidden (Access denied).")
+     * )
      */
     public function destroy(Trip $trip): JsonResponse
     {
@@ -145,21 +211,39 @@ class TripController extends Controller
     }
 
     /**
-     * @group Trips
-     * @authenticated
-     * @operationId updateTripStartLocation
+     * @OA\Patch(
+     * path="/trips/{trip}/start-location",
+     * summary="Update the starting location (latitude and longitude) for a trip.",
+     * tags={"Trips"},
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="trip",
+     * in="path",
+     * required=true,
+     * description="The ID of the trip.",
+     * @OA\Schema(type="integer", example=10)
+     * ),
+     * @OA\RequestBody(
+     * required=true,
+     * @OA\JsonContent(
+     * required={"start_latitude", "start_longitude"},
+     * @OA\Property(property="start_latitude", type="number", format="float", minimum=-90, maximum=90, example=51.21),
+     * @OA\Property(property="start_longitude", type="number", format="float", minimum=-180, maximum=180, example=16.16)
+     * )
+     * ),
+     * @OA\Response(
+     * response=200,
+     * description="Start location updated successfully.",
+     * @OA\JsonContent(
+     * @OA\Property(property="message", type="string", example="Start location updated"),
+     * @OA\Property(property="data", ref="#/components/schemas/TripResource")
+     * )
+     * ),
+     * @OA\Response(response=400, description="Bad Request (Domain error)."),
+     * @OA\Response(response=422, description="Validation error.")
+     * )
      *
-     * Update the starting location of the trip.
-     *
-     * @urlParam trip integer required Example: 10
-     *
-     * @bodyParam start_latitude number required Example: 51.21
-     * @bodyParam start_longitude number required Example: 16.16
-     *
-     * @response 200 {
-     *   "message": "Start location updated",
-     *   "data": {...}
-     * }
+     * @throws DomainException
      */
     public function updateStartLocation(Request $request, Trip $trip): JsonResponse
     {
@@ -178,7 +262,7 @@ class TripController extends Controller
 
         return response()->json([
             'message' => 'Start location updated',
-            'data'    => (new TripResource($updated))->resolve(),
+            'data'    => new TripResource($updated),
         ]);
     }
 }
