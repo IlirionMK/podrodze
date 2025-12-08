@@ -3,7 +3,6 @@ import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { useAuth } from "@/composables/useAuth"
 import { useValidator } from "@/composables/useValidator"
-
 import BaseInput from "@/components/forms/BaseInput.vue"
 
 const router = useRouter()
@@ -49,7 +48,6 @@ async function onSubmit() {
   })
 
   if (!isValid) return
-
   if (password.value !== confirmPassword.value) {
     globalError.value = "auth.errors.incorrect_data"
     return
@@ -57,35 +55,55 @@ async function onSubmit() {
 
   loading.value = true
 
-  // --- STUB: emulate registration ---
-  setTimeout(() => {
-    const fakeToken = "register_stub_token_123"
-
-    setToken(fakeToken)
-
-    // Same structure as login
-    setUser({
-      name: email.value.split("@")[0],
-      role: "user"
+  try {
+    const res = await fetch(import.meta.env.VITE_API_URL + "/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value,
+        password_confirmation: confirmPassword.value
+      })
     })
 
-    // Redirect to intended page
+    const data = await res.json()
+
+    if (!data?.token) {
+      globalError.value = "auth.errors.incorrect_data"
+      return
+    }
+
+    setToken(data.token)
+    setUser(data.user)
+
     const intended = localStorage.getItem("intended")
     if (intended) {
       localStorage.removeItem("intended")
       return router.push(intended)
     }
 
-    // Default user home route
     return router.push({ name: "app.home" })
+  } catch (e) {
+    globalError.value = "auth.errors.incorrect_data"
+  } finally {
+    loading.value = false
+  }
+}
 
-  }, 600)
+async function redirectToGoogle() {
+  try {
+    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/google/url")
+    const data = await res.json()
+
+    if (data?.url) {
+      window.location.href = data.url
+    }
+  } catch (e) {}
 }
 </script>
 
 <template>
   <div class="min-h-screen px-4 py-12 flex items-center justify-center bg-[#0d1117] relative">
-
     <div class="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 blur-3xl opacity-40"></div>
 
     <Transition
@@ -104,8 +122,6 @@ async function onSubmit() {
         </h1>
 
         <form class="space-y-5" @submit.prevent="onSubmit">
-
-          <!-- EMAIL -->
           <BaseInput
               v-model="email"
               :label="$t('auth.email')"
@@ -116,7 +132,6 @@ async function onSubmit() {
             {{ $t("auth.hints.email_format") }}
           </p>
 
-          <!-- PASSWORD -->
           <BaseInput
               v-model="password"
               :label="$t('auth.password')"
@@ -128,7 +143,6 @@ async function onSubmit() {
             {{ $t("auth.hints.password_min") }}
           </p>
 
-          <!-- CONFIRM PASSWORD -->
           <BaseInput
               v-model="confirmPassword"
               :label="$t('auth.password_confirm')"
@@ -140,7 +154,6 @@ async function onSubmit() {
             {{ $t("auth.hints.password_confirm") }}
           </p>
 
-          <!-- GLOBAL ERROR -->
           <p v-if="globalError" class="text-red-300 text-center text-sm mt-2">
             {{ $t(globalError) }}
           </p>
@@ -157,19 +170,22 @@ async function onSubmit() {
           </button>
         </form>
 
-        <!-- Disabled social login -->
         <div class="mt-8 flex flex-col gap-3">
-          <button disabled class="w-full py-3 rounded-xl bg-red-500/40 text-white/70 cursor-not-allowed shadow-inner">
+          <button
+              @click="redirectToGoogle"
+              class="w-full py-3 rounded-xl bg-red-500 text-white font-medium shadow-lg hover:opacity-90 transition"
+          >
             {{ $t("auth.register.google") }}
           </button>
 
-          <button disabled class="w-full py-3 rounded-xl bg-blue-600/40 text-white/70 cursor-not-allowed shadow-inner">
+          <button
+              disabled
+              class="w-full py-3 rounded-xl bg-blue-600/40 text-white/70 cursor-not-allowed shadow-inner"
+          >
             {{ $t("auth.register.facebook") }}
           </button>
         </div>
-
       </div>
     </Transition>
-
   </div>
 </template>

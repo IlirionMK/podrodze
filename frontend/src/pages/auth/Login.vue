@@ -3,7 +3,6 @@ import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { useAuth } from "@/composables/useAuth"
 import { useValidator } from "@/composables/useValidator"
-
 import BaseInput from "@/components/forms/BaseInput.vue"
 
 const router = useRouter()
@@ -56,29 +55,24 @@ async function onSubmit() {
 
     const data = await res.json()
 
-    // backend always returns 200 → success only if token exists
     if (!data?.token) {
       globalError.value = "auth.errors.incorrect_data"
       return
     }
 
-    // Save auth
     setToken(data.token)
     setUser(data.user || { name: email.value.split("@")[0] })
 
-    // INTENDED redirect
     const intended = localStorage.getItem("intended")
     if (intended) {
       localStorage.removeItem("intended")
       return router.push(intended)
     }
 
-    // ADMIN redirect
     if (data.user?.role === "admin") {
       return router.push({ name: "admin.dashboard" })
     }
 
-    // NORMAL USER redirect
     return router.push({ name: "app.home" })
 
   } catch (e) {
@@ -87,11 +81,21 @@ async function onSubmit() {
     loading.value = false
   }
 }
+
+async function redirectToGoogle() {
+  try {
+    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/google/url")
+    const data = await res.json()
+
+    if (data?.url) {
+      window.location.href = data.url
+    }
+  } catch (e) {}
+}
 </script>
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-[#0d1117] px-4 py-10 relative">
-
     <div class="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 blur-3xl opacity-40"></div>
 
     <Transition
@@ -110,8 +114,6 @@ async function onSubmit() {
         </h1>
 
         <form class="space-y-5" @submit.prevent="onSubmit">
-
-          <!-- EMAIL -->
           <BaseInput
               v-model="email"
               :label="$t('auth.email')"
@@ -122,7 +124,6 @@ async function onSubmit() {
             {{ $t("auth.hints.email_format") }}
           </p>
 
-          <!-- PASSWORD -->
           <BaseInput
               v-model="password"
               :label="$t('auth.password')"
@@ -134,7 +135,6 @@ async function onSubmit() {
             {{ $t("auth.hints.password_min") }}
           </p>
 
-          <!-- GLOBAL ERROR -->
           <p v-if="globalError" class="text-red-300 text-sm text-center">
             {{ $t(globalError) }}
           </p>
@@ -143,26 +143,30 @@ async function onSubmit() {
               type="submit"
               :disabled="loading"
               class="w-full py-3 rounded-xl text-lg font-medium
-                   bg-gradient-to-r from-blue-500 to-purple-600
-                   hover:opacity-90 active:opacity-80 transition
-                   disabled:opacity-50 shadow-lg"
+                     bg-gradient-to-r from-blue-500 to-purple-600
+                     hover:opacity-90 active:opacity-80 transition
+                     disabled:opacity-50 shadow-lg"
           >
             {{ loading ? $t("auth.loading") : $t("auth.login.submit") }}
           </button>
         </form>
 
-        <!-- SOCIAL DISABLED -->
         <div class="mt-8 flex flex-col gap-3">
-          <button disabled class="w-full py-3 rounded-xl bg-red-500/40 text-white/70 cursor-not-allowed shadow-inner">
+          <button
+              @click="redirectToGoogle"
+              class="w-full py-3 rounded-xl bg-red-500 text-white font-medium shadow-lg hover:opacity-90 transition"
+          >
             {{ $t("auth.login.google") }}
           </button>
 
-          <button disabled class="w-full py-3 rounded-xl bg-blue-600/40 text-white/70 cursor-not-allowed shadow-inner">
+          <button
+              disabled
+              class="w-full py-3 rounded-xl bg-blue-600/40 text-white/70 cursor-not-allowed shadow-inner"
+          >
             {{ $t("auth.login.facebook") }}
           </button>
         </div>
       </div>
     </Transition>
-
   </div>
 </template>
