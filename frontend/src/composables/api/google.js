@@ -1,5 +1,5 @@
-import axios from "axios"
+import { api } from "./trips.js"
 
 export const fetchGoogleMapsKey = () => {
-    return axios.get("/api/v1/google/maps-key")
+    return api.get("/google/maps-key")
 }

@@ -22,7 +22,15 @@ const router = createRouter({
             children: [
                 { path: "", name: "guest.home", component: HomePage },
                 { path: "login", name: "auth.login", component: AuthLoginPage },
-                { path: "register", name: "auth.register", component: AuthRegisterPage }
+                { path: "register", name: "auth.register", component: AuthRegisterPage },
+
+                //  GOOGLE OAUTH CALLBACK ROUTE
+                {
+                    path: "auth/google",
+                    name: "auth.google",
+                    component: () => import("../pages/auth/GoogleCallback.vue"),
+                    meta: { guest: true }
+                }
             ]
         },
 
@@ -89,7 +97,8 @@ const router = createRouter({
     ]
 })
 
-// Global route guard
+
+// Global navigation guard
 router.beforeEach((to, from, next) => {
     const token = localStorage.getItem("token")
     const role = localStorage.getItem("role")
