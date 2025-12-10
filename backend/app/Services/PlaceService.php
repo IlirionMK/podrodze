@@ -10,6 +10,7 @@ use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use DomainException;
 
@@ -27,6 +28,80 @@ class PlaceService implements PlaceInterface
     }
 
     /**
+     * Create a manually added custom place (no Google ID).
+     */
+    public function createCustomPlace(array $data, User $user): Place
+    {
+        return Place::create([
+            'name'          => $data['name'],
+            'category_slug' => $data['category'],
+            'location'      => DB::raw("ST_SetSRID(ST_MakePoint({$data['lon']}, {$data['lat']}), 4326)"),
+            'meta'          => [
+                'source'     => 'custom',
+                'created_by' => $user->id,
+            ],
+        ]);
+    }
+
+    /**
+     * Map Google Place types to internal category.
+     */
+    private function mapGoogleTypesToCategory(array $types): string
+    {
+        foreach ($types as $type) {
+            $mapped = Config::get("google_category_map.$type");
+            if ($mapped) {
+                return $mapped;
+            }
+        }
+
+        return 'other';
+    }
+
+    /**
+     * Create a place from Google data (for later Google integration).
+     */
+    public function createFromGoogle(array $data, User $user): Place
+    {
+        $category = $this->mapGoogleTypesToCategory($data['types'] ?? []);
+
+        return Place::create([
+            'name'           => $data['name'],
+            'google_place_id'=> $data['google_place_id'] ?? null,
+            'category_slug'  => $category,
+            'rating'         => $data['rating'] ?? null,
+            'location'       => DB::raw("ST_SetSRID(ST_MakePoint({$data['lon']}, {$data['lat']}), 4326)"),
+            'opening_hours'  => $data['opening_hours'] ?? null,
+            'meta'           => [
+                'source' => 'google',
+            ],
+        ]);
+    }
+
+    /**
+     * Universal entry point for attaching places to a trip.
+     *
+     * If place_id is provided → attach existing place.
+     * Else → create new custom place and attach it.
+     */
+    public function addToTrip(Trip $trip, array $data, User $user): TripPlace
+    {
+        // Existing place
+        if (!empty($data['place_id'])) {
+            return $this->attachToTrip($trip, $data, $user);
+        }
+
+        // Create custom place
+        $place = $this->createCustomPlace($data, $user);
+
+        $data['place_id'] = $place->id;
+
+        return $this->attachToTrip($trip, $data, $user);
+    }
+
+    /**
+     * Attach place to trip.
+     *
      * @throws ModelNotFoundException
      * @throws DomainException
      */
@@ -36,7 +111,7 @@ class PlaceService implements PlaceInterface
 
         $place = Place::find($placeId);
 
-        if (! $place) {
+        if (!$place) {
             throw new ModelNotFoundException("Place #{$placeId} not found.");
         }
 
@@ -67,7 +142,7 @@ class PlaceService implements PlaceInterface
     {
         $attached = $trip->places()->where('places.id', $place->id)->first();
 
-        if (! $attached) {
+        if (!$attached) {
             throw new ModelNotFoundException('Place not found in this trip.');
         }
 
@@ -85,7 +160,7 @@ class PlaceService implements PlaceInterface
      */
     public function detachFromTrip(Trip $trip, Place $place): void
     {
-        if (! $trip->places()->where('places.id', $place->id)->exists()) {
+        if (!$trip->places()->where('places.id', $place->id)->exists()) {
             throw new ModelNotFoundException('Place not found in this trip.');
         }
 
@@ -113,7 +188,7 @@ class PlaceService implements PlaceInterface
     }
 
     /**
-     * Find nearby places using PostGIS (clean service layer).
+     * Nearby place search (PostGIS).
      *
      * @return Collection<int, Place>
      */

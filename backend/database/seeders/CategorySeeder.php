@@ -16,6 +16,7 @@ class CategorySeeder extends Seeder
                     'en' => 'Museums',
                     'pl' => 'Muzea',
                 ]),
+                'include_in_preferences' => true,
             ],
             [
                 'slug' => 'food',
@@ -23,6 +24,7 @@ class CategorySeeder extends Seeder
                     'en' => 'Food',
                     'pl' => 'Jedzenie',
                 ]),
+                'include_in_preferences' => true,
             ],
             [
                 'slug' => 'nature',
@@ -30,6 +32,7 @@ class CategorySeeder extends Seeder
                     'en' => 'Nature',
                     'pl' => 'Natura',
                 ]),
+                'include_in_preferences' => true,
             ],
             [
                 'slug' => 'nightlife',
@@ -37,9 +40,54 @@ class CategorySeeder extends Seeder
                     'en' => 'Nightlife',
                     'pl' => 'Życie nocne',
                 ]),
+                'include_in_preferences' => true,
+            ],
+            [
+                'slug' => 'attraction',
+                'translations' => json_encode([
+                    'en' => 'Attractions',
+                    'pl' => 'Atrakcje',
+                ]),
+                'include_in_preferences' => true,
+            ],
+            [
+                'slug' => 'hotel',
+                'translations' => json_encode([
+                    'en' => 'Hotels',
+                    'pl' => 'Hotele',
+                ]),
+                'include_in_preferences' => false,
+            ],
+            [
+                'slug' => 'airport',
+                'translations' => json_encode([
+                    'en' => 'Airports',
+                    'pl' => 'Lotniska',
+                ]),
+                'include_in_preferences' => false,
+            ],
+            [
+                'slug' => 'station',
+                'translations' => json_encode([
+                    'en' => 'Stations',
+                    'pl' => 'Stacje',
+                ]),
+                'include_in_preferences' => false,
+            ],
+            [
+                'slug' => 'other',
+                'translations' => json_encode([
+                    'en' => 'Other',
+                    'pl' => 'Inne',
+                ]),
+                'include_in_preferences' => false,
             ],
         ];
 
-        DB::table('categories')->upsert($rows, ['slug']);
+        DB::table('categories')->upsert(
+            $rows,
+            ['slug'],
+            ['translations', 'include_in_preferences']
+        );
     }
 }

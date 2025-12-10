@@ -3,52 +3,47 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\TripPlaceStoreRequest;
+use App\Http\Requests\TripPlaceUpdateRequest;
 use App\Http\Resources\TripPlaceResource;
 use App\Http\Resources\TripVoteResource;
 use App\Interfaces\PlaceInterface;
 use App\Models\Trip;
 use App\Models\Place;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use DomainException;
 
-/**
- * @OA\Tag(
- * name="TripPlaces",
- * description="Operations for managing places attached to a specific trip."
- * )
- */
 class TripPlaceController extends Controller
 {
-    use AuthorizesRequests;
-
     public function __construct(
         protected PlaceInterface $placeService
     ) {}
 
     /**
      * @OA\Get(
-     * path="/trips/{trip}/places",
-     * summary="Get all places attached to a trip.",
-     * tags={"TripPlaces"},
-     * security={{"bearerAuth":{}}},
-     * @OA\Parameter(
-     * name="trip",
-     * in="path",
-     * required=true,
-     * description="The ID of the trip.",
-     * @OA\Schema(type="integer", example=12)
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Successful operation.",
-     * @OA\JsonContent(
-     * @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/TripPlaceResource"))
-     * )
-     * ),
-     * @OA\Response(response=401, description="Unauthenticated"),
-     * @OA\Response(response=403, description="Forbidden (Access denied).")
+     *     path="/trips/{trip}/places",
+     *     summary="Get all places added to a trip.",
+     *     tags={"TripPlaces"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="trip",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=12)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of trip places",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(ref="#/components/schemas/TripPlaceResource")
+     *             )
+     *         )
+     *     )
      * )
      */
     public function index(Trip $trip): JsonResponse
@@ -64,58 +59,73 @@ class TripPlaceController extends Controller
 
     /**
      * @OA\Post(
-     * path="/trips/{trip}/places",
-     * summary="Attach a place to a trip.",
-     * tags={"TripPlaces"},
-     * security={{"bearerAuth":{}}},
-     * @OA\Parameter(
-     * name="trip",
-     * in="path",
-     * required=true,
-     * description="The ID of the trip.",
-     * @OA\Schema(type="integer", example=12)
-     * ),
-     * @OA\RequestBody(
-     * required=true,
-     * @OA\JsonContent(
-     * required={"place_id"},
-     * @OA\Property(property="place_id", type="integer", description="The ID of the place to attach.", example=237),
-     * @OA\Property(property="status", type="string", description="Status of the place in the trip.", enum={"proposed", "selected", "rejected", "planned"}, example="proposed"),
-     * @OA\Property(property="is_fixed", type="boolean", description="Whether the place's schedule is fixed.", example=false),
-     * @OA\Property(property="day", type="integer", description="The day of the trip the place is planned for.", example=1, minimum=1),
-     * @OA\Property(property="order_index", type="integer", description="Order index within the day.", example=0, minimum=0),
-     * @OA\Property(property="note", type="string", description="Optional note about the place.", example="Must visit", maxLength=255),
-     * )
-     * ),
-     * @OA\Response(
-     * response=201,
-     * description="Place added to trip successfully.",
-     * @OA\JsonContent(
-     * @OA\Property(property="message", type="string", example="Place added to trip"),
-     * @OA\Property(property="data", ref="#/components/schemas/TripPlaceResource")
-     * )
-     * ),
-     * @OA\Response(response=409, description="Conflict (Place already attached to trip)."),
-     * @OA\Response(response=422, description="Validation error.")
+     *     path="/trips/{trip}/places",
+     *     summary="Attach a place to a trip or create a custom place.",
+     *     description="This endpoint supports:
+     *         1) Attaching an existing place using place_id,
+     *         2) Creating a custom place with name/category/lat/lon.",
+     *     tags={"TripPlaces"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="trip",
+     *         in="path",
+     *         required=true,
+     *         description="Trip ID",
+     *         @OA\Schema(type="integer", example=12)
+     *     ),
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             oneOf={
+     *                 @OA\Schema(
+     *                     description="Attach existing place",
+     *                     required={"place_id"},
+     *                     @OA\Property(property="place_id", type="integer", example=42),
+     *                     @OA\Property(property="status", type="string", enum={"proposed","selected","rejected","planned"}),
+     *                     @OA\Property(property="is_fixed", type="boolean"),
+     *                     @OA\Property(property="day", type="integer", example=1),
+     *                     @OA\Property(property="order_index", type="integer"),
+     *                     @OA\Property(property="note", type="string", example="Check hours")
+     *                 ),
+     *                 @OA\Schema(
+     *                     description="Create custom place",
+     *                     required={"name","category","lat","lon"},
+     *                     @OA\Property(property="name", type="string", example="My Custom Point"),
+     *                     @OA\Property(property="category", type="string", example="hotel"),
+     *                     @OA\Property(property="lat", type="number", example=51.110),
+     *                     @OA\Property(property="lon", type="number", example=17.032),
+     *                     @OA\Property(property="status", type="string", enum={"proposed","selected","rejected","planned"}),
+     *                     @OA\Property(property="is_fixed", type="boolean", example=true),
+     *                     @OA\Property(property="day", type="integer", example=1),
+     *                     @OA\Property(property="order_index", type="integer"),
+     *                     @OA\Property(property="note", type="string", example="Hotel for the group")
+     *                 )
+     *             }
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=201,
+     *         description="Place added to trip",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", ref="#/components/schemas/TripPlaceResource")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(response=409, description="Conflict: place already attached")
      * )
      */
-    public function store(Request $request, Trip $trip): JsonResponse
+    public function store(TripPlaceStoreRequest $request, Trip $trip): JsonResponse
     {
         $this->authorize('update', $trip);
 
-        $validated = $request->validate([
-            'place_id'    => 'required|exists:places,id',
-            'status'      => 'nullable|string|in:proposed,selected,rejected,planned',
-            'is_fixed'    => 'nullable|boolean',
-            'day'         => 'nullable|integer|min:1',
-            'order_index' => 'nullable|integer|min:0',
-            'note'        => 'nullable|string|max:255',
-        ]);
-
         try {
-            $dto = $this->placeService->attachToTrip($trip, $validated, $request->user());
+            $dto = $this->placeService->addToTrip($trip, $request->validated(), $request->user());
         } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 409); // 409 Conflict for existing resource
+            return response()->json(['message' => $e->getMessage()], 409);
         }
 
         return response()->json([
@@ -126,61 +136,43 @@ class TripPlaceController extends Controller
 
     /**
      * @OA\Patch(
-     * path="/trips/{trip}/places/{place}",
-     * summary="Update pivot data (status, day, order) for a place in a trip.",
-     * tags={"TripPlaces"},
-     * security={{"bearerAuth":{}}},
-     * @OA\Parameter(
-     * name="trip",
-     * in="path",
-     * required=true,
-     * description="The ID of the trip.",
-     * @OA\Schema(type="integer", example=12)
-     * ),
-     * @OA\Parameter(
-     * name="place",
-     * in="path",
-     * required=true,
-     * description="The ID of the place.",
-     * @OA\Schema(type="integer", example=237)
-     * ),
-     * @OA\RequestBody(
-     * @OA\JsonContent(
-     * @OA\Property(property="status", type="string", description="New status.", enum={"proposed", "selected", "rejected", "planned"}, example="planned"),
-     * @OA\Property(property="is_fixed", type="boolean", description="Whether the schedule is fixed.", example=true),
-     * @OA\Property(property="day", type="integer", description="The new day of the trip.", example=1),
-     * @OA\Property(property="order_index", type="integer", description="New order index within the day.", example=0),
-     * @OA\Property(property="note", type="string", description="Updated note.", example="Checking times"),
-     * )
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Trip place updated successfully.",
-     * @OA\JsonContent(
-     * @OA\Property(property="message", type="string", example="Trip place updated"),
-     * @OA\Property(property="data", ref="#/components/schemas/TripPlaceResource")
-     * )
-     * ),
-     * @OA\Response(response=404, description="Not Found (Place is not attached to this trip)."),
-     * @OA\Response(response=422, description="Validation error.")
+     *     path="/trips/{trip}/places/{place}",
+     *     summary="Update metadata for a place in a trip.",
+     *     tags={"TripPlaces"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(name="trip", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="place", in="path", required=true, @OA\Schema(type="integer")),
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", enum={"proposed","selected","rejected","planned"}),
+     *             @OA\Property(property="is_fixed", type="boolean"),
+     *             @OA\Property(property="day", type="integer"),
+     *             @OA\Property(property="order_index", type="integer"),
+     *             @OA\Property(property="note", type="string")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Trip place updated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", ref="#/components/schemas/TripPlaceResource")
+     *         )
+     *     )
      * )
      */
-    public function update(Request $request, Trip $trip, Place $place): JsonResponse
+    public function update(TripPlaceUpdateRequest $request, Trip $trip, Place $place): JsonResponse
     {
         $this->authorize('update', $trip);
 
-        $validated = $request->validate([
-            'status'      => 'nullable|string|in:proposed,selected,rejected,planned',
-            'is_fixed'    => 'nullable|boolean',
-            'day'         => 'nullable|integer|min:1',
-            'order_index' => 'nullable|integer|min:0',
-            'note'        => 'nullable|string|max:255',
-        ]);
-
         try {
-            $dto = $this->placeService->updateTripPlace($trip, $place, $validated);
+            $dto = $this->placeService->updateTripPlace($trip, $place, $request->validated());
         } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 404); // 404 Not Found if pivot doesn't exist
+            return response()->json(['message' => $e->getMessage()], 404);
         }
 
         return response()->json([
@@ -191,32 +183,16 @@ class TripPlaceController extends Controller
 
     /**
      * @OA\Delete(
-     * path="/trips/{trip}/places/{place}",
-     * summary="Remove a place from a trip.",
-     * tags={"TripPlaces"},
-     * security={{"bearerAuth":{}}},
-     * @OA\Parameter(
-     * name="trip",
-     * in="path",
-     * required=true,
-     * description="The ID of the trip.",
-     * @OA\Schema(type="integer", example=12)
-     * ),
-     * @OA\Parameter(
-     * name="place",
-     * in="path",
-     * required=true,
-     * description="The ID of the place.",
-     * @OA\Schema(type="integer", example=237)
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Place removed successfully.",
-     * @OA\JsonContent(
-     * @OA\Property(property="message", type="string", example="Place removed from trip")
-     * )
-     * ),
-     * @OA\Response(response=404, description="Not Found (Place is not attached to this trip).")
+     *     path="/trips/{trip}/places/{place}",
+     *     summary="Remove a place from a trip.",
+     *     tags={"TripPlaces"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Place removed",
+     *         @OA\JsonContent(@OA\Property(property="message", type="string"))
+     *     )
      * )
      */
     public function destroy(Trip $trip, Place $place): JsonResponse
@@ -236,44 +212,30 @@ class TripPlaceController extends Controller
 
     /**
      * @OA\Post(
-     * path="/trips/{trip}/places/{place}/vote",
-     * summary="Submit or update a user's vote for a place in a trip.",
-     * tags={"TripPlaces"},
-     * security={{"bearerAuth":{}}},
-     * @OA\Parameter(
-     * name="trip",
-     * in="path",
-     * required=true,
-     * description="The ID of the trip.",
-     * @OA\Schema(type="integer", example=12)
-     * ),
-     * @OA\Parameter(
-     * name="place",
-     * in="path",
-     * required=true,
-     * description="The ID of the place.",
-     * @OA\Schema(type="integer", example=237)
-     * ),
-     * @OA\RequestBody(
-     * required=true,
-     * @OA\JsonContent(
-     * required={"score"},
-     * @OA\Property(property="score", type="integer", description="Vote score (1 to 5).", example=4, minimum=1, maximum=5)
-     * )
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Vote saved and aggregate score returned.",
-     * @OA\JsonContent(
-     * @OA\Property(property="message", type="string", example="Vote saved"),
-     * @OA\Property(property="data", ref="#/components/schemas/TripVoteResource")
-     * )
-     * ),
-     * @OA\Response(response=400, description="Bad Request (Domain error or validation)."),
-     * @OA\Response(response=422, description="Validation error.")
+     *     path="/trips/{trip}/places/{place}/vote",
+     *     summary="Submit or update a user's vote for a place.",
+     *     tags={"TripPlaces"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"score"},
+     *             @OA\Property(property="score", type="integer", minimum=1, maximum=5, example=4)
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Vote saved",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", ref="#/components/schemas/TripVoteResource")
+     *         )
+     *     )
      * )
      */
-    public function vote(Request $request, Trip $trip, Place $place): JsonResponse
+    public function vote(TripPlaceUpdateRequest $request, Trip $trip, Place $place): JsonResponse
     {
         $this->authorize('view', $trip);
 
@@ -286,7 +248,7 @@ class TripPlaceController extends Controller
                 $trip,
                 $place,
                 $request->user(),
-                (int) $validated['score']
+                (int)$validated['score']
             );
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 400);
