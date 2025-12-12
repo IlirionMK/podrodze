@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\TripManagement;
 
 use App\Models\Trip;
 use App\Models\User;
