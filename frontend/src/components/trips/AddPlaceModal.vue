@@ -32,8 +32,8 @@ function submit() {
   emit("submit", {
     name: name.value.trim(),
     category: category.value,
-    latitude: props.lat,
-    longitude: props.lng,
+    lat: props.lat,
+    lon: props.lng,
   })
 
   close()
