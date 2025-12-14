@@ -13,7 +13,6 @@ import AuthRegisterPage from "../pages/auth/Register.vue"
 const router = createRouter({
     history: createWebHistory(),
     routes: [
-
         // Guest routes
         {
             path: "/",
@@ -24,14 +23,22 @@ const router = createRouter({
                 { path: "login", name: "auth.login", component: AuthLoginPage },
                 { path: "register", name: "auth.register", component: AuthRegisterPage },
 
-                //  GOOGLE OAUTH CALLBACK ROUTE
+                // Google OAuth callback route
                 {
                     path: "auth/google",
                     name: "auth.google",
                     component: () => import("../pages/auth/GoogleCallback.vue"),
-                    meta: { guest: true }
-                }
-            ]
+                    meta: { guest: true },
+                },
+
+                // Email verification (SPA)
+                {
+                    path: "auth/verify-email",
+                    name: "auth.verify",
+                    component: () => import("../pages/auth/VerifyEmail.vue"),
+                    meta: { guest: true },
+                },
+            ],
         },
 
         // Authenticated user routes
@@ -64,9 +71,9 @@ const router = createRouter({
                 {
                     path: "profile",
                     name: "app.profile",
-                    component: () => import("../pages/app/Profile.vue")
-                }
-            ]
+                    component: () => import("../pages/app/Profile.vue"),
+                },
+            ],
         },
 
         // Admin routes
@@ -78,38 +85,42 @@ const router = createRouter({
                 {
                     path: "",
                     name: "admin.dashboard",
-                    component: () => import("../pages/admin/Dashboard.vue")
-                }
-            ]
+                    component: () => import("../pages/admin/Dashboard.vue"),
+                },
+            ],
         },
 
         // Error pages
         {
             path: "/403",
             name: "error.403",
-            component: () => import("../pages/errors/Forbidden.vue")
+            component: () => import("../pages/errors/Forbidden.vue"),
         },
         {
             path: "/:pathMatch(.*)*",
             name: "error.404",
-            component: () => import("../pages/errors/NotFound.vue")
-        }
-    ]
+            component: () => import("../pages/errors/NotFound.vue"),
+        },
+    ],
 })
-
 
 // Global navigation guard
 router.beforeEach((to, from, next) => {
     const token = localStorage.getItem("token")
-    const role = localStorage.getItem("role")
     const isAuthenticated = !!token
-    const isAdmin = role === "admin"
+
+    // Prefer user.role from stored user (more reliable than separate "role" key)
+    const user = JSON.parse(localStorage.getItem("user") || "null")
+    const isAdmin = user?.role === "admin"
 
     // Guest restrictions
-    if (to.meta.guest && isAuthenticated) {
+    const allowWhenAuth = ["auth.verify", "auth.google"]
+
+    if (to.meta.guest && isAuthenticated && !allowWhenAuth.includes(to.name)) {
         if (isAdmin) return next({ name: "admin.dashboard" })
         return next({ name: "app.home" })
     }
+
 
     // Auth protection
     if (to.meta.auth && !isAuthenticated) {

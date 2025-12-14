@@ -42,6 +42,16 @@
     "profile": "Profil"
   },
 
+  "common": {
+    "email": "Email",
+    "role": "Rola"
+  },
+
+  "roles": {
+    "member": "Uczestnik",
+    "editor": "Edytor"
+  },
+
   "auth": {
     "email": "Email",
     "password": "Hasło",
@@ -78,6 +88,15 @@
       "password_mismatch": "Hasła nie są takie same",
       "login_failed": "Logowanie nie powiodło się. Niepoprawny email lub hasło.",
       "network": "Błąd połączenia. Spróbuj ponownie później."
+    },
+
+    "verify": {
+      "title": "Weryfikacja e-mail",
+      "success": "Twój adres e-mail został zweryfikowany. Możesz się teraz zalogować.",
+      "already_verified": "Ten adres e-mail jest już zweryfikowany. Możesz się zalogować.",
+      "invalid_link": "Link weryfikacyjny jest nieprawidłowy lub wygasł.",
+      "error": "Coś poszło nie tak. Spróbuj ponownie.",
+      "go_login": "Przejdź do logowania"
     }
   },
 
@@ -138,7 +157,31 @@
       "sort_name_asc": "Nazwa (A–Z)",
       "sort_name_desc": "Nazwa (Z–A)",
       "sort_cat_asc": "Kategoria (A–Z)",
-      "sort_cat_desc": "Kategoria (Z–A)"
+      "sort_cat_desc": "Kategoria (Z–A)",
+
+      "empty_title": "Brak miejsc",
+      "empty_hint": "Dodaj pierwsze miejsce, aby rozpocząć planowanie.",
+
+      "add_title": "Dodaj miejsce",
+      "add_hint": "Utwórz własne miejsce dla tej podróży.",
+      "name_label": "Nazwa",
+      "name_placeholder": "Nazwa miejsca",
+      "category_label": "Kategoria",
+      "add_submit": "Dodaj miejsce",
+      "coords_label": "Współrzędne",
+      "coords_missing": "Najpierw wybierz punkt na mapie."
+    },
+
+    "categories": {
+      "other": "Inne",
+      "food": "Jedzenie",
+      "museum": "Muzeum",
+      "nature": "Natura",
+      "nightlife": "Nocne życie",
+      "attraction": "Atrakcja",
+      "hotel": "Hotel",
+      "airport": "Lotnisko",
+      "station": "Stacja"
     },
 
     "map": {
@@ -161,6 +204,11 @@
       "no_results": "Brak wyników"
     },
 
+    "team": {
+      "empty_title": "Brak uczestników",
+      "empty_hint": "Zaproś znajomych, aby wspólnie planować podróż."
+    },
+
     "plan": {
       "coming_title": "Wkrótce",
       "coming_hint": "Ta sekcja jest w trakcie tworzenia."
@@ -172,7 +220,9 @@
       "hint": "Wybierz, jak ważna jest każda kategoria. Użyjemy tego, aby dopasować sugestie.",
       "score_0": "Nieważne",
       "score_1": "Miło, gdyby było",
-      "score_2": "Bardzo ważne"
+      "score_2": "Bardzo ważne",
+      "empty_title": "Nie znaleziono kategorii",
+      "empty_hint": "Spróbuj zmienić zapytanie wyszukiwania."
     }
   },
 

@@ -2,44 +2,29 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Trip;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, MustVerifyEmailTrait;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -48,24 +33,18 @@ class User extends Authenticatable
         ];
     }
 
-    /**
-     * Trips owned by the user (owner_id).
-     */
     public function trips()
     {
         return $this->hasMany(Trip::class, 'owner_id');
     }
 
-    /**
-     * Trips the user was invited to / joined via pivot `trip_user`.
-     * Includes pivot fields: role, status, created_at, updated_at.
-     */
     public function joinedTrips()
     {
         return $this->belongsToMany(Trip::class, 'trip_user')
             ->withPivot(['role', 'status', 'created_at', 'updated_at'])
             ->withTimestamps();
     }
+
     public function preferences()
     {
         return $this->hasMany(\App\Models\UserPreference::class);
