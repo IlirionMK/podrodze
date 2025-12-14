@@ -11,9 +11,6 @@ use Illuminate\Validation\ValidationException;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * Stateless API login: returns user + bearer token.
-     */
     public function store(LoginRequest $request): JsonResponse
     {
         try {
@@ -22,6 +19,14 @@ class AuthenticatedSessionController extends Controller
             return response()->json([
                 'message' => 'invalid_credentials',
             ], 422);
+        }
+
+        if (method_exists($user, 'isBanned') && $user->isBanned()) {
+            $user->tokens()->delete();
+
+            return response()->json([
+                'message' => 'Account is banned.',
+            ], 403);
         }
 
         if (is_null($user->email_verified_at)) {
@@ -38,17 +43,14 @@ class AuthenticatedSessionController extends Controller
         ], 200);
     }
 
-    /**
-     * Stateless API logout: revoke ALL tokens for this user.
-     */
     public function destroy(Request $request): Response
     {
         $user = $request->user();
 
         if ($user) {
-            $user->tokens()->delete(); // matches your E2E expectation
+            $user->tokens()->delete();
         }
 
-        return response()->noContent(); // 204
+        return response()->noContent();
     }
 }

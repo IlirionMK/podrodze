@@ -18,6 +18,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'role',
+        'banned_at',
     ];
 
     protected $hidden = [
@@ -30,6 +32,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'banned_at' => 'datetime',
         ];
     }
 
@@ -48,5 +51,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function preferences()
     {
         return $this->hasMany(\App\Models\UserPreference::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
     }
 }
