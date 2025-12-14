@@ -22,9 +22,14 @@ class PlaceService implements PlaceInterface
     public function listForTrip(Trip $trip): Collection
     {
         return $trip->places()
+            ->select('places.*')
+            ->addSelect([
+                DB::raw('ST_Y(places.location::geometry) AS lat'),
+                DB::raw('ST_X(places.location::geometry) AS lon'),
+            ])
             ->withPivot(['status', 'is_fixed', 'day', 'order_index', 'note', 'added_by'])
             ->get()
-            ->map(fn(Place $p) => TripPlace::fromModel($p));
+            ->map(fn (Place $p) => TripPlace::fromModel($p));
     }
 
     /**

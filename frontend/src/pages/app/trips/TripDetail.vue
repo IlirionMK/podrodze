@@ -202,8 +202,14 @@ onMounted(loadData)
                     class="border rounded-lg p-4 flex items-center justify-between hover:bg-gray-50 transition"
                 >
                   <div>
-                    <h3 class="font-medium">{{ pl.name }}</h3>
-                    <p class="text-gray-500 text-sm">{{ pl.category }}</p>
+                    <h3 class="font-medium">
+                      {{ pl.place?.name }}
+                    </h3>
+
+                    <p class="text-gray-500 text-sm">
+                      {{ pl.place?.category_slug }}
+                    </p>
+
                   </div>
 
                   <button class="text-blue-600 hover:underline">

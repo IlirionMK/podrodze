@@ -1,4 +1,6 @@
 {
+  "loading": "Loading...",
+
   "app": {
     "name": "PoDrodze",
     "guest": {
@@ -87,6 +89,36 @@
       "invite_desc": "Plan trips together with your group.",
       "vote": "Vote on places",
       "vote_desc": "Choose the best spots together."
+    }
+  },
+
+  "trip": {
+    "stats": {
+      "places": "Places",
+      "activities": "Activities",
+      "members": "Members",
+      "other": "Other"
+    },
+
+    "tabs": {
+      "overview": "Overview",
+      "places": "Places",
+      "plan": "Plan",
+      "team": "Team"
+    },
+
+    "about": "About trip",
+    "no_description": "No description provided",
+    "start": "Start date",
+    "end": "End date",
+
+    "view": {
+      "places": "Places",
+      "add_place": "Add place",
+      "map": "Map",
+      "members": "Members",
+      "open": "Open place",
+      "add_member": "Add member"
     }
   },
 

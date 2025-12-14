@@ -1,45 +1,49 @@
 import { ref, computed } from "vue"
+import api from "@/composables/api/api"
 
-const token = ref(localStorage.getItem("token") || null)
-const user = ref(JSON.parse(localStorage.getItem("user")) || null)
+const token = ref(localStorage.getItem("token"))
+const user = ref(
+    localStorage.getItem("user")
+        ? JSON.parse(localStorage.getItem("user"))
+        : null
+)
 
 export function useAuth() {
 
-    function setToken(newToken) {
-        token.value = newToken
-        localStorage.setItem("token", newToken)
-    }
+    function setAuth(authUser, authToken) {
+        token.value = authToken
+        user.value = authUser
 
-    function setUser(newUser) {
-        user.value = newUser
-        localStorage.setItem("user", JSON.stringify(newUser))
+        localStorage.setItem("token", authToken)
+        localStorage.setItem("user", JSON.stringify(authUser))
     }
 
     function clearAuth() {
         token.value = null
         user.value = null
+
         localStorage.removeItem("token")
         localStorage.removeItem("user")
         localStorage.removeItem("intended")
     }
 
-    function logout(router) {
-        clearAuth()
-
-        if (router) {
-            router.push({ name: "guest.home" })
+    async function logout(router) {
+        try {
+            await api.post("/logout")
+        } catch (e) {
+        } finally {
+            clearAuth()
+            router?.push({ name: "guest.home" })
         }
     }
 
     return {
         token,
         user,
-        setToken,
-        setUser,
+        setAuth,
         clearAuth,
         logout,
-
         isAuthenticated: computed(() => !!token.value),
-        isAdmin: computed(() => user.value?.role === "admin")
+        isAdmin: computed(() => user.value?.role === "admin"),
     }
 }

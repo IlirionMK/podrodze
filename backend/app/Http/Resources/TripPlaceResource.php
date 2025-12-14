@@ -18,21 +18,26 @@ class TripPlaceResource extends JsonResource
 {
     public function toArray($request): array
     {
-        /** @var TripPlace $place */
-        $place = $this->resource;
+        /** @var TripPlace $tp */
+        $tp = $this->resource;
 
         return [
-            'id'            => $place->id,
-            'name'          => $place->name,
-            'category_slug' => $place->category_slug,
-            'rating'        => $place->rating,
+            'id' => $tp->id,
 
-            'status'        => $place->status,
-            'is_fixed'      => $place->is_fixed,
-            'day'           => $place->day,
-            'order_index'   => $place->order_index,
-            'note'          => $place->note,
-            'added_by'      => $place->added_by,
+            'place' => [
+                'id'            => $tp->place['id'],
+                'name'          => $tp->place['name'],
+                'category_slug' => $tp->place['category_slug'],
+                'lat'           => $tp->place['lat'],
+                'lon'           => $tp->place['lon'],
+            ],
+
+            'status'      => $tp->status,
+            'is_fixed'    => $tp->is_fixed,
+            'day'         => $tp->day,
+            'order_index' => $tp->order_index,
+            'note'        => $tp->note,
+            'added_by'    => $tp->added_by,
         ];
     }
 }

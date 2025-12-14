@@ -2,25 +2,18 @@
 import { ref, onMounted, watch } from "vue"
 import { useRoute } from "vue-router"
 
-import { loadGoogleMaps } from "@/utils/loadGoogleMaps.js"
-import { fetchGoogleMapsKey } from "@/composables/api/google.js"
-import { createTripPlace } from "@/composables/api/tripPlaces.js"
+import { loadGoogleMaps } from "@/utils/loadGoogleMaps"
+import { fetchGoogleMapsKey } from "@/composables/api/google"
+import { createTripPlace } from "@/composables/api/tripPlaces"
 
 import AddPlaceModal from "@/components/trips/AddPlaceModal.vue"
 
 const props = defineProps({
-  trip: {
-    type: Object,
-    required: true,
-  },
-  places: {
-    type: Array,
-    required: true,
-  },
+  trip: Object,
+  places: Array,
 })
 
 const emit = defineEmits(["places-changed"])
-
 const route = useRoute()
 
 const map = ref(null)
@@ -30,32 +23,40 @@ const showModal = ref(false)
 const modalLat = ref(null)
 const modalLng = ref(null)
 
-// markers created from backend data
+let google = null
+let MapClass = null
 let markers = []
 
-async function initMap() {
-  const keyRes = await fetchGoogleMapsKey()
-  const apiKey = keyRes.data.key
+function toNumber(v) {
+  if (v == null) return null
+  if (typeof v === "number") return Number.isFinite(v) ? v : null
+  if (typeof v === "string") {
+    const n = Number(v.replace(",", "."))
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
 
-  const googleMaps = await loadGoogleMaps(apiKey)
+async function initMap() {
+  console.log("[TripMap] initMap")
+
+  const { data } = await fetchGoogleMapsKey()
+  google = await loadGoogleMaps(data.key)
+
+  const mapsLib = await google.maps.importLibrary("maps")
+  MapClass = mapsLib.Map
 
   const center =
       props.trip?.start_latitude && props.trip?.start_longitude
-          ? {
-            lat: props.trip.start_latitude,
-            lng: props.trip.start_longitude,
-          }
-          : {
-            lat: 51.1079,
-            lng: 17.0385,
-          }
+          ? { lat: Number(props.trip.start_latitude), lng: Number(props.trip.start_longitude) }
+          : { lat: 51.1079, lng: 17.0385 }
 
-  map.value = new googleMaps.Map(mapElement.value, {
+  map.value = new MapClass(mapElement.value, {
     center,
     zoom: 12,
   })
 
-  renderMarkers(googleMaps, props.places)
+  renderMarkers(props.places)
 
   map.value.addListener("click", (event) => {
     modalLat.value = event.latLng.lat()
@@ -64,42 +65,65 @@ async function initMap() {
   })
 }
 
-function renderMarkers(googleMaps, places) {
-  markers.forEach((m) => (m.map = null))
+function clearMarkers() {
+  markers.forEach((m) => m.setMap(null))
   markers = []
+}
 
-  if (!Array.isArray(places)) return
+function renderMarkers(places = []) {
+  if (!map.value || !google) return
 
-  places.forEach((place) => {
-    if (place.latitude == null || place.longitude == null) return
+  console.log("[TripMap] renderMarkers places:", places)
 
-    const marker = new googleMaps.marker.AdvancedMarkerElement({
+  clearMarkers()
+
+  const bounds = new google.maps.LatLngBounds()
+
+  places.forEach((tp) => {
+    console.log("[TripMap] TripPlace:", tp)
+
+    const lat = toNumber(tp?.place?.lat)
+    const lng = toNumber(tp?.place?.lon)
+
+    console.log("[TripMap] coords:", lat, lng)
+
+    if (lat == null || lng == null) {
+      console.warn("[TripMap] missing/invalid coords for place", tp)
+      return
+    }
+
+    const position = { lat, lng }
+    bounds.extend(position)
+
+    const marker = new google.maps.Marker({
       map: map.value,
-      position: {
-        lat: place.latitude,
-        lng: place.longitude,
-      },
+      position,
+      title: tp?.place?.name || "",
+      label: tp?.place?.name ? tp.place.name.slice(0, 1).toUpperCase() : undefined,
     })
 
     markers.push(marker)
   })
+
+  console.log("[TripMap] markers rendered:", markers.length)
+
+  if (markers.length > 0) {
+    map.value.fitBounds(bounds, 60)
+  }
 }
 
-// when parent updates places from backend – we re-render markers
 watch(
     () => props.places,
     (newPlaces) => {
-      if (!map.value || !window.google || !window.google.maps) return
-      renderMarkers(window.google.maps, newPlaces)
+      console.log("[TripMap] places changed", newPlaces)
+      if (!map.value) return
+      renderMarkers(newPlaces)
     },
     { deep: true }
 )
 
 async function handleSubmit(payload) {
   await createTripPlace(route.params.id, payload)
-
-  // we do NOT push into props.places here – source of truth is backend
-  // just notify parent that places changed
   emit("places-changed")
 }
 
@@ -108,16 +132,8 @@ onMounted(initMap)
 
 <template>
   <div class="relative">
-    <div
-        ref="mapElement"
-        class="w-full h-72 md:h-96 rounded-xl border overflow-hidden"
-    ></div>
+    <div ref="mapElement" class="w-full h-72 md:h-96 rounded-xl border overflow-hidden"></div>
 
-    <AddPlaceModal
-        v-model="showModal"
-        :lat="modalLat"
-        :lng="modalLng"
-        @submit="handleSubmit"
-    />
+    <AddPlaceModal v-model="showModal" :lat="modalLat" :lng="modalLng" @submit="handleSubmit" />
   </div>
 </template>

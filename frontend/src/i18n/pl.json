@@ -1,4 +1,6 @@
 {
+  "loading": "Ładowanie...",
+
   "app": {
     "name": "PoDrodze",
     "guest": {
@@ -58,7 +60,7 @@
     },
 
     "errors": {
-      "incorrect_data": "Niepoprawne dane logowania.",
+      "incorrect_data": "Niepoprawny email lub hasło.",
       "email_required": "Email jest wymagany",
       "invalid_email": "Niepoprawny format adresu email",
       "password_required": "Hasło jest wymagane",
@@ -87,6 +89,36 @@
       "invite_desc": "Planuj podróże razem z grupą.",
       "vote": "Głosuj na miejsca",
       "vote_desc": "Wspólnie wybierajcie najlepsze punkty."
+    }
+  },
+
+  "trip": {
+    "stats": {
+      "places": "Miejsca",
+      "activities": "Aktywności",
+      "members": "Uczestnicy",
+      "other": "Inne"
+    },
+
+    "tabs": {
+      "overview": "Przegląd",
+      "places": "Miejsca",
+      "plan": "Plan",
+      "team": "Zespół"
+    },
+
+    "about": "O podróży",
+    "no_description": "Brak opisu",
+    "start": "Data rozpoczęcia",
+    "end": "Data zakończenia",
+
+    "view": {
+      "places": "Miejsca",
+      "add_place": "Dodaj miejsce",
+      "map": "Mapa",
+      "members": "Uczestnicy",
+      "open": "Otwórz mejsce",
+      "add_member": "Dodaj uczestnika"
     }
   },
 

@@ -3,10 +3,11 @@ import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { useAuth } from "@/composables/useAuth"
 import { useValidator } from "@/composables/useValidator"
+import api from "@/composables/api/api"
 import BaseInput from "@/components/forms/BaseInput.vue"
 
 const router = useRouter()
-const { setToken, setUser } = useAuth()
+const { setAuth } = useAuth()
 
 const email = ref("")
 const password = ref("")
@@ -25,8 +26,8 @@ async function onSubmit() {
       email: true,
       messages: {
         required: "auth.errors.incorrect_data",
-        email: "auth.errors.incorrect_data"
-      }
+        email: "auth.errors.incorrect_data",
+      },
     },
     password: {
       value: password.value,
@@ -34,34 +35,26 @@ async function onSubmit() {
       min: 6,
       messages: {
         required: "auth.errors.incorrect_data",
-        min: "auth.errors.incorrect_data"
-      }
-    }
+        min: "auth.errors.incorrect_data",
+      },
+    },
   })
 
   if (!isValid) return
-
   loading.value = true
 
   try {
-    const res = await fetch(import.meta.env.VITE_API_URL + "/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value
-      })
+    const { data } = await api.post("/login", {
+      email: email.value,
+      password: password.value,
     })
 
-    const data = await res.json()
-
-    if (!data?.token) {
+    if (!data?.token || !data?.user) {
       globalError.value = "auth.errors.incorrect_data"
       return
     }
 
-    setToken(data.token)
-    setUser(data.user || { name: email.value.split("@")[0] })
+    setAuth(data.user, data.token)
 
     const intended = localStorage.getItem("intended")
     if (intended) {
@@ -69,28 +62,16 @@ async function onSubmit() {
       return router.push(intended)
     }
 
-    if (data.user?.role === "admin") {
+    if (data.user.role === "admin") {
       return router.push({ name: "admin.dashboard" })
     }
 
-    return router.push({ name: "app.home" })
-
-  } catch (e) {
+    router.push({ name: "app.home" })
+  } catch {
     globalError.value = "auth.errors.incorrect_data"
   } finally {
     loading.value = false
   }
-}
-
-async function redirectToGoogle() {
-  try {
-    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/google/url")
-    const data = await res.json()
-
-    if (data?.url) {
-      window.location.href = data.url
-    }
-  } catch (e) {}
 }
 </script>
 
