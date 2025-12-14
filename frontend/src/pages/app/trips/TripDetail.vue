@@ -3,9 +3,11 @@ import { ref, computed, onMounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 
+import { useAuth } from "@/composables/useAuth.js"
+
 import { fetchTrip } from "@/composables/api/trips.js"
 import { fetchTripPlaces, voteTripPlace, updateTripPlace, deleteTripPlace } from "@/composables/api/tripPlaces.js"
-import { fetchTripMembers } from "@/composables/api/tripMembers.js"
+import { fetchTripMembers, inviteTripMember } from "@/composables/api/tripMembers.js"
 
 import TripHeaderBar from "@/components/trips/TripHeaderBar.vue"
 import TripTabs from "@/components/trips/TripTabs.vue"
@@ -17,11 +19,16 @@ const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
 
+const { user: authUser } = useAuth()
+
 const trip = ref(null)
 const members = ref([])
 const places = ref([])
+
 const loading = ref(true)
+const membersLoading = ref(false)
 const placesLoading = ref(false)
+
 const errorMsg = ref("")
 
 const activeTab = ref("overview")
@@ -34,6 +41,11 @@ const placeSearchOpen = ref(false)
 
 const drawerOpen = ref(false)
 const actionBusy = ref(false)
+
+const inviteOpen = ref(false)
+const inviteEmail = ref("")
+const inviteRole = ref("member")
+const inviteBusy = ref(false)
 
 const bannerImage =
     "https://images.unsplash.com/photo-1528909514045-2fa4ac7a08ba?auto=format&fit=crop&w=1600&q=80"
@@ -82,20 +94,25 @@ async function refreshPlaces() {
   }
 }
 
+async function refreshMembers() {
+  membersLoading.value = true
+  try {
+    const res = await fetchTripMembers(route.params.id)
+    members.value = res.data.data || []
+  } finally {
+    membersLoading.value = false
+  }
+}
+
 async function loadData() {
   loading.value = true
   errorMsg.value = ""
 
   try {
-    const [tripRes, membersRes] = await Promise.all([
-      fetchTrip(route.params.id),
-      fetchTripMembers(route.params.id),
-    ])
-
+    const tripRes = await fetchTrip(route.params.id)
     trip.value = tripRes.data.data
-    members.value = membersRes.data.data || []
 
-    await refreshPlaces()
+    await Promise.all([refreshMembers(), refreshPlaces()])
   } catch (err) {
     errorMsg.value = err.response?.data?.message || t("errors.default")
   } finally {
@@ -172,6 +189,52 @@ const selectedIsFixed = computed(() => {
   if (!tp) return false
   return Boolean(tp.is_fixed ?? tp.fixed ?? tp.is_mandatory ?? false)
 })
+
+const myMember = computed(() => {
+  const uid = authUser.value?.id
+  if (!uid) return null
+  return members.value.find((m) => m.id === uid) || null
+})
+
+const canManageMembers = computed(() => {
+  const uid = authUser.value?.id
+  if (!uid || !trip.value) return false
+  if (trip.value.owner_id === uid) return true
+  return myMember.value?.role === "editor" && myMember.value?.status === "accepted"
+})
+
+function openInvite() {
+  if (!canManageMembers.value) return
+  inviteOpen.value = true
+}
+
+function closeInvite() {
+  inviteOpen.value = false
+  inviteEmail.value = ""
+  inviteRole.value = "member"
+}
+
+async function submitInvite() {
+  const email = inviteEmail.value.trim()
+  if (!email) return
+
+  inviteBusy.value = true
+  errorMsg.value = ""
+
+  try {
+    await inviteTripMember(route.params.id, {
+      email,
+      role: inviteRole.value,
+    })
+
+    await refreshMembers()
+    closeInvite()
+  } catch (e) {
+    errorMsg.value = e?.response?.data?.error || e?.response?.data?.message || t("errors.default")
+  } finally {
+    inviteBusy.value = false
+  }
+}
 
 watch(
     () => route.params.id,
@@ -380,39 +443,52 @@ onMounted(async () => {
         </KeepAlive>
 
         <section v-if="activeTab === 'plan'" class="bg-white p-6 rounded-2xl border shadow-sm">
-          <h2 class="text-xl font-semibold mb-2">{{ t("trip.tabs.plan") }}</h2>
-          <div class="p-6 rounded-xl border bg-gray-50 text-gray-700">
-            <div class="font-semibold mb-1">{{ t("trip.plan.coming_title") }}</div>
-            <div class="text-sm text-gray-600">{{ t("trip.plan.coming_hint") }}</div>
-          </div>
+        <h2 class="text-xl font-semibold mb-2">{{ t("trip.tabs.plan") }}</h2>
+        <div class="p-6 rounded-xl border bg-gray-50 text-gray-700">
+          <div class="font-semibold mb-1">{{ t("trip.plan.coming_title") }}</div>
+          <div class="text-sm text-gray-600">{{ t("trip.plan.coming_hint") }}</div>
+        </div>
         </section>
 
         <section v-if="activeTab === 'team'" class="bg-white p-6 rounded-2xl border shadow-sm">
-          <div class="flex items-center justify-between gap-4 mb-4">
-            <h2 class="text-xl font-semibold">{{ t("trip.view.members") }}</h2>
-            <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">
+        <div class="flex items-center justify-between gap-4 mb-4">
+          <h2 class="text-xl font-semibold">{{ t("trip.view.members") }}</h2>
+
+          <div class="flex items-center gap-3">
+            <div v-if="membersLoading" class="text-sm text-gray-500">
+              {{ t("loading") }}…
+            </div>
+
+            <button
+                v-if="canManageMembers"
+                type="button"
+                class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+                @click="openInvite"
+            >
               {{ t("trip.view.add_member") }}
             </button>
           </div>
+        </div>
 
-          <div v-if="members.length === 0" class="p-6 rounded-xl border bg-gray-50 text-gray-700">
-            <div class="font-semibold mb-1">{{ t("trip.team.empty_title") }}</div>
-            <div class="text-sm text-gray-600">{{ t("trip.team.empty_hint") }}</div>
-          </div>
+        <div v-if="members.length === 0" class="p-6 rounded-xl border bg-gray-50 text-gray-700">
+          <div class="font-semibold mb-1">{{ t("trip.team.empty_title") }}</div>
+          <div class="text-sm text-gray-600">{{ t("trip.team.empty_hint") }}</div>
+        </div>
 
-          <div v-else class="flex flex-wrap gap-3">
-            <div v-for="m in members" :key="m.id" class="px-4 py-2 rounded-xl bg-gray-100 border">
-              <div class="font-medium">{{ m.name }}</div>
-            </div>
+        <div v-else class="flex flex-wrap gap-3">
+          <div v-for="m in members" :key="m.id" class="px-4 py-2 rounded-xl bg-gray-100 border">
+            <div class="font-medium">{{ m.name }}</div>
+            <div class="text-xs text-gray-600">{{ m.role }} • {{ m.status }}</div>
           </div>
+        </div>
         </section>
 
         <section v-if="activeTab === 'preferences'" class="bg-white p-6 rounded-2xl border shadow-sm">
-          <h2 class="text-xl font-semibold mb-2">{{ t("trip.tabs.preferences") }}</h2>
-          <div class="p-6 rounded-xl border bg-gray-50 text-gray-700">
-            <div class="font-semibold mb-1">{{ t("trip.preferences.coming_title") }}</div>
-            <div class="text-sm text-gray-600">{{ t("trip.preferences.coming_hint") }}</div>
-          </div>
+        <h2 class="text-xl font-semibold mb-2">{{ t("trip.tabs.preferences") }}</h2>
+        <div class="p-6 rounded-xl border bg-gray-50 text-gray-700">
+          <div class="font-semibold mb-1">{{ t("trip.preferences.coming_title") }}</div>
+          <div class="text-sm text-gray-600">{{ t("trip.preferences.coming_hint") }}</div>
+        </div>
         </section>
 
         <PlaceSearchModal v-model="placeSearchOpen" :trip-id="route.params.id" @picked="handlePickedPlace" />
@@ -425,6 +501,70 @@ onMounted(async () => {
             @toggle-fixed="doToggleFixed"
             @remove="doRemove"
         />
+
+        <div v-if="inviteOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div class="absolute inset-0 bg-black/40" @click="closeInvite"></div>
+
+          <div class="relative w-full max-w-lg bg-white rounded-2xl border shadow-xl p-6">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="text-lg font-semibold">{{ t("trip.view.add_member") }}</h3>
+
+              <button
+                  type="button"
+                  class="px-3 py-1.5 rounded-xl border bg-white hover:bg-gray-50"
+                  @click="closeInvite"
+                  :disabled="inviteBusy"
+              >
+                {{ t("actions.cancel") }}
+              </button>
+            </div>
+
+            <div class="mt-4 space-y-3">
+              <div>
+                <label class="text-sm text-gray-600">Email</label>
+                <input
+                    v-model="inviteEmail"
+                    type="email"
+                    class="w-full mt-1 px-4 py-2.5 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
+                    placeholder="friend@example.com"
+                    :disabled="inviteBusy"
+                />
+              </div>
+
+              <div>
+                <label class="text-sm text-gray-600">Role</label>
+                <select
+                    v-model="inviteRole"
+                    class="w-full mt-1 px-4 py-2.5 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
+                    :disabled="inviteBusy"
+                >
+                  <option value="member">member</option>
+                  <option value="editor">editor</option>
+                </select>
+              </div>
+
+              <div class="flex justify-end gap-2 pt-2">
+                <button
+                    type="button"
+                    class="px-4 py-2 rounded-xl border bg-white hover:bg-gray-50 transition"
+                    @click="closeInvite"
+                    :disabled="inviteBusy"
+                >
+                  {{ t("actions.cancel") }}
+                </button>
+
+                <button
+                    type="button"
+                    class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+                    @click="submitInvite"
+                    :disabled="inviteBusy || !inviteEmail.trim()"
+                >
+                  {{ inviteBusy ? t("loading") : t("actions.add") }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

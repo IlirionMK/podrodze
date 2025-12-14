@@ -69,7 +69,7 @@ class TripService implements TripInterface
     /** Invite another user to the trip. */
     public function inviteUser(Trip $trip, User $actor, array $data): Invite
     {
-        if (! $actor->can('update', $trip)) {
+        if (! $actor->can('manageMembers', $trip)) {
             throw new AuthorizationException('You cannot invite users to this trip.');
         }
 
@@ -93,7 +93,6 @@ class TripService implements TripInterface
                 throw new \DomainException('This user is already invited.');
             }
 
-            // Resend invite for declined or unknown status
             $trip->members()->updateExistingPivot($user->id, [
                 'role'   => $role,
                 'status' => 'pending',
@@ -177,7 +176,7 @@ class TripService implements TripInterface
     /** Update a member's role. */
     public function updateMemberRole(Trip $trip, User $user, string $role, User $actor): void
     {
-        if (! $actor->can('update', $trip)) {
+        if (! $actor->can('manageMembers', $trip)) {
             throw new AuthorizationException('You cannot update member roles.');
         }
 
@@ -209,7 +208,7 @@ class TripService implements TripInterface
     /** Remove a member from the trip. */
     public function removeMember(Trip $trip, User $user, User $actor): void
     {
-        if (! $actor->can('update', $trip)) {
+        if (! $actor->can('manageMembers', $trip)) {
             throw new AuthorizationException('You cannot remove members.');
         }
 
