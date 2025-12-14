@@ -1,33 +1,99 @@
 <script setup>
-import { ref, onMounted } from "vue"
-import { useRoute } from "vue-router"
+import { ref, computed, onMounted, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 
 import { fetchTrip } from "@/composables/api/trips.js"
-import { fetchTripPlaces } from "@/composables/api/tripPlaces.js"
+import { fetchTripPlaces, voteTripPlace, updateTripPlace, deleteTripPlace } from "@/composables/api/tripPlaces.js"
 import { fetchTripMembers } from "@/composables/api/tripMembers.js"
 
-import TripMap from "@/components/trips/TripMap.vue"
+import TripHeaderBar from "@/components/trips/TripHeaderBar.vue"
+import TripTabs from "@/components/trips/TripTabs.vue"
+import PlacesWorkspace from "@/components/trips/panels/PlacesWorkspace.vue"
+import PlaceSearchModal from "@/components/trips/PlaceSearchModal.vue"
+import PlaceDetailsDrawer from "@/components/trips/PlaceDetailsDrawer.vue"
 
 const route = useRoute()
-const { t } = useI18n()
+const router = useRouter()
+const { t, locale } = useI18n()
 
 const trip = ref(null)
 const members = ref([])
 const places = ref([])
 const loading = ref(true)
+const placesLoading = ref(false)
 const errorMsg = ref("")
 
-// UI
 const activeTab = ref("overview")
+const placeQuery = ref("")
+const categoryFilter = ref("all")
+const sortKey = ref("name_asc")
+
+const selectedTripPlaceId = ref(null)
+const placeSearchOpen = ref(false)
+
+const drawerOpen = ref(false)
+const actionBusy = ref(false)
+
+const bannerImage =
+    "https://images.unsplash.com/photo-1528909514045-2fa4ac7a08ba?auto=format&fit=crop&w=1600&q=80"
+
+function initTabFromRoute() {
+  const qTab = String(route.query.tab || "")
+  const allowed = new Set(["overview", "places", "plan", "team", "preferences"])
+  activeTab.value = allowed.has(qTab) ? qTab : "overview"
+}
+
+function setTab(tab) {
+  activeTab.value = tab
+  router.replace({ query: { ...route.query, tab } })
+}
+
+function openPlaceSearch() {
+  placeSearchOpen.value = true
+}
+
+function handlePickedPlace(payload) {
+  console.log("picked place:", payload)
+}
+
+function formatDate(value) {
+  if (!value) return "—"
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value)
+  try {
+    return new Intl.DateTimeFormat(locale.value || "en", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    }).format(d)
+  } catch {
+    return d.toISOString().slice(0, 10)
+  }
+}
+
+async function refreshPlaces() {
+  placesLoading.value = true
+  try {
+    const res = await fetchTripPlaces(route.params.id)
+    places.value = res.data.data || []
+  } finally {
+    placesLoading.value = false
+  }
+}
 
 async function loadData() {
-  try {
-    const tripRes = await fetchTrip(route.params.id)
-    trip.value = tripRes.data.data
+  loading.value = true
+  errorMsg.value = ""
 
-    const membersRes = await fetchTripMembers(route.params.id)
-    members.value = membersRes.data.data
+  try {
+    const [tripRes, membersRes] = await Promise.all([
+      fetchTrip(route.params.id),
+      fetchTripMembers(route.params.id),
+    ])
+
+    trip.value = tripRes.data.data
+    members.value = membersRes.data.data || []
 
     await refreshPlaces()
   } catch (err) {
@@ -37,70 +103,200 @@ async function loadData() {
   }
 }
 
-async function refreshPlaces() {
-  const res = await fetchTripPlaces(route.params.id)
-  places.value = res.data.data
+const categories = computed(() => {
+  const set = new Set()
+  for (const p of places.value) {
+    const slug = p?.place?.category_slug
+    if (slug) set.add(slug)
+  }
+  return ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b))]
+})
+
+const filteredPlaces = computed(() => {
+  const q = placeQuery.value.trim().toLowerCase()
+  let list = [...places.value]
+
+  if (categoryFilter.value !== "all") {
+    list = list.filter((p) => p?.place?.category_slug === categoryFilter.value)
+  }
+
+  if (q) {
+    list = list.filter((p) => {
+      const name = (p?.place?.name || "").toLowerCase()
+      const cat = (p?.place?.category_slug || "").toLowerCase()
+      return name.includes(q) || cat.includes(q)
+    })
+  }
+
+  switch (sortKey.value) {
+    case "name_desc":
+      list.sort((a, b) => (b?.place?.name || "").localeCompare(a?.place?.name || ""))
+      break
+    case "cat_asc":
+      list.sort((a, b) => (a?.place?.category_slug || "").localeCompare(b?.place?.category_slug || ""))
+      break
+    case "cat_desc":
+      list.sort((a, b) => (b?.place?.category_slug || "").localeCompare(a?.place?.category_slug || ""))
+      break
+    default:
+      list.sort((a, b) => (a?.place?.name || "").localeCompare(b?.place?.name || ""))
+  }
+
+  return list
+})
+
+const stats = computed(() => ({
+  places: places.value.length,
+  members: members.value.length,
+  activities: 0,
+}))
+
+const selectedTripPlace = computed(() => {
+  const id = selectedTripPlaceId.value
+  if (!id) return null
+  return (
+      places.value.find((p) => p.id === id) ||
+      places.value.find((p) => p?.place?.id === id) ||
+      null
+  )
+})
+
+const selectedBackendId = computed(() => {
+  const tp = selectedTripPlace.value
+  if (!tp) return null
+  return tp?.place?.id ?? tp?.id ?? null
+})
+
+const selectedIsFixed = computed(() => {
+  const tp = selectedTripPlace.value
+  if (!tp) return false
+  return Boolean(tp.is_fixed ?? tp.fixed ?? tp.is_mandatory ?? false)
+})
+
+watch(
+    () => route.params.id,
+    async () => {
+      initTabFromRoute()
+      await loadData()
+    }
+)
+
+watch(
+    () => route.query.tab,
+    () => initTabFromRoute()
+)
+
+watch(
+    () => selectedTripPlaceId.value,
+    (v) => {
+      drawerOpen.value = Boolean(v)
+    }
+)
+
+watch(
+    () => drawerOpen.value,
+    (v) => {
+      if (!v) selectedTripPlaceId.value = null
+    }
+)
+
+async function doVote() {
+  if (!selectedBackendId.value) return
+  actionBusy.value = true
+  try {
+    await voteTripPlace(route.params.id, selectedBackendId.value)
+    await refreshPlaces()
+  } catch (e) {
+    errorMsg.value = e?.response?.data?.message || t("errors.default")
+  } finally {
+    actionBusy.value = false
+  }
 }
 
-onMounted(loadData)
+async function doToggleFixed() {
+  if (!selectedBackendId.value) return
+  actionBusy.value = true
+  try {
+    await updateTripPlace(route.params.id, selectedBackendId.value, {
+      is_fixed: !selectedIsFixed.value,
+    })
+    await refreshPlaces()
+  } catch (e) {
+    errorMsg.value = e?.response?.data?.message || t("errors.default")
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+async function doRemove() {
+  if (!selectedBackendId.value) return
+  actionBusy.value = true
+  try {
+    await deleteTripPlace(route.params.id, selectedBackendId.value)
+    drawerOpen.value = false
+    selectedTripPlaceId.value = null
+    await refreshPlaces()
+  } catch (e) {
+    errorMsg.value = e?.response?.data?.message || t("errors.default")
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+onMounted(async () => {
+  initTabFromRoute()
+  await loadData()
+})
 </script>
 
 <template>
   <div class="w-full">
-
-    <!-- Loading -->
-    <div v-if="loading" class="p-8 text-center text-gray-500">
-      {{ t("loading") }}…
-    </div>
-
-    <!-- Error -->
-    <div
-        v-if="errorMsg && !loading"
-        class="p-4 bg-red-100 text-red-700 border border-red-300 rounded-xl max-w-xl mx-auto"
-    >
-      {{ errorMsg }}
-    </div>
-
-    <!-- Content -->
-    <div v-if="trip">
-
-      <!-- Banner -->
-      <div class="relative h-56 md:h-72 w-full overflow-hidden">
-        <img
-            src="https://images.unsplash.com/photo-1528909514045-2fa4ac7a08ba"
-            alt="Trip banner"
-            class="w-full h-full object-cover"
-        />
-
-        <div class="absolute inset-0 bg-black/40"></div>
-
-        <div class="absolute bottom-6 left-6 text-white drop-shadow">
-          <h1 class="text-3xl md:text-4xl font-bold">
-            {{ trip.name }}
-          </h1>
-          <p v-if="trip.description" class="text-lg opacity-90">
-            {{ trip.description }}
-          </p>
+    <div v-if="loading" class="max-w-6xl mx-auto px-4 py-10">
+      <div class="animate-pulse space-y-6">
+        <div class="h-10 w-2/3 bg-gray-200 rounded-lg"></div>
+        <div class="h-5 w-1/2 bg-gray-200 rounded-lg"></div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div v-for="i in 4" :key="i" class="h-24 bg-gray-200 rounded-xl"></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div class="lg:col-span-7 h-72 bg-gray-200 rounded-xl"></div>
+          <div class="lg:col-span-5 h-[520px] bg-gray-200 rounded-xl"></div>
         </div>
       </div>
+    </div>
 
-      <div class="max-w-6xl mx-auto px-4 -mt-10 relative z-10">
+    <div v-else-if="errorMsg" class="max-w-6xl mx-auto px-4 py-10">
+      <div class="p-4 bg-red-100 text-red-700 border border-red-300 rounded-xl max-w-xl">
+        {{ errorMsg }}
+      </div>
+    </div>
 
-        <!-- Stats -->
+    <div v-else-if="trip">
+      <TripHeaderBar
+          :trip="trip"
+          :stats="stats"
+          :banner-image="bannerImage"
+          :format-date="formatDate"
+          @add-place="openPlaceSearch"
+          @invite-member="setTab('team')"
+          @open-preferences="setTab('preferences')"
+      />
+
+      <div class="max-w-6xl mx-auto px-4 -mt-10 relative z-10 pb-14">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div class="bg-white p-5 rounded-xl shadow border text-center">
             <div class="text-gray-600 text-sm">{{ t("trip.stats.places") }}</div>
-            <div class="text-2xl font-semibold">{{ places.length }}</div>
+            <div class="text-2xl font-semibold">{{ stats.places }}</div>
           </div>
 
           <div class="bg-white p-5 rounded-xl shadow border text-center">
             <div class="text-gray-600 text-sm">{{ t("trip.stats.activities") }}</div>
-            <div class="text-2xl font-semibold">0</div>
+            <div class="text-2xl font-semibold">{{ stats.activities }}</div>
           </div>
 
           <div class="bg-white p-5 rounded-xl shadow border text-center">
             <div class="text-gray-600 text-sm">{{ t("trip.stats.members") }}</div>
-            <div class="text-2xl font-semibold">{{ members.length }}</div>
+            <div class="text-2xl font-semibold">{{ stats.members }}</div>
           </div>
 
           <div class="bg-white p-5 rounded-xl shadow border text-center">
@@ -109,162 +305,127 @@ onMounted(loadData)
           </div>
         </div>
 
-        <!-- Tabs -->
-        <div
-            class="flex gap-8 border-b pb-2 text-gray-600 mb-6 overflow-x-auto whitespace-nowrap"
-        >
-          <button
-              class="pb-1 font-medium"
-              :class="activeTab === 'overview'
-              ? 'text-black border-b-2 border-black'
-              : 'hover:text-black'"
-              @click="activeTab = 'overview'"
-          >
-            {{ t("trip.tabs.overview") }}
-          </button>
+        <TripTabs :modelValue="activeTab" class="mb-6" @update:modelValue="setTab">
+          <template #overview>{{ t("trip.tabs.overview") }}</template>
+          <template #places>{{ t("trip.tabs.places") }}</template>
+          <template #plan>{{ t("trip.tabs.plan") }}</template>
+          <template #team>{{ t("trip.tabs.team") }}</template>
+          <template #preferences>{{ t("trip.tabs.preferences") }}</template>
+        </TripTabs>
 
-          <button
-              class="pb-1"
-              :class="activeTab === 'places'
-              ? 'text-black border-b-2 border-black'
-              : 'hover:text-black'"
-              @click="activeTab = 'places'"
-          >
-            {{ t("trip.tabs.places") }}
-          </button>
-
-          <button
-              class="pb-1"
-              :class="activeTab === 'plan'
-              ? 'text-black border-b-2 border-black'
-              : 'hover:text-black'"
-              @click="activeTab = 'plan'"
-          >
-            {{ t("trip.tabs.plan") }}
-          </button>
-
-          <button
-              class="pb-1"
-              :class="activeTab === 'team'
-              ? 'text-black border-b-2 border-black'
-              : 'hover:text-black'"
-              @click="activeTab = 'team'"
-          >
-            {{ t("trip.tabs.team") }}
-          </button>
-        </div>
-
-        <!-- Main Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          <!-- LEFT column -->
-          <div class="lg:col-span-2 flex flex-col gap-8">
-
-            <!-- About -->
-            <section class="bg-white p-6 rounded-xl border shadow-sm">
-              <h2 class="text-xl font-semibold mb-4">
-                {{ t("trip.about") }}
-              </h2>
-
-              <p class="text-gray-700 mb-4">
-                {{ trip.description || t("trip.no_description") }}
-              </p>
-
-              <div class="flex items-center gap-6 text-sm">
-                <div>
-                  <div class="text-gray-500">{{ t("trip.start") }}</div>
-                  <div class="font-medium">{{ trip.start_date }}</div>
-                </div>
-
-                <div>
-                  <div class="text-gray-500">{{ t("trip.end") }}</div>
-                  <div class="font-medium">{{ trip.end_date }}</div>
-                </div>
-              </div>
-            </section>
-
-            <!-- Places -->
-            <section class="bg-white p-6 rounded-xl border shadow-sm">
-              <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold">
-                  {{ t("trip.view.places") }}
-                </h2>
-
-                <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  {{ t("trip.view.add_place") }}
-                </button>
-              </div>
-
-              <div class="flex flex-col gap-3">
-                <div
-                    v-for="pl in places"
-                    :key="pl.id"
-                    class="border rounded-lg p-4 flex items-center justify-between hover:bg-gray-50 transition"
-                >
-                  <div>
-                    <h3 class="font-medium">
-                      {{ pl.place?.name }}
-                    </h3>
-
-                    <p class="text-gray-500 text-sm">
-                      {{ pl.place?.category_slug }}
-                    </p>
-
-                  </div>
-
-                  <button class="text-blue-600 hover:underline">
-                    {{ t("trip.view.open") }}
-                  </button>
-                </div>
-              </div>
-            </section>
-
+        <section v-if="activeTab === 'overview'" class="bg-white p-6 rounded-2xl border shadow-sm">
+          <div class="flex items-center justify-between gap-4">
+            <h2 class="text-xl font-semibold">{{ t("trip.about") }}</h2>
+            <button
+                type="button"
+                class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+                @click="setTab('places'); openPlaceSearch()"
+            >
+              {{ t("trip.view.add_place") }}
+            </button>
           </div>
 
-          <!-- RIGHT column -->
-          <div class="flex flex-col gap-8">
+          <p class="text-gray-700 leading-relaxed mt-4">
+            {{ trip.description || t("trip.no_description") }}
+          </p>
+        </section>
 
-            <!-- Map -->
-            <section class="bg-white p-6 rounded-xl border shadow-sm">
-              <h2 class="text-xl font-semibold mb-4">
-                {{ t("trip.view.map") }}
-              </h2>
+        <KeepAlive>
+          <PlacesWorkspace
+              v-if="activeTab === 'places'"
+              :key="route.params.id"
+              :trip="trip"
+              :places="places"
+              :places-loading="placesLoading"
+              :categories="categories"
+              :filtered-places="filteredPlaces"
+              :place-query="placeQuery"
+              :category-filter="categoryFilter"
+              :sort-key="sortKey"
+              :selected-trip-place-id="selectedTripPlaceId"
+              :placeholder="t('trip.places.search')"
+              @update:placeQuery="placeQuery = $event"
+              @update:categoryFilter="categoryFilter = $event"
+              @update:sortKey="sortKey = $event"
+              @select-place="selectedTripPlaceId = $event; drawerOpen = true"
+              @refresh-places="refreshPlaces"
+              @open-add-place="openPlaceSearch"
+              @clear-selection="selectedTripPlaceId = null"
+          >
+            <template #title>{{ t("trip.view.places") }}</template>
+            <template #addBtn>{{ t("trip.view.add_place") }}</template>
+            <template #refreshBtn>{{ t("actions.refresh") }}</template>
+            <template #openLabel>{{ t("trip.view.open") }}</template>
 
-              <div class="w-full rounded-xl overflow-hidden border" style="min-height: 360px;">
-                <TripMap
-                    :trip="trip"
-                    :places="places"
-                    @places-changed="refreshPlaces"
-                />
-              </div>
-            </section>
+            <template #categoryLabel="{ c }">
+              {{ c === "all" ? t("trip.places.category_all") : c }}
+            </template>
 
-            <!-- Members -->
-            <section class="bg-white p-6 rounded-xl border shadow-sm">
-              <h2 class="text-xl font-semibold mb-4">
-                {{ t("trip.view.members") }}
-              </h2>
+            <template #sortNameAsc>{{ t("trip.places.sort_name_asc") }}</template>
+            <template #sortNameDesc>{{ t("trip.places.sort_name_desc") }}</template>
+            <template #sortCatAsc>{{ t("trip.places.sort_cat_asc") }}</template>
+            <template #sortCatDesc>{{ t("trip.places.sort_cat_desc") }}</template>
 
-              <div class="flex flex-wrap gap-4">
-                <div
-                    v-for="m in members"
-                    :key="m.id"
-                    class="px-4 py-2 rounded-lg bg-gray-100 border"
-                >
-                  {{ m.name }}
-                </div>
+            <template #loading>{{ t("loading") }}…</template>
+            <template #emptyTitle>{{ t("trip.places.empty_title") }}</template>
+            <template #emptyHint>{{ t("trip.places.empty_hint") }}</template>
 
-                <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  {{ t("trip.view.add_member") }}
-                </button>
-              </div>
-            </section>
+            <template #mapTitle>{{ t("trip.view.map") }}</template>
+            <template #clearSelection>{{ t("trip.map.clear_selection") }}</template>
+            <template #mapCount="{ count }">
+              {{ t("trip.stats.places") }}:
+              <span class="font-semibold text-gray-900">{{ count }}</span>
+            </template>
+          </PlacesWorkspace>
+        </KeepAlive>
 
+        <section v-if="activeTab === 'plan'" class="bg-white p-6 rounded-2xl border shadow-sm">
+          <h2 class="text-xl font-semibold mb-2">{{ t("trip.tabs.plan") }}</h2>
+          <div class="p-6 rounded-xl border bg-gray-50 text-gray-700">
+            <div class="font-semibold mb-1">{{ t("trip.plan.coming_title") }}</div>
+            <div class="text-sm text-gray-600">{{ t("trip.plan.coming_hint") }}</div>
+          </div>
+        </section>
+
+        <section v-if="activeTab === 'team'" class="bg-white p-6 rounded-2xl border shadow-sm">
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <h2 class="text-xl font-semibold">{{ t("trip.view.members") }}</h2>
+            <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">
+              {{ t("trip.view.add_member") }}
+            </button>
           </div>
 
-        </div>
+          <div v-if="members.length === 0" class="p-6 rounded-xl border bg-gray-50 text-gray-700">
+            <div class="font-semibold mb-1">{{ t("trip.team.empty_title") }}</div>
+            <div class="text-sm text-gray-600">{{ t("trip.team.empty_hint") }}</div>
+          </div>
+
+          <div v-else class="flex flex-wrap gap-3">
+            <div v-for="m in members" :key="m.id" class="px-4 py-2 rounded-xl bg-gray-100 border">
+              <div class="font-medium">{{ m.name }}</div>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="activeTab === 'preferences'" class="bg-white p-6 rounded-2xl border shadow-sm">
+          <h2 class="text-xl font-semibold mb-2">{{ t("trip.tabs.preferences") }}</h2>
+          <div class="p-6 rounded-xl border bg-gray-50 text-gray-700">
+            <div class="font-semibold mb-1">{{ t("trip.preferences.coming_title") }}</div>
+            <div class="text-sm text-gray-600">{{ t("trip.preferences.coming_hint") }}</div>
+          </div>
+        </section>
+
+        <PlaceSearchModal v-model="placeSearchOpen" :trip-id="route.params.id" @picked="handlePickedPlace" />
+
+        <PlaceDetailsDrawer
+            v-model="drawerOpen"
+            :trip-place="selectedTripPlace"
+            :busy="actionBusy"
+            @vote="doVote"
+            @toggle-fixed="doToggleFixed"
+            @remove="doRemove"
+        />
       </div>
-
     </div>
   </div>
 </template>

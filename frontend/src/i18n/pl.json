@@ -1,6 +1,15 @@
 {
   "loading": "Ładowanie...",
 
+  "actions": {
+    "search": "Szukaj",
+    "cancel": "Anuluj",
+    "add": "Dodaj",
+    "refresh": "Odśwież",
+    "close": "Zamknij",
+    "remove": "Usuń"
+  },
+
   "app": {
     "name": "PoDrodze",
     "guest": {
@@ -104,7 +113,8 @@
       "overview": "Przegląd",
       "places": "Miejsca",
       "plan": "Plan",
-      "team": "Zespół"
+      "team": "Zespół",
+      "preferences": "Preferencje"
     },
 
     "about": "O podróży",
@@ -117,8 +127,47 @@
       "add_place": "Dodaj miejsce",
       "map": "Mapa",
       "members": "Uczestnicy",
-      "open": "Otwórz mejsce",
+      "open": "Otwórz miejsce",
       "add_member": "Dodaj uczestnika"
+    },
+
+    "places": {
+      "search": "Szukaj miejsc",
+      "category_all": "Wszystkie kategorie",
+      "sort_name_asc": "Nazwa (A–Z)",
+      "sort_name_desc": "Nazwa (Z–A)",
+      "sort_cat_asc": "Kategoria (A–Z)",
+      "sort_cat_desc": "Kategoria (Z–A)"
+    },
+
+    "map": {
+      "clear_selection": "Wyczyść zaznaczenie"
+    },
+
+    "place": {
+      "vote": "Głosuj",
+      "fix": "Przypnij",
+      "details_hint": "Kliknij miejsce, aby zobaczyć szczegóły."
+    },
+
+    "add_place": {
+      "title_search": "Dodaj miejsce",
+      "tabs": {
+        "suggested": "Propozycje",
+        "search": "Wyszukaj"
+      },
+      "search_placeholder": "Szukaj po nazwie lub adresie",
+      "no_results": "Brak wyników"
+    },
+
+    "plan": {
+      "coming_title": "Wkrótce",
+      "coming_hint": "Ta sekcja jest w trakcie tworzenia."
+    },
+
+    "preferences": {
+      "coming_title": "Wkrótce",
+      "coming_hint": "Preferencje będą dostępne wkrótce."
     }
   },
 

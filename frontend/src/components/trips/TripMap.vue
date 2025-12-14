@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from "vue"
+import { ref, onMounted, watch, nextTick, onBeforeUnmount, onActivated } from "vue"
 import { useRoute } from "vue-router"
 
 import { loadGoogleMaps } from "@/utils/loadGoogleMaps"
@@ -11,6 +11,7 @@ import AddPlaceModal from "@/components/trips/AddPlaceModal.vue"
 const props = defineProps({
   trip: Object,
   places: Array,
+  selectedTripPlaceId: { type: [Number, String, null], default: null },
 })
 
 const emit = defineEmits(["places-changed"])
@@ -24,8 +25,14 @@ const modalLat = ref(null)
 const modalLng = ref(null)
 
 let google = null
-let MapClass = null
+let destroyed = false
 let markers = []
+let markerByTripPlaceId = new Map()
+let lastBounds = null
+let resizeObserver = null
+let initPromise = null
+
+const mapId = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || "").trim() || undefined
 
 function toNumber(v) {
   if (v == null) return null
@@ -37,89 +44,143 @@ function toNumber(v) {
   return null
 }
 
-async function initMap() {
-  console.log("[TripMap] initMap")
+function isValidLatLng(lat, lng) {
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+}
 
-  const { data } = await fetchGoogleMapsKey()
-  google = await loadGoogleMaps(data.key)
+function extractCoords(tp) {
+  const p = tp?.place ?? tp
+  const lat = toNumber(p?.lat) ?? toNumber(p?.latitude)
+  const lng = toNumber(p?.lon) ?? toNumber(p?.lng) ?? toNumber(p?.longitude)
+  if (lat == null || lng == null) return null
+  if (!isValidLatLng(lat, lng)) return null
+  return { lat, lng }
+}
 
-  const mapsLib = await google.maps.importLibrary("maps")
-  MapClass = mapsLib.Map
-
-  const center =
-      props.trip?.start_latitude && props.trip?.start_longitude
-          ? { lat: Number(props.trip.start_latitude), lng: Number(props.trip.start_longitude) }
-          : { lat: 51.1079, lng: 17.0385 }
-
-  map.value = new MapClass(mapElement.value, {
-    center,
-    zoom: 12,
-  })
-
-  renderMarkers(props.places)
-
-  map.value.addListener("click", (event) => {
-    modalLat.value = event.latLng.lat()
-    modalLng.value = event.latLng.lng()
-    showModal.value = true
-  })
+function getCenter() {
+  const lat = toNumber(props.trip?.start_latitude)
+  const lng = toNumber(props.trip?.start_longitude)
+  if (lat != null && lng != null && isValidLatLng(lat, lng)) return { lat, lng }
+  return { lat: 51.1079, lng: 17.0385 }
 }
 
 function clearMarkers() {
-  markers.forEach((m) => m.setMap(null))
+  for (const m of markers) {
+    if (!m) continue
+    if (typeof m.setMap === "function") m.setMap(null)
+  }
   markers = []
+  markerByTripPlaceId = new Map()
 }
 
-function renderMarkers(places = []) {
+function triggerResizeAndRefit() {
+  if (!google || !map.value) return
+  if (google.maps?.event?.trigger) google.maps.event.trigger(map.value, "resize")
+  if (lastBounds && markers.length > 0) {
+    map.value.fitBounds(lastBounds, 60)
+  }
+}
+
+async function ensureMap() {
+  if (map.value) return
+  if (initPromise) return initPromise
+
+  initPromise = (async () => {
+    destroyed = false
+    await nextTick()
+    if (destroyed || !mapElement.value) return
+
+    const { data } = await fetchGoogleMapsKey()
+    if (destroyed || !mapElement.value) return
+
+    google = await loadGoogleMaps(data.key)
+    if (destroyed || !mapElement.value) return
+
+    const mapsLib = await google.maps.importLibrary("maps")
+    if (destroyed || !mapElement.value) return
+
+    map.value = new mapsLib.Map(mapElement.value, {
+      center: getCenter(),
+      zoom: 12,
+      mapId,
+      gestureHandling: "greedy",
+    })
+
+    map.value.addListener("click", (event) => {
+      if (!event?.latLng) return
+      modalLat.value = event.latLng.lat()
+      modalLng.value = event.latLng.lng()
+      showModal.value = true
+    })
+
+    resizeObserver = new ResizeObserver(() => triggerResizeAndRefit())
+    resizeObserver.observe(mapElement.value)
+  })()
+
+  return initPromise
+}
+
+async function renderMarkers(list = []) {
   if (!map.value || !google) return
 
-  console.log("[TripMap] renderMarkers places:", places)
-
   clearMarkers()
+  lastBounds = new google.maps.LatLngBounds()
 
-  const bounds = new google.maps.LatLngBounds()
+  for (const tp of list) {
+    const coords = extractCoords(tp)
+    if (!coords) continue
 
-  places.forEach((tp) => {
-    console.log("[TripMap] TripPlace:", tp)
+    const name = tp?.place?.name || ""
+    const letter = name ? name.slice(0, 1).toUpperCase() : undefined
 
-    const lat = toNumber(tp?.place?.lat)
-    const lng = toNumber(tp?.place?.lon)
-
-    console.log("[TripMap] coords:", lat, lng)
-
-    if (lat == null || lng == null) {
-      console.warn("[TripMap] missing/invalid coords for place", tp)
-      return
-    }
-
-    const position = { lat, lng }
-    bounds.extend(position)
+    lastBounds.extend(coords)
 
     const marker = new google.maps.Marker({
       map: map.value,
-      position,
-      title: tp?.place?.name || "",
-      label: tp?.place?.name ? tp.place.name.slice(0, 1).toUpperCase() : undefined,
+      position: coords,
+      title: name,
+      label: letter,
     })
 
     markers.push(marker)
-  })
-
-  console.log("[TripMap] markers rendered:", markers.length)
+    if (tp?.id != null) markerByTripPlaceId.set(Number(tp.id), marker)
+  }
 
   if (markers.length > 0) {
-    map.value.fitBounds(bounds, 60)
+    map.value.fitBounds(lastBounds, 60)
   }
+}
+
+function focusSelected(id) {
+  if (!map.value || !google) return
+  const n = id == null ? null : Number(id)
+  if (!n || !markerByTripPlaceId.has(n)) return
+
+  const marker = markerByTripPlaceId.get(n)
+  const pos = marker?.getPosition?.()
+  if (!pos) return
+
+  map.value.panTo(pos)
+  const z = map.value.getZoom?.()
+  if (typeof z === "number" && z < 14) map.value.setZoom(14)
 }
 
 watch(
     () => props.places,
-    (newPlaces) => {
-      console.log("[TripMap] places changed", newPlaces)
+    async (newPlaces) => {
+      await ensureMap()
       if (!map.value) return
-      renderMarkers(newPlaces)
+      await renderMarkers(newPlaces || [])
+      focusSelected(props.selectedTripPlaceId)
     },
     { deep: true }
+)
+
+watch(
+    () => props.selectedTripPlaceId,
+    (id) => {
+      focusSelected(id)
+    }
 )
 
 async function handleSubmit(payload) {
@@ -127,13 +188,32 @@ async function handleSubmit(payload) {
   emit("places-changed")
 }
 
-onMounted(initMap)
+onMounted(async () => {
+  await ensureMap()
+  if (!map.value) return
+  await renderMarkers(props.places || [])
+  focusSelected(props.selectedTripPlaceId)
+  requestAnimationFrame(() => triggerResizeAndRefit())
+})
+
+onActivated(() => {
+  requestAnimationFrame(() => triggerResizeAndRefit())
+  focusSelected(props.selectedTripPlaceId)
+})
+
+onBeforeUnmount(() => {
+  destroyed = true
+  if (resizeObserver && mapElement.value) resizeObserver.unobserve(mapElement.value)
+  resizeObserver = null
+  clearMarkers()
+  map.value = null
+  initPromise = null
+})
 </script>
 
 <template>
   <div class="relative">
     <div ref="mapElement" class="w-full h-72 md:h-96 rounded-xl border overflow-hidden"></div>
-
     <AddPlaceModal v-model="showModal" :lat="modalLat" :lng="modalLng" @submit="handleSubmit" />
   </div>
 </template>

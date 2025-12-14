@@ -23,11 +23,14 @@ export function loadGoogleMaps(apiKey) {
         const script = document.createElement("script")
         script.src =
             `https://maps.googleapis.com/maps/api/js` +
-            `?key=${apiKey}` +
-            `&libraries=places` +
+            `?key=${encodeURIComponent(apiKey)}` +
             `&v=weekly` +
+            `&libraries=places` +
+            `&loading=async` +
             `&callback=__initGoogleMaps`
+
         script.async = true
+        script.defer = true
         script.onerror = reject
 
         document.head.appendChild(script)

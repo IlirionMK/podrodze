@@ -1,6 +1,15 @@
 {
   "loading": "Loading...",
 
+  "actions": {
+    "search": "Search",
+    "cancel": "Cancel",
+    "add": "Add",
+    "refresh": "Refresh",
+    "close": "Close",
+    "remove": "Remove"
+  },
+
   "app": {
     "name": "PoDrodze",
     "guest": {
@@ -104,7 +113,8 @@
       "overview": "Overview",
       "places": "Places",
       "plan": "Plan",
-      "team": "Team"
+      "team": "Team",
+      "preferences": "Preferences"
     },
 
     "about": "About trip",
@@ -119,6 +129,45 @@
       "members": "Members",
       "open": "Open place",
       "add_member": "Add member"
+    },
+
+    "places": {
+      "search": "Search places",
+      "category_all": "All categories",
+      "sort_name_asc": "Name (A–Z)",
+      "sort_name_desc": "Name (Z–A)",
+      "sort_cat_asc": "Category (A–Z)",
+      "sort_cat_desc": "Category (Z–A)"
+    },
+
+    "map": {
+      "clear_selection": "Clear selection"
+    },
+
+    "place": {
+      "vote": "Vote",
+      "fix": "Fix",
+      "details_hint": "Click a place to see details."
+    },
+
+    "add_place": {
+      "title_search": "Add a place",
+      "tabs": {
+        "suggested": "Suggested",
+        "search": "Search"
+      },
+      "search_placeholder": "Search by name or address",
+      "no_results": "No results"
+    },
+
+    "plan": {
+      "coming_title": "Coming soon",
+      "coming_hint": "This section is under development."
+    },
+
+    "preferences": {
+      "coming_title": "Coming soon",
+      "coming_hint": "Preferences will be available soon."
     }
   },
 
