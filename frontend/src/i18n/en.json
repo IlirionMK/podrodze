@@ -4,6 +4,7 @@
   "actions": {
     "search": "Search",
     "cancel": "Cancel",
+    "save": "Save",
     "add": "Add",
     "refresh": "Refresh",
     "close": "Close",
@@ -167,7 +168,11 @@
 
     "preferences": {
       "coming_title": "Coming soon",
-      "coming_hint": "Preferences will be available soon."
+      "coming_hint": "Preferences will be available soon.",
+      "hint": "Choose how important each category is. We’ll use this to tailor suggestions.",
+      "score_0": "Not important",
+      "score_1": "Nice to have",
+      "score_2": "Must have"
     }
   },
 

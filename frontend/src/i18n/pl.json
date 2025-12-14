@@ -5,6 +5,7 @@
     "search": "Szukaj",
     "cancel": "Anuluj",
     "add": "Dodaj",
+    "save": "Zapisz",
     "refresh": "Odśwież",
     "close": "Zamknij",
     "remove": "Usuń"
@@ -167,7 +168,11 @@
 
     "preferences": {
       "coming_title": "Wkrótce",
-      "coming_hint": "Preferencje będą dostępne wkrótce."
+      "coming_hint": "Preferencje będą dostępne wkrótce.",
+      "hint": "Wybierz, jak ważna jest każda kategoria. Użyjemy tego, aby dopasować sugestie.",
+      "score_0": "Nieważne",
+      "score_1": "Miło, gdyby było",
+      "score_2": "Bardzo ważne"
     }
   },
 
