@@ -14,9 +14,9 @@ class TripSeeder extends Seeder
         DB::statement('TRUNCATE TABLE trip_user RESTART IDENTITY CASCADE');
         DB::statement('TRUNCATE TABLE trips RESTART IDENTITY CASCADE');
 
-        $users = User::all();
+        $users = User::query()->get();
 
-        if ($users->count() === 0) {
+        if ($users->isEmpty()) {
             $this->command->warn('No users found — skipping TripSeeder');
             return;
         }
@@ -30,27 +30,21 @@ class TripSeeder extends Seeder
                 'name' => 'Trip #' . $i . ' — ' . fake()->city(),
             ]);
 
-            DB::table('trip_user')->insert([
-                'trip_id'    => $trip->id,
-                'user_id'    => $owner->id,
-                'role'       => 'owner',
-                'status'     => 'accepted',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // NOTE:
+            // Owner is already attached in Trip::created() hook (role=owner, status=accepted).
+            // Do NOT insert owner into trip_user here.
 
             $members = $users
                 ->where('id', '!=', $owner->id)
-                ->random(rand(2, min(5, $users->count() - 1)));
+                ->shuffle()
+                ->take(rand(2, min(5, $users->count() - 1)));
 
             foreach ($members as $member) {
-                DB::table('trip_user')->insert([
-                    'trip_id'    => $trip->id,
-                    'user_id'    => $member->id,
-                    'role'       => fake()->randomElement(['member', 'editor']),
-                    'status'     => fake()->randomElement(['pending', 'accepted', 'declined']),
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                $trip->members()->syncWithoutDetaching([
+                    $member->id => [
+                        'role' => fake()->randomElement(['member', 'editor']),
+                        'status' => fake()->randomElement(['pending', 'accepted', 'declined']),
+                    ],
                 ]);
             }
         }

@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
+use App\DTO\Trip\Invite;
 use App\Interfaces\TripInterface;
 use App\Models\Trip;
 use App\Models\User;
-use App\DTO\Trip\Invite;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Auth\Access\AuthorizationException;
 
 class TripService implements TripInterface
 {
@@ -21,7 +21,7 @@ class TripService implements TripInterface
     {
         return Trip::query()
             ->where('owner_id', $user->id)
-            ->orWhereHas('members', fn($q) => $q->where('trip_user.user_id', $user->id))
+            ->orWhereHas('members', fn ($q) => $q->where('trip_user.user_id', $user->id))
             ->with(['members:id,name,email'])
             ->latest()
             ->paginate(10);
@@ -30,6 +30,7 @@ class TripService implements TripInterface
     /** Create a new trip. */
     public function create(array $data, User $owner): Trip
     {
+        // Owner membership is created in Trip::booted() (created event).
         return Trip::create([
             'name'       => $data['name'],
             'start_date' => $data['start_date'] ?? null,
@@ -70,13 +71,13 @@ class TripService implements TripInterface
     public function inviteUser(Trip $trip, User $actor, array $data): Invite
     {
         if (! $actor->can('manageMembers', $trip)) {
-            throw new AuthorizationException('You cannot invite users to this trip.');
+            throw new AuthorizationException('Forbidden.');
         }
 
         $user = User::where('email', $data['email'])->firstOrFail();
         $role = $data['role'] ?? 'member';
 
-        if ($trip->owner_id === $user->id) {
+        if ((int) $trip->owner_id === (int) $user->id) {
             throw new \DomainException('Owner cannot invite themselves.');
         }
 
@@ -153,20 +154,43 @@ class TripService implements TripInterface
     // Members management
     // -------------------------------
 
+    /**
+     * Resolve role of a user in a trip.
+     * Returns: 'owner' | 'editor' | 'member' | null (not accepted member)
+     */
+    private function roleInTrip(Trip $trip, User $user): ?string
+    {
+        if ((int) $user->id === (int) $trip->owner_id) {
+            return 'owner';
+        }
+
+        $pivot = $trip->members()
+            ->where('users.id', $user->id)
+            ->first()?->pivot;
+
+        if (! $pivot || $pivot->status !== 'accepted') {
+            return null;
+        }
+
+        return $pivot->role;
+    }
+
     /** List all members of the trip (including owner). */
     public function listMembers(Trip $trip): Collection
     {
+        // owner is returned separately to keep is_owner + forced pivot consistent
         $members = $trip->members()
+            ->where('users.id', '!=', $trip->owner_id)
             ->withPivot(['role', 'status'])
             ->orderBy('users.name')
             ->get(['users.id', 'users.name', 'users.email'])
-            ->map(fn($u) => tap($u, fn($x) => $x->is_owner = false));
+            ->map(fn ($u) => tap($u, fn ($x) => $x->is_owner = false));
 
         $owner = $trip->owner()
             ->get(['id', 'name', 'email'])
             ->map(function ($u) {
                 $u->is_owner = true;
-                $u->pivot = (object)['role' => 'owner', 'status' => 'accepted'];
+                $u->pivot = (object) ['role' => 'owner', 'status' => 'accepted'];
                 return $u;
             });
 
@@ -177,15 +201,15 @@ class TripService implements TripInterface
     public function updateMemberRole(Trip $trip, User $user, string $role, User $actor): void
     {
         if (! $actor->can('manageMembers', $trip)) {
-            throw new AuthorizationException('You cannot update member roles.');
+            throw new AuthorizationException('Forbidden.');
         }
 
-        if ($user->id === $trip->owner_id) {
-            throw new \DomainException('Cannot change role of the trip owner.');
+        if ((int) $user->id === (int) $trip->owner_id) {
+            throw new AuthorizationException('Forbidden.');
         }
 
-        if ($actor->id === $user->id) {
-            throw new \DomainException('You cannot change your own role.');
+        if ((int) $actor->id === (int) $user->id) {
+            throw new AuthorizationException('Forbidden.');
         }
 
         $pivot = $trip->members()
@@ -200,6 +224,13 @@ class TripService implements TripInterface
             throw new \DomainException('Cannot change role of an inactive member.');
         }
 
+        $actorRole = $this->roleInTrip($trip, $actor);
+
+        // Editors cannot promote/demote other editors (tests expect restrictions).
+        if ($actorRole === 'editor' && $pivot->role === 'editor') {
+            throw new AuthorizationException('Forbidden.');
+        }
+
         $trip->members()->updateExistingPivot($user->id, [
             'role' => $role,
         ]);
@@ -209,29 +240,33 @@ class TripService implements TripInterface
     public function removeMember(Trip $trip, User $user, User $actor): void
     {
         if (! $actor->can('manageMembers', $trip)) {
-            throw new AuthorizationException('You cannot remove members.');
+            throw new AuthorizationException('Forbidden.');
         }
 
-        if ($user->id === $trip->owner_id) {
-            throw new \DomainException('Cannot remove the trip owner.');
+        // Never allow removing owner (tests expect 403, not 400).
+        if ((int) $user->id === (int) $trip->owner_id) {
+            throw new AuthorizationException('Forbidden.');
         }
 
-        if ($actor->id === $user->id) {
-            throw new \DomainException('You cannot remove yourself.');
+        // Prevent self-removal (tests treat as forbidden).
+        if ((int) $actor->id === (int) $user->id) {
+            throw new AuthorizationException('Forbidden.');
         }
 
-        $pivot = $trip->members()
-            ->where('users.id', $user->id)
-            ->first()?->pivot;
+        $actorRole  = $this->roleInTrip($trip, $actor);
+        $targetRole = $this->roleInTrip($trip, $user);
 
-        if (! $pivot) {
-            throw new \DomainException('This user is not a member of the trip.');
+        if (! $actorRole) {
+            throw new AuthorizationException('Forbidden.');
         }
 
-        if ($pivot->status !== 'accepted') {
-            throw new \DomainException('Only active members can be removed.');
+        // Editors can remove only members, not other editors.
+        if ($actorRole === 'editor' && $targetRole !== 'member') {
+            throw new AuthorizationException('Forbidden.');
         }
 
+        // Idempotent delete: if user is not in pivot, detach is a no-op.
+        // Owner is protected above, so it won't detach the owner row.
         $trip->members()->detach($user->id);
     }
 
@@ -246,17 +281,15 @@ class TripService implements TripInterface
             ->with(['owner:id,name,email'])
             ->wherePivot('status', 'pending')
             ->get(['trips.id', 'trips.name', 'trips.start_date', 'trips.end_date', 'trips.owner_id'])
-            ->map(fn(Trip $trip) => Invite::fromModel($trip));
+            ->map(fn (Trip $trip) => Invite::fromModel($trip));
     }
 
     /** List invitations sent by the owner (pending only). */
     public function listSentInvites(User $owner): Collection
     {
         return Trip::where('owner_id', $owner->id)
-            ->with(['members' => fn($q) => $q->wherePivot('status', 'pending')])
+            ->with(['members' => fn ($q) => $q->wherePivot('status', 'pending')])
             ->get()
-            ->flatMap(fn(Trip $trip) =>
-            $trip->members->map(fn($m) => Invite::fromPivot($trip, $m))
-            );
+            ->flatMap(fn (Trip $trip) => $trip->members->map(fn ($m) => Invite::fromPivot($trip, $m)));
     }
 }
