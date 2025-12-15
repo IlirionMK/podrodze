@@ -6,17 +6,17 @@ use App\DTO\Trip\Invite;
 use App\Interfaces\TripInterface;
 use App\Models\Trip;
 use App\Models\User;
+use App\Services\Activity\ActivityLogger;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 class TripService implements TripInterface
 {
-    // -------------------------------
-    // Trip CRUD
-    // -------------------------------
+    public function __construct(
+        private readonly ActivityLogger $activityLogger
+    ) {}
 
-    /** List trips owned or joined by the user. */
     public function list(User $user): LengthAwarePaginator
     {
         return Trip::query()
@@ -27,32 +27,42 @@ class TripService implements TripInterface
             ->paginate(10);
     }
 
-    /** Create a new trip. */
     public function create(array $data, User $owner): Trip
     {
-        // Owner membership is created in Trip::booted() (created event).
-        return Trip::create([
+        $trip = Trip::create([
             'name'       => $data['name'],
             'start_date' => $data['start_date'] ?? null,
             'end_date'   => $data['end_date'] ?? null,
             'owner_id'   => $owner->id,
         ]);
+
+        $this->activityLogger->add(
+            actor: $owner,
+            action: 'trip.created',
+            target: $trip,
+            details: [
+                'trip_id' => $trip->getKey(),
+                'name' => (string) $trip->getAttribute('name'),
+                'start_date' => $trip->getAttribute('start_date'),
+                'end_date' => $trip->getAttribute('end_date'),
+                'owner_id' => $owner->getKey(),
+            ]
+        );
+
+        return $trip;
     }
 
-    /** Update an existing trip. */
     public function update(array $data, Trip $trip): Trip
     {
         $trip->update($data);
         return $trip->fresh();
     }
 
-    /** Delete a trip permanently. */
     public function delete(Trip $trip): void
     {
         $trip->delete();
     }
 
-    /** Update start location. */
     public function updateStartLocation(array $data, Trip $trip): Trip
     {
         $trip->update([
@@ -63,11 +73,6 @@ class TripService implements TripInterface
         return $trip->fresh();
     }
 
-    // -------------------------------
-    // Invitations management
-    // -------------------------------
-
-    /** Invite another user to the trip. */
     public function inviteUser(Trip $trip, User $actor, array $data): Invite
     {
         if (! $actor->can('manageMembers', $trip)) {
@@ -105,12 +110,23 @@ class TripService implements TripInterface
             ]);
         }
 
+        $this->activityLogger->add(
+            actor: $actor,
+            action: 'trip.member_invited',
+            target: $trip,
+            details: [
+                'trip_id' => $trip->getKey(),
+                'user_id' => $user->getKey(),
+                'role' => $role,
+                'status' => 'pending',
+            ]
+        );
+
         $trip->load('owner:id,name,email');
 
         return Invite::fromPivot($trip, $user);
     }
 
-    /** Accept a pending invitation. */
     public function acceptInvite(Trip $trip, User $user): void
     {
         $pivot = $trip->members()
@@ -125,12 +141,24 @@ class TripService implements TripInterface
             throw new \DomainException('Invitation is not pending.');
         }
 
+        $role = (string) $pivot->role;
+
         $trip->members()->updateExistingPivot($user->id, [
             'status' => 'accepted',
         ]);
+
+        $this->activityLogger->add(
+            actor: $user,
+            action: 'trip.member_added',
+            target: $trip,
+            details: [
+                'trip_id' => $trip->getKey(),
+                'user_id' => $user->getKey(),
+                'role' => $role,
+            ]
+        );
     }
 
-    /** Decline a pending invitation. */
     public function declineInvite(Trip $trip, User $user): void
     {
         $pivot = $trip->members()
@@ -150,14 +178,6 @@ class TripService implements TripInterface
         ]);
     }
 
-    // -------------------------------
-    // Members management
-    // -------------------------------
-
-    /**
-     * Resolve role of a user in a trip.
-     * Returns: 'owner' | 'editor' | 'member' | null (not accepted member)
-     */
     private function roleInTrip(Trip $trip, User $user): ?string
     {
         if ((int) $user->id === (int) $trip->owner_id) {
@@ -175,10 +195,8 @@ class TripService implements TripInterface
         return $pivot->role;
     }
 
-    /** List all members of the trip (including owner). */
     public function listMembers(Trip $trip): Collection
     {
-        // owner is returned separately to keep is_owner + forced pivot consistent
         $members = $trip->members()
             ->where('users.id', '!=', $trip->owner_id)
             ->withPivot(['role', 'status'])
@@ -197,7 +215,6 @@ class TripService implements TripInterface
         return $owner->merge($members);
     }
 
-    /** Update a member's role. */
     public function updateMemberRole(Trip $trip, User $user, string $role, User $actor): void
     {
         if (! $actor->can('manageMembers', $trip)) {
@@ -226,29 +243,39 @@ class TripService implements TripInterface
 
         $actorRole = $this->roleInTrip($trip, $actor);
 
-        // Editors cannot promote/demote other editors (tests expect restrictions).
         if ($actorRole === 'editor' && $pivot->role === 'editor') {
             throw new AuthorizationException('Forbidden.');
         }
 
+        $before = (string) $pivot->role;
+
         $trip->members()->updateExistingPivot($user->id, [
             'role' => $role,
         ]);
+
+        $this->activityLogger->add(
+            actor: $actor,
+            action: 'trip.member_role_updated',
+            target: $trip,
+            details: [
+                'trip_id' => $trip->getKey(),
+                'user_id' => $user->getKey(),
+                'before' => $before,
+                'after' => $role,
+            ]
+        );
     }
 
-    /** Remove a member from the trip. */
     public function removeMember(Trip $trip, User $user, User $actor): void
     {
         if (! $actor->can('manageMembers', $trip)) {
             throw new AuthorizationException('Forbidden.');
         }
 
-        // Never allow removing owner (tests expect 403, not 400).
         if ((int) $user->id === (int) $trip->owner_id) {
             throw new AuthorizationException('Forbidden.');
         }
 
-        // Prevent self-removal (tests treat as forbidden).
         if ((int) $actor->id === (int) $user->id) {
             throw new AuthorizationException('Forbidden.');
         }
@@ -260,21 +287,24 @@ class TripService implements TripInterface
             throw new AuthorizationException('Forbidden.');
         }
 
-        // Editors can remove only members, not other editors.
         if ($actorRole === 'editor' && $targetRole !== 'member') {
             throw new AuthorizationException('Forbidden.');
         }
 
-        // Idempotent delete: if user is not in pivot, detach is a no-op.
-        // Owner is protected above, so it won't detach the owner row.
         $trip->members()->detach($user->id);
+
+        $this->activityLogger->add(
+            actor: $actor,
+            action: 'trip.member_removed',
+            target: $trip,
+            details: [
+                'trip_id' => $trip->getKey(),
+                'user_id' => $user->getKey(),
+                'removed_by' => $actor->getKey(),
+            ]
+        );
     }
 
-    // -------------------------------
-    // Invitation listings
-    // -------------------------------
-
-    /** List invitations for the authenticated user (pending only). */
     public function listUserInvites(User $user): Collection
     {
         return $user->joinedTrips()
@@ -284,7 +314,6 @@ class TripService implements TripInterface
             ->map(fn (Trip $trip) => Invite::fromModel($trip));
     }
 
-    /** List invitations sent by the owner (pending only). */
     public function listSentInvites(User $owner): Collection
     {
         return Trip::where('owner_id', $owner->id)
