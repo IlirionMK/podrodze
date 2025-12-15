@@ -17,6 +17,9 @@ use App\Http\Controllers\Api\V1\ItineraryController;
 use App\Http\Controllers\Api\V1\TripPlaceController;
 use App\Http\Controllers\Api\V1\PlaceController;
 
+// NEW: AI Suggestions controller
+use App\Http\Controllers\Api\V1\TripPlaceSuggestionsController;
+
 use App\Http\Controllers\Api\V1\Admin\AdminUserController;
 use App\Http\Controllers\Api\V1\Admin\AdminActivityLogController;
 
@@ -74,6 +77,10 @@ Route::prefix('v1')->group(function () {
         Route::patch('/trips/{trip}/places/{place}', [TripPlaceController::class, 'update']);
         Route::delete('/trips/{trip}/places/{place}', [TripPlaceController::class, 'destroy']);
         Route::post('/trips/{trip}/places/{place}/vote', [TripPlaceController::class, 'vote']);
+
+        // NEW: AI suggestions for places (stateless, JSON)
+        Route::get('/trips/{trip}/places/suggestions', TripPlaceSuggestionsController::class)
+            ->middleware('throttle:30,1');
 
         Route::get('/places/nearby', [PlaceController::class, 'nearby']);
 
