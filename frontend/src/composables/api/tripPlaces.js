@@ -8,8 +8,8 @@ export function createTripPlace(tripId, payload) {
     return api.post(`/trips/${tripId}/places`, payload)
 }
 
-export function voteTripPlace(tripId, placeId) {
-    return api.post(`/trips/${tripId}/places/${placeId}/vote`)
+export function voteTripPlace(tripId, placeId, score) {
+    return api.post(`/trips/${tripId}/places/${placeId}/vote`, { score })
 }
 
 export function updateTripPlace(tripId, placeId, payload) {

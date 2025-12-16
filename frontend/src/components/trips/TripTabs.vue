@@ -8,15 +8,22 @@ const emit = defineEmits(["update:modelValue"])
 function setTab(tab) {
   emit("update:modelValue", tab)
 }
+
+const tabBase =
+    "px-4 py-2 rounded-xl font-medium transition whitespace-nowrap"
+const tabActive =
+    "text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow"
+const tabInactive =
+    "text-gray-700 hover:bg-gray-100"
 </script>
 
 <template>
   <div class="bg-white border shadow-sm rounded-2xl p-2">
-    <div class="flex gap-2 overflow-x-auto whitespace-nowrap">
+    <div class="flex gap-2 overflow-x-auto whitespace-nowrap justify-start sm:justify-center">
       <button
           type="button"
           class="px-4 py-2 rounded-xl font-medium transition"
-          :class="modelValue === 'overview' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'"
+          :class="[tabBase, modelValue === 'overview' ? tabActive : tabInactive]"
           @click="setTab('overview')"
       >
         <slot name="overview">Overview</slot>
@@ -25,7 +32,7 @@ function setTab(tab) {
       <button
           type="button"
           class="px-4 py-2 rounded-xl font-medium transition"
-          :class="modelValue === 'places' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'"
+          :class="[tabBase, modelValue === 'places' ? tabActive : tabInactive]"
           @click="setTab('places')"
       >
         <slot name="places">Places</slot>
@@ -34,7 +41,7 @@ function setTab(tab) {
       <button
           type="button"
           class="px-4 py-2 rounded-xl font-medium transition"
-          :class="modelValue === 'plan' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'"
+          :class="[tabBase, modelValue === 'plan' ? tabActive : tabInactive]"
           @click="setTab('plan')"
       >
         <slot name="plan">Plan</slot>
@@ -43,7 +50,7 @@ function setTab(tab) {
       <button
           type="button"
           class="px-4 py-2 rounded-xl font-medium transition"
-          :class="modelValue === 'team' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'"
+          :class="[tabBase, modelValue === 'team' ? tabActive : tabInactive]"
           @click="setTab('team')"
       >
         <slot name="team">Team</slot>
@@ -52,7 +59,7 @@ function setTab(tab) {
       <button
           type="button"
           class="px-4 py-2 rounded-xl font-medium transition"
-          :class="modelValue === 'preferences' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'"
+          :class="[tabBase, modelValue === 'preferences' ? tabActive : tabInactive]"
           @click="setTab('preferences')"
       >
         <slot name="preferences">Preferences</slot>

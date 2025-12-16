@@ -11,6 +11,10 @@
     "remove": "Remove"
   },
 
+  "errors": {
+    "default": "Something went wrong. Please try again."
+  },
+
   "app": {
     "name": "PoDrodze",
     "guest": {
@@ -48,8 +52,15 @@
   },
 
   "roles": {
+    "owner": "Owner",
     "member": "Member",
     "editor": "Editor"
+  },
+
+  "statuses": {
+    "accepted": "Accepted",
+    "pending": "Pending",
+    "rejected": "Rejected"
   },
 
   "auth": {
@@ -169,7 +180,10 @@
       "category_label": "Category",
       "add_submit": "Add place",
       "coords_label": "Coordinates",
-      "coords_missing": "Select a point on the map first."
+      "coords_missing": "Select a point on the map first.",
+
+      "fixed": "Fixed",
+      "added_by": "Added by"
     },
 
     "categories": {
@@ -191,7 +205,19 @@
     "place": {
       "vote": "Vote",
       "fix": "Fix",
-      "details_hint": "Click a place to see details."
+      "details_hint": "Click a place to see details.",
+
+      "modal": {
+        "title": "Place",
+        "category": "Category",
+        "fixed": "Fixed"
+      },
+
+      "actions": {
+        "vote": "Vote",
+        "fix": "Fix",
+        "unfix": "Unfix"
+      }
     },
 
     "add_place": {
@@ -206,7 +232,17 @@
 
     "team": {
       "empty_title": "No members yet",
-      "empty_hint": "Invite friends to collaborate on this trip."
+      "empty_hint": "Invite friends to collaborate on this trip.",
+
+      "manage_hint": "Owners and editors can manage members.",
+      "invite_hint": "Send an invitation by email.",
+      "remove_title": "Remove member",
+      "remove_hint": "This user will lose access to the trip.",
+
+      "actions": {
+        "change_role": "Change role",
+        "remove": "Remove from trip"
+      }
     },
 
     "plan": {

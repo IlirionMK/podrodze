@@ -1,26 +1,34 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue"
+import { ref, computed, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-
-import { useAuth } from "@/composables/useAuth.js"
+import { X, Vote, Pin, Trash2 } from "lucide-vue-next"
 
 import { fetchTrip } from "@/composables/api/trips.js"
 import { fetchTripPlaces, voteTripPlace, updateTripPlace, deleteTripPlace } from "@/composables/api/tripPlaces.js"
-import { fetchTripMembers, inviteTripMember } from "@/composables/api/tripMembers.js"
-import { fetchPreferences, updateMyPreferences } from "@/composables/api/preferences.js"
+import { fetchTripMembers } from "@/composables/api/tripMembers.js"
 
 import TripHeaderBar from "@/components/trips/TripHeaderBar.vue"
 import TripTabs from "@/components/trips/TripTabs.vue"
 import PlacesWorkspace from "@/components/trips/panels/PlacesWorkspace.vue"
+import TripMembersPanel from "@/components/trips/panels/TripMembersPanel.vue"
+import TripPreferencesPanel from "@/components/trips/panels/TripPreferencesPanel.vue"
+import TripPlanPanel from "@/components/trips/panels/TripPlanPanel.vue"
 import PlaceSearchModal from "@/components/trips/PlaceSearchModal.vue"
-import PlaceDetailsDrawer from "@/components/trips/PlaceDetailsDrawer.vue"
 
 const route = useRoute()
 const router = useRouter()
-const { t, locale } = useI18n()
+const { t, te, locale } = useI18n()
 
-const { user: authUser } = useAuth()
+function tr(key, fallback) {
+  return te(key) ? t(key) : fallback
+}
+
+function getErrMessage(err) {
+  return err?.response?.data?.message || tr("errors.default", "Something went wrong.")
+}
+
+const tripId = computed(() => String(route.params.id || ""))
 
 const trip = ref(null)
 const members = ref([])
@@ -31,8 +39,8 @@ const membersLoading = ref(false)
 const placesLoading = ref(false)
 
 const errorMsg = ref("")
-
 const activeTab = ref("overview")
+
 const placeQuery = ref("")
 const categoryFilter = ref("all")
 const sortKey = ref("name_asc")
@@ -40,30 +48,22 @@ const sortKey = ref("name_asc")
 const selectedTripPlaceId = ref(null)
 const placeSearchOpen = ref(false)
 
-const drawerOpen = ref(false)
+const placeModalOpen = ref(false)
 const actionBusy = ref(false)
-
-const inviteOpen = ref(false)
-const inviteEmail = ref("")
-const inviteRole = ref("member")
-const inviteBusy = ref(false)
-
-// ---- Preferences (backend-driven: categories + user scores 0..2) ----
-const prefCategories = ref([]) // [{slug,name}]
-const prefScores = ref({}) // { [slug]: 0|1|2 }
-
-const prefsLoading = ref(false)
-const prefsSaving = ref(false)
-const prefsLoadedOnce = ref(false)
-const prefsQuery = ref("")
 
 const bannerImage =
     "https://images.unsplash.com/photo-1528909514045-2fa4ac7a08ba?auto=format&fit=crop&w=1600&q=80"
 
+const btnBase =
+    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+const btnSecondary = btnBase + " border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
+const btnDanger = btnBase + " border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+
+const allowedTabs = new Set(["overview", "places", "plan", "team", "preferences"])
+
 function initTabFromRoute() {
   const qTab = String(route.query.tab || "")
-  const allowed = new Set(["overview", "places", "plan", "team", "preferences"])
-  activeTab.value = allowed.has(qTab) ? qTab : "overview"
+  activeTab.value = allowedTabs.has(qTab) ? qTab : "overview"
 }
 
 function setTab(tab) {
@@ -73,10 +73,6 @@ function setTab(tab) {
 
 function openPlaceSearch() {
   placeSearchOpen.value = true
-}
-
-function handlePickedPlace(payload) {
-  console.log("picked place:", payload)
 }
 
 function formatDate(value) {
@@ -94,39 +90,58 @@ function formatDate(value) {
   }
 }
 
-async function refreshPlaces() {
+async function refreshPlaces(id = tripId.value) {
+  if (!id) return
   placesLoading.value = true
   try {
-    const res = await fetchTripPlaces(route.params.id)
+    const res = await fetchTripPlaces(id)
     places.value = res.data.data || []
+  } catch (err) {
+    errorMsg.value = getErrMessage(err)
   } finally {
     placesLoading.value = false
   }
 }
 
-async function refreshMembers() {
+async function refreshMembers(id = tripId.value) {
+  if (!id) return
   membersLoading.value = true
   try {
-    const res = await fetchTripMembers(route.params.id)
+    const res = await fetchTripMembers(id)
     members.value = res.data.data || []
+  } catch (err) {
+    errorMsg.value = getErrMessage(err)
   } finally {
     membersLoading.value = false
   }
 }
 
-async function loadData() {
+let loadSeq = 0
+
+async function loadData(id = tripId.value) {
+  if (!id) return
+  const seq = ++loadSeq
+
   loading.value = true
   errorMsg.value = ""
 
   try {
-    const tripRes = await fetchTrip(route.params.id)
-    trip.value = tripRes.data.data
+    const [tripRes, membersRes, placesRes] = await Promise.all([
+      fetchTrip(id),
+      fetchTripMembers(id),
+      fetchTripPlaces(id),
+    ])
 
-    await Promise.all([refreshMembers(), refreshPlaces()])
+    if (seq !== loadSeq) return
+
+    trip.value = tripRes.data.data
+    members.value = membersRes.data.data || []
+    places.value = placesRes.data.data || []
   } catch (err) {
-    errorMsg.value = err.response?.data?.message || t("errors.default")
+    if (seq !== loadSeq) return
+    errorMsg.value = getErrMessage(err)
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
 }
 
@@ -163,7 +178,7 @@ const filteredPlaces = computed(() => {
       list.sort((a, b) => (a?.place?.category_slug || "").localeCompare(b?.place?.category_slug || ""))
       break
     case "cat_desc":
-      list.sort((a, b) => (b?.place?.category_slug || "").localeCompare(b?.place?.category_slug || ""))
+      list.sort((a, b) => (b?.place?.category_slug || "").localeCompare(a?.place?.category_slug || ""))
       break
     default:
       list.sort((a, b) => (a?.place?.name || "").localeCompare(b?.place?.name || ""))
@@ -196,164 +211,29 @@ const selectedIsFixed = computed(() => {
   return Boolean(tp.is_fixed ?? tp.fixed ?? tp.is_mandatory ?? false)
 })
 
-const myMember = computed(() => {
-  const uid = authUser.value?.id
-  if (!uid) return null
-  return members.value.find((m) => m.id === uid) || null
-})
-
-const canManageMembers = computed(() => {
-  const uid = authUser.value?.id
-  if (!uid || !trip.value) return false
-  if (trip.value.owner_id === uid) return true
-  return myMember.value?.role === "editor" && myMember.value?.status === "accepted"
-})
-
-function openInvite() {
-  if (!canManageMembers.value) return
-  inviteOpen.value = true
+function closePlaceModal() {
+  placeModalOpen.value = false
 }
 
-function closeInvite() {
-  inviteOpen.value = false
-  inviteEmail.value = ""
-  inviteRole.value = "member"
+function onSelectPlace(id) {
+  selectedTripPlaceId.value = id
+  placeModalOpen.value = true
 }
 
-async function submitInvite() {
-  const email = inviteEmail.value.trim()
-  if (!email) return
-
-  inviteBusy.value = true
-  errorMsg.value = ""
-
-  try {
-    await inviteTripMember(route.params.id, {
-      email,
-      role: inviteRole.value,
-    })
-
-    await refreshMembers()
-    closeInvite()
-  } catch (e) {
-    errorMsg.value = e?.response?.data?.error || e?.response?.data?.message || t("errors.default")
-  } finally {
-    inviteBusy.value = false
-  }
-}
-
-// ---- Preferences helpers ----
-function clampScore(v) {
-  const n = Number.parseInt(v, 10)
-  if (Number.isNaN(n)) return 0
-  return Math.max(0, Math.min(2, n))
-}
-
-function normalizePreferenceResponse(payload) {
-  const root = payload?.data ?? payload ?? {}
-  const categories = Array.isArray(root.categories) ? root.categories : []
-  const user = root.user && typeof root.user === "object" ? root.user : {}
-  return { categories, user }
-}
-
-async function loadPreferences() {
-  if (prefsLoadedOnce.value) return
-  prefsLoading.value = true
-  errorMsg.value = ""
-
-  try {
-    const res = await fetchPreferences()
-    const { categories, user } = normalizePreferenceResponse(res?.data)
-
-    prefCategories.value = categories
-
-    // backend update() expects each allowed slug to exist, so send full set
-    const nextScores = {}
-    for (const c of categories) {
-      const slug = c?.slug
-      if (!slug) continue
-      nextScores[slug] = clampScore(user?.[slug] ?? 0)
-    }
-
-    prefScores.value = nextScores
-    prefsLoadedOnce.value = true
-  } catch (e) {
-    errorMsg.value = e?.response?.data?.message || t("errors.default")
-  } finally {
-    prefsLoading.value = false
-  }
-}
-
-function setPrefScore(slug, score) {
-  if (!slug) return
-  prefScores.value = {
-    ...prefScores.value,
-    [slug]: clampScore(score),
-  }
-}
-
-const filteredPrefCategories = computed(() => {
-  const list = Array.isArray(prefCategories.value) ? prefCategories.value : []
-  const q = prefsQuery.value.trim().toLowerCase()
-  if (!q) return list
-
-  return list.filter((c) => {
-    const name = String(c?.name ?? "").toLowerCase()
-    const slug = String(c?.slug ?? "").toLowerCase()
-    return name.includes(q) || slug.includes(q)
-  })
-})
-
-async function savePreferences() {
-  prefsSaving.value = true
-  errorMsg.value = ""
-
-  try {
-    await updateMyPreferences(prefScores.value)
-  } catch (e) {
-    errorMsg.value = e?.response?.data?.message || e?.response?.data?.error || t("errors.default")
-  } finally {
-    prefsSaving.value = false
-  }
-}
-
-// Load prefs when opening tab
-watch(
-    () => activeTab.value,
-    async (tab) => {
-      if (tab === "preferences") {
-        await loadPreferences()
-      }
-    }
-)
+watch(() => route.query.tab, initTabFromRoute, { immediate: true })
 
 watch(
-    () => route.params.id,
-    async () => {
+    tripId,
+    async (id) => {
+      if (!id) return
       initTabFromRoute()
-      await loadData()
-
-      prefsLoadedOnce.value = false
-      prefCategories.value = []
-      prefScores.value = {}
-      prefsQuery.value = ""
-    }
+      await loadData(id)
+    },
+    { immediate: true }
 )
 
 watch(
-    () => route.query.tab,
-    () => initTabFromRoute()
-)
-
-watch(
-    () => selectedTripPlaceId.value,
-    (v) => {
-      drawerOpen.value = Boolean(v)
-    }
-)
-
-watch(
-    () => drawerOpen.value,
+    () => placeModalOpen.value,
     (v) => {
       if (!v) selectedTripPlaceId.value = null
     }
@@ -363,10 +243,10 @@ async function doVote() {
   if (!selectedBackendId.value) return
   actionBusy.value = true
   try {
-    await voteTripPlace(route.params.id, selectedBackendId.value)
+    await voteTripPlace(tripId.value, selectedBackendId.value)
     await refreshPlaces()
   } catch (e) {
-    errorMsg.value = e?.response?.data?.message || t("errors.default")
+    errorMsg.value = getErrMessage(e)
   } finally {
     actionBusy.value = false
   }
@@ -376,12 +256,10 @@ async function doToggleFixed() {
   if (!selectedBackendId.value) return
   actionBusy.value = true
   try {
-    await updateTripPlace(route.params.id, selectedBackendId.value, {
-      is_fixed: !selectedIsFixed.value,
-    })
+    await updateTripPlace(tripId.value, selectedBackendId.value, { is_fixed: !selectedIsFixed.value })
     await refreshPlaces()
   } catch (e) {
-    errorMsg.value = e?.response?.data?.message || t("errors.default")
+    errorMsg.value = getErrMessage(e)
   } finally {
     actionBusy.value = false
   }
@@ -391,21 +269,16 @@ async function doRemove() {
   if (!selectedBackendId.value) return
   actionBusy.value = true
   try {
-    await deleteTripPlace(route.params.id, selectedBackendId.value)
-    drawerOpen.value = false
+    await deleteTripPlace(tripId.value, selectedBackendId.value)
+    closePlaceModal()
     selectedTripPlaceId.value = null
     await refreshPlaces()
   } catch (e) {
-    errorMsg.value = e?.response?.data?.message || t("errors.default")
+    errorMsg.value = getErrMessage(e)
   } finally {
     actionBusy.value = false
   }
 }
-
-onMounted(async () => {
-  initTabFromRoute()
-  await loadData()
-})
 </script>
 
 <template>
@@ -431,40 +304,10 @@ onMounted(async () => {
     </div>
 
     <div v-else-if="trip">
-      <TripHeaderBar
-          :trip="trip"
-          :stats="stats"
-          :banner-image="bannerImage"
-          :format-date="formatDate"
-          @add-place="openPlaceSearch"
-          @invite-member="setTab('team')"
-          @open-preferences="setTab('preferences')"
-      />
+      <TripHeaderBar :trip="trip" :stats="stats" :banner-image="bannerImage" :format-date="formatDate" />
 
-      <div class="max-w-6xl mx-auto px-4 -mt-10 relative z-10 pb-14">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-white p-5 rounded-xl shadow border text-center">
-            <div class="text-gray-600 text-sm">{{ t("trip.stats.places") }}</div>
-            <div class="text-2xl font-semibold">{{ stats.places }}</div>
-          </div>
-
-          <div class="bg-white p-5 rounded-xl shadow border text-center">
-            <div class="text-gray-600 text-sm">{{ t("trip.stats.activities") }}</div>
-            <div class="text-2xl font-semibold">{{ stats.activities }}</div>
-          </div>
-
-          <div class="bg-white p-5 rounded-xl shadow border text-center">
-            <div class="text-gray-600 text-sm">{{ t("trip.stats.members") }}</div>
-            <div class="text-2xl font-semibold">{{ stats.members }}</div>
-          </div>
-
-          <div class="bg-white p-5 rounded-xl shadow border text-center">
-            <div class="text-gray-600 text-sm">{{ t("trip.stats.other") }}</div>
-            <div class="text-2xl font-semibold">—</div>
-          </div>
-        </div>
-
-        <TripTabs :modelValue="activeTab" class="mb-6" @update:modelValue="setTab">
+      <div class="max-w-6xl mx-auto px-4 mt-6 pb-14">
+        <TripTabs :modelValue="activeTab" class="mb-5" @update:modelValue="setTab">
           <template #overview>{{ t("trip.tabs.overview") }}</template>
           <template #places>{{ t("trip.tabs.places") }}</template>
           <template #plan>{{ t("trip.tabs.plan") }}</template>
@@ -477,7 +320,7 @@ onMounted(async () => {
             <h2 class="text-xl font-semibold">{{ t("trip.about") }}</h2>
             <button
                 type="button"
-                class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+                class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 active:opacity-80 shadow"
                 @click="setTab('places'); openPlaceSearch()"
             >
               {{ t("trip.view.add_place") }}
@@ -498,26 +341,24 @@ onMounted(async () => {
               :places-loading="placesLoading"
               :categories="categories"
               :filtered-places="filteredPlaces"
-              :place-query="placeQuery"
-              :category-filter="categoryFilter"
-              :sort-key="sortKey"
+              v-model:placeQuery="placeQuery"
+              v-model:categoryFilter="categoryFilter"
+              v-model:sortKey="sortKey"
               :selected-trip-place-id="selectedTripPlaceId"
               :placeholder="t('trip.places.search')"
-              @update:placeQuery="placeQuery = $event"
-              @update:categoryFilter="categoryFilter = $event"
-              @update:sortKey="sortKey = $event"
-              @select-place="selectedTripPlaceId = $event; drawerOpen = true"
+              :labels="{
+              title: t('trip.view.places'),
+              addBtn: t('trip.view.add_place'),
+              refreshBtn: t('actions.refresh'),
+              openLabel: t('trip.view.open'),
+              mapTitle: t('trip.view.map')
+            }"
+              @select-place="onSelectPlace"
               @refresh-places="refreshPlaces"
               @open-add-place="openPlaceSearch"
-              @clear-selection="selectedTripPlaceId = null"
           >
-            <template #title>{{ t("trip.view.places") }}</template>
-            <template #addBtn>{{ t("trip.view.add_place") }}</template>
-            <template #refreshBtn>{{ t("actions.refresh") }}</template>
-            <template #openLabel>{{ t("trip.view.open") }}</template>
-
             <template #categoryLabel="{ c }">
-              {{ c === "all" ? t("trip.places.category_all") : c }}
+              {{ c === 'all' ? t('trip.places.category_all') : c }}
             </template>
 
             <template #sortNameAsc>{{ t("trip.places.sort_name_asc") }}</template>
@@ -525,12 +366,6 @@ onMounted(async () => {
             <template #sortCatAsc>{{ t("trip.places.sort_cat_asc") }}</template>
             <template #sortCatDesc>{{ t("trip.places.sort_cat_desc") }}</template>
 
-            <template #loading>{{ t("loading") }}…</template>
-            <template #emptyTitle>{{ t("trip.places.empty_title") }}</template>
-            <template #emptyHint>{{ t("trip.places.empty_hint") }}</template>
-
-            <template #mapTitle>{{ t("trip.view.map") }}</template>
-            <template #clearSelection>{{ t("trip.map.clear_selection") }}</template>
             <template #mapCount="{ count }">
               {{ t("trip.stats.places") }}:
               <span class="font-semibold text-gray-900">{{ count }}</span>
@@ -538,204 +373,120 @@ onMounted(async () => {
           </PlacesWorkspace>
         </KeepAlive>
 
-        <section v-if="activeTab === 'plan'" class="bg-white p-6 rounded-2xl border shadow-sm">
-          <h2 class="text-xl font-semibold mb-2">{{ t("trip.tabs.plan") }}</h2>
-          <div class="p-6 rounded-xl border bg-gray-50 text-gray-700">
-            <div class="font-semibold mb-1">{{ t("trip.plan.coming_title") }}</div>
-            <div class="text-sm text-gray-600">{{ t("trip.plan.coming_hint") }}</div>
-          </div>
-        </section>
-
-        <section v-if="activeTab === 'team'" class="bg-white p-6 rounded-2xl border shadow-sm">
-          <div class="flex items-center justify-between gap-4 mb-4">
-            <h2 class="text-xl font-semibold">{{ t("trip.view.members") }}</h2>
-
-            <div class="flex items-center gap-3">
-              <div v-if="membersLoading" class="text-sm text-gray-500">
-                {{ t("loading") }}…
-              </div>
-
-              <button
-                  v-if="canManageMembers"
-                  type="button"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
-                  @click="openInvite"
-              >
-                {{ t("trip.view.add_member") }}
-              </button>
-            </div>
-          </div>
-
-          <div v-if="members.length === 0" class="p-6 rounded-xl border bg-gray-50 text-gray-700">
-            <div class="font-semibold mb-1">{{ t("trip.team.empty_title") }}</div>
-            <div class="text-sm text-gray-600">{{ t("trip.team.empty_hint") }}</div>
-          </div>
-
-          <div v-else class="flex flex-wrap gap-3">
-            <div v-for="m in members" :key="m.id" class="px-4 py-2 rounded-xl bg-gray-100 border">
-              <div class="font-medium">{{ m.name }}</div>
-              <div class="text-xs text-gray-600">{{ m.role }} • {{ m.status }}</div>
-            </div>
-          </div>
-        </section>
-
-        <section v-if="activeTab === 'preferences'" class="bg-white p-6 rounded-2xl border shadow-sm">
-          <div class="flex items-center justify-between gap-4 mb-4">
-            <div>
-              <h2 class="text-xl font-semibold">{{ t("trip.tabs.preferences") }}</h2>
-              <div class="text-sm text-gray-600">{{ t("trip.preferences.hint") }}</div>
-            </div>
-
-            <button
-                type="button"
-                class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-60"
-                @click="savePreferences"
-                :disabled="prefsLoading || prefsSaving"
-            >
-              {{ prefsSaving ? t("loading") : t("actions.save") }}
-            </button>
-          </div>
-
-          <div class="mb-4">
-            <input
-                v-model="prefsQuery"
-                type="text"
-                class="w-full px-4 py-2.5 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
-                :placeholder="t('actions.search')"
-                :disabled="prefsLoading || prefsSaving"
-            />
-          </div>
-
-          <div v-if="prefsLoading" class="p-6 rounded-xl border bg-gray-50 text-gray-700">
-            {{ t("loading") }}…
-          </div>
-
-          <div v-else-if="filteredPrefCategories.length === 0" class="p-6 rounded-xl border bg-gray-50 text-gray-700">
-            <div class="font-semibold mb-1">{{ t("trip.preferences.empty_title") }}</div>
-            <div class="text-sm text-gray-600">{{ t("trip.preferences.empty_hint") }}</div>
-          </div>
-
-          <div v-else class="space-y-3">
-            <div
-                v-for="c in filteredPrefCategories"
-                :key="c.slug"
-                class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-2xl border"
-            >
-              <div>
-                <div class="font-medium">{{ c.name }}</div>
-                <div class="text-xs text-gray-600">{{ c.slug }}</div>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <button
-                    type="button"
-                    class="px-3 py-2 rounded-xl border transition"
-                    :class="prefScores[c.slug] === 0 ? 'bg-blue-50 border-blue-200' : 'bg-white hover:bg-gray-50'"
-                    @click="setPrefScore(c.slug, 0)"
-                    :disabled="prefsSaving"
-                >
-                  {{ t("trip.preferences.score_0") }}
-                </button>
-
-                <button
-                    type="button"
-                    class="px-3 py-2 rounded-xl border transition"
-                    :class="prefScores[c.slug] === 1 ? 'bg-blue-50 border-blue-200' : 'bg-white hover:bg-gray-50'"
-                    @click="setPrefScore(c.slug, 1)"
-                    :disabled="prefsSaving"
-                >
-                  {{ t("trip.preferences.score_1") }}
-                </button>
-
-                <button
-                    type="button"
-                    class="px-3 py-2 rounded-xl border transition"
-                    :class="prefScores[c.slug] === 2 ? 'bg-blue-50 border-blue-200' : 'bg-white hover:bg-gray-50'"
-                    @click="setPrefScore(c.slug, 2)"
-                    :disabled="prefsSaving"
-                >
-                  {{ t("trip.preferences.score_2") }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <PlaceSearchModal v-model="placeSearchOpen" :trip-id="route.params.id" @picked="handlePickedPlace" />
-
-        <PlaceDetailsDrawer
-            v-model="drawerOpen"
-            :trip-place="selectedTripPlace"
-            :busy="actionBusy"
-            @vote="doVote"
-            @toggle-fixed="doToggleFixed"
-            @remove="doRemove"
+        <TripPlanPanel
+            v-if="activeTab === 'plan'"
+            :trip-id="tripId"
+            :trip="trip"
+            :places="places"
+            :places-loading="placesLoading"
+            @error="errorMsg = $event"
         />
 
-        <div v-if="inviteOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div class="absolute inset-0 bg-black/40" @click="closeInvite"></div>
+        <TripMembersPanel
+            v-if="activeTab === 'team'"
+            :trip="trip"
+            :members="members"
+            :loading="membersLoading"
+            @members-changed="refreshMembers"
+            @error="errorMsg = $event"
+        />
 
-          <div class="relative w-full max-w-lg bg-white rounded-2xl border shadow-xl p-6">
-            <div class="flex items-center justify-between gap-3">
-              <h3 class="text-lg font-semibold">{{ t("trip.view.add_member") }}</h3>
+        <TripPreferencesPanel
+            v-if="activeTab === 'preferences'"
+            :excluded-slugs="['hotel', 'airport', 'station', 'other']"
+            @error="errorMsg = $event"
+        />
 
-              <button
-                  type="button"
-                  class="px-3 py-1.5 rounded-xl border bg-white hover:bg-gray-50"
-                  @click="closeInvite"
-                  :disabled="inviteBusy"
-              >
-                {{ t("actions.cancel") }}
-              </button>
+        <PlaceSearchModal v-model="placeSearchOpen" :trip-id="route.params.id" />
+
+        <Teleport to="body">
+          <Transition
+              appear
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="opacity-0 scale-95"
+              enter-to-class="opacity-100 scale-100"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="opacity-100 scale-100"
+              leave-to-class="opacity-0 scale-95"
+          >
+            <div v-if="placeModalOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
+              <button class="absolute inset-0 bg-black/50" @click="closePlaceModal" aria-label="Close" />
+
+              <div class="relative w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden">
+                <div class="p-6">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                      <h3 class="text-xl font-semibold text-gray-900 truncate">
+                        {{
+                          selectedTripPlace?.place?.name ||
+                          selectedTripPlace?.name ||
+                          tr("trip.place.modal.title", "Place")
+                        }}
+                      </h3>
+
+                      <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700">
+                          {{ tr("trip.place.modal.category", "Category") }}:
+                          <span class="ml-1 font-semibold">
+                            {{ selectedTripPlace?.place?.category_slug || "—" }}
+                          </span>
+                        </span>
+
+                        <span
+                            v-if="selectedIsFixed"
+                            class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700"
+                        >
+                          <Pin class="h-3.5 w-3.5 mr-1" />
+                          {{ tr("trip.place.modal.fixed", "Fixed") }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="h-10 w-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center"
+                        @click="closePlaceModal"
+                    >
+                      <X class="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                        type="button"
+                        :class="btnSecondary + ' py-3'"
+                        :disabled="actionBusy || !selectedBackendId"
+                        @click="doVote"
+                    >
+                      <Vote class="h-4 w-4" />
+                      {{ tr("trip.place.actions.vote", "Vote") }}
+                    </button>
+
+                    <button
+                        type="button"
+                        :class="btnSecondary + ' py-3'"
+                        :disabled="actionBusy || !selectedBackendId"
+                        @click="doToggleFixed"
+                    >
+                      <Pin class="h-4 w-4" />
+                      {{ selectedIsFixed ? tr("trip.place.actions.unfix", "Unfix") : tr("trip.place.actions.fix", "Fix") }}
+                    </button>
+
+                    <button
+                        type="button"
+                        :class="btnDanger + ' py-3'"
+                        :disabled="actionBusy || !selectedBackendId"
+                        @click="doRemove"
+                    >
+                      <Trash2 class="h-4 w-4" />
+                      {{ tr("actions.remove", "Remove") }}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <div class="mt-4 space-y-3">
-              <div>
-                <label class="text-sm text-gray-600">{{ t("common.email", "Email") }}</label>
-                <input
-                    v-model="inviteEmail"
-                    type="email"
-                    class="w-full mt-1 px-4 py-2.5 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
-                    placeholder="friend@example.com"
-                    :disabled="inviteBusy"
-                />
-              </div>
-
-              <div>
-                <label class="text-sm text-gray-600">{{ t("common.role", "Role") }}</label>
-                <select
-                    v-model="inviteRole"
-                    class="w-full mt-1 px-4 py-2.5 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
-                    :disabled="inviteBusy"
-                >
-                  <option value="member">{{ t("roles.member", "member") }}</option>
-                  <option value="editor">{{ t("roles.editor", "editor") }}</option>
-                </select>
-              </div>
-
-              <div class="flex justify-end gap-2 pt-2">
-                <button
-                    type="button"
-                    class="px-4 py-2 rounded-xl border bg-white hover:bg-gray-50 transition"
-                    @click="closeInvite"
-                    :disabled="inviteBusy"
-                >
-                  {{ t("actions.cancel") }}
-                </button>
-
-                <button
-                    type="button"
-                    class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
-                    @click="submitInvite"
-                    :disabled="inviteBusy || !inviteEmail.trim()"
-                >
-                  {{ inviteBusy ? t("loading") : t("actions.add") }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
+          </Transition>
+        </Teleport>
       </div>
     </div>
   </div>

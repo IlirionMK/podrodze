@@ -11,6 +11,10 @@
     "remove": "Usuń"
   },
 
+  "errors": {
+    "default": "Coś poszło nie tak. Spróbuj ponownie."
+  },
+
   "app": {
     "name": "PoDrodze",
     "guest": {
@@ -48,8 +52,15 @@
   },
 
   "roles": {
+    "owner": "Właściciel",
     "member": "Uczestnik",
     "editor": "Edytor"
+  },
+
+  "statuses": {
+    "accepted": "Zaakceptowany",
+    "pending": "Oczekuje",
+    "rejected": "Odrzucony"
   },
 
   "auth": {
@@ -169,7 +180,10 @@
       "category_label": "Kategoria",
       "add_submit": "Dodaj miejsce",
       "coords_label": "Współrzędne",
-      "coords_missing": "Najpierw wybierz punkt na mapie."
+      "coords_missing": "Najpierw wybierz punkt na mapie.",
+
+      "fixed": "Stałe",
+      "added_by": "Dodane przez"
     },
 
     "categories": {
@@ -191,7 +205,19 @@
     "place": {
       "vote": "Głosuj",
       "fix": "Przypnij",
-      "details_hint": "Kliknij miejsce, aby zobaczyć szczegóły."
+      "details_hint": "Kliknij miejsce, aby zobaczyć szczegóły.",
+
+      "modal": {
+        "title": "Miejsce",
+        "category": "Kategoria",
+        "fixed": "Stałe"
+      },
+
+      "actions": {
+        "vote": "Głosuj",
+        "fix": "Przypnij",
+        "unfix": "Odepnij"
+      }
     },
 
     "add_place": {
@@ -206,7 +232,17 @@
 
     "team": {
       "empty_title": "Brak uczestników",
-      "empty_hint": "Zaproś znajomych, aby wspólnie planować podróż."
+      "empty_hint": "Zaproś znajomych, aby wspólnie planować podróż.",
+
+      "manage_hint": "Właściciel i edytorzy mogą zarządzać uczestnikami.",
+      "invite_hint": "Wyślij zaproszenie e-mailem.",
+      "remove_title": "Usuń uczestnika",
+      "remove_hint": "Ta osoba straci dostęp do wycieczki.",
+
+      "actions": {
+        "change_role": "Zmień rolę",
+        "remove": "Usuń z wycieczki"
+      }
     },
 
     "plan": {
