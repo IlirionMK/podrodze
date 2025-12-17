@@ -3,7 +3,7 @@ import { ref, computed, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { RefreshCw, Sparkles, GripVertical, RotateCcw } from "lucide-vue-next"
 
-import { fetchTripItinerary, generateTripFullItinerary } from "@/composables/api/itinerary.js"
+import { fetchTripItinerary, fetchTripItineraryFull } from "@/composables/api/itinerary.js"
 
 const props = defineProps({
   tripId: { type: [String, Number], required: true },
@@ -68,7 +68,7 @@ async function generateFull() {
       days: Number(days.value || 1),
       radius: Number(radius.value || 2000),
     }
-    const res = await generateTripFullItinerary(props.tripId, payload)
+    const res = await fetchTripItineraryFull(props.tripId, payload)
     setItineraryData(res.data.data)
   } catch (err) {
     emit("error", getErrMessage(err))
