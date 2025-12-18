@@ -10,7 +10,7 @@ Użytkownicy mogą dodawać uczestników, określać preferencje, wybierać miej
 
 ---
 
-## **Wymagania funkcjonalne (MVP)**
+## **Wymagania funkcjonalne **
 
 ### **Użytkownicy i autoryzacja**
 

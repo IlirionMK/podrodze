@@ -19,9 +19,6 @@ class TripPolicy
         return null;
     }
 
-    /**
-     * Allowed: owner or member (accepted or pending invite).
-     */
     public function view(User $user, Trip $trip): bool
     {
         if ($trip->owner_id === $user->id) {
@@ -30,7 +27,7 @@ class TripPolicy
 
         if ($trip->relationLoaded('members')) {
             return $trip->members->contains(fn ($m) =>
-                $m->id === $user->id && in_array($m->pivot->status, ['accepted', 'pending'])
+                $m->id === $user->id && in_array($m->pivot->status, ['accepted', 'pending'], true)
             );
         }
 
@@ -40,9 +37,6 @@ class TripPolicy
             ->exists();
     }
 
-    /**
-     * Allowed: owner or accepted editor.
-     */
     public function update(User $user, Trip $trip): bool
     {
         if ($trip->owner_id === $user->id) {
@@ -64,9 +58,6 @@ class TripPolicy
             ->exists();
     }
 
-    /**
-     * Allowed: only owner.
-     */
     public function delete(User $user, Trip $trip): bool
     {
         return $trip->owner_id === $user->id;
@@ -75,6 +66,29 @@ class TripPolicy
     public function create(User $user): bool
     {
         return true;
+    }
+
+    public function addPlace(User $user, Trip $trip): bool
+    {
+        if ($trip->owner_id === $user->id) {
+            return true;
+        }
+
+        if ($trip->relationLoaded('members')) {
+            return $trip->members->contains(fn ($m) =>
+                $m->id === $user->id && $m->pivot->status === 'accepted'
+            );
+        }
+
+        return $trip->members()
+            ->where('users.id', $user->id)
+            ->wherePivot('status', 'accepted')
+            ->exists();
+    }
+
+    public function vote(User $user, Trip $trip): bool
+    {
+        return $this->addPlace($user, $trip);
     }
 
     protected function canRespond(User $user, Trip $trip): bool
@@ -101,10 +115,6 @@ class TripPolicy
         return $this->canRespond($user, $trip);
     }
 
-    /**
-     * Allowed: owner or accepted editor.
-     * Used for inviting / changing roles / removing members.
-     */
     public function manageMembers(User $user, Trip $trip): bool
     {
         if ($trip->owner_id === $user->id) {
