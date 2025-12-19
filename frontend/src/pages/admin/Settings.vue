@@ -36,7 +36,7 @@ onMounted(fetchSettings)
         <label class="font-medium w-40">{{ setting.key }}</label>
         <input v-model="setting.value" class="flex-1 border rounded p-2" />
         <button @click="updateSetting(setting)" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
-          {{ t("app.admin.save") }}
+          {{ t("app.admin.settings.save") }}
         </button>
       </div>
       <div v-if="loading" class="text-center text-gray-500">{{ t("loading") }}</div>
