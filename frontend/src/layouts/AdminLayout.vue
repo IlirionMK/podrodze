@@ -86,20 +86,18 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
     </header>
 
     <!-- ADMIN TITLE HEADER -->
-<section class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600
+<section class="px-4 py-5 bg-gradient-to-r from-black to-blue-900
                  text-white rounded-lg shadow-md hover:shadow-lg
-                 hover:brightness-105 transition-all active:scale-[0.98]">
+                 hover:brightness-105 transition-all active:scale-[1] mb-10">
   <div class="max-w-7xl mx-auto px-6 py-10 text-center">
     <!-- Klikalny tytuł -> dashboard -->
     <router-link to="/admin">
       <h1 class="text-3xl md:text-4xl font-bold text-white-800
-                 hover:text-blue-600 transition cursor-pointer">
+                 hover:text-blue-200 transition cursor-pointer ">
         {{ t("app.admin.title") }}
       </h1>
     </router-link>
-    <p class="mt-3 text-white-500 text-sm md:text-base">
-      {{ t("app.admin.subtitle") }}
-    </p>
+    
   </div>
 </section>
 

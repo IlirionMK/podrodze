@@ -15,8 +15,7 @@ const tiles = [
 
 <template>
   <div>
-    <h1 class="text-3xl font-bold mb-2">{{ t("app.admin.title") }}</h1>
-    <p class="text-gray-600 mb-8">{{ t("app.admin.subtitle") }}</p>
+    <h1 class="text-3xl  font-bold  mb-20 text-center">{{ t("app.admin.subtitle") }}</h1>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <button
@@ -24,10 +23,10 @@ const tiles = [
         :key="tile.titleKey"
         @click="router.push(tile.to)"
         class="bg-white rounded-xl p-6 shadow
-               hover:shadow-lg transition text-left"
+               hover:shadow-lg transition text-left mb-15"
       >
         <h2 class="text-xl font-semibold mb-2">{{ t(tile.titleKey) }}</h2>
-        <p class="text-gray-500 text-sm">{{ t(tile.descKey) }}</p>
+        <p class="text-gray-500 text-sm ">{{ t(tile.descKey) }}</p>
       </button>
     </div>
   </div>
