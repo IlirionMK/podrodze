@@ -1,10 +1,9 @@
 <script setup>
 import { ref, onMounted } from "vue"
-import axios from "axios"
 import { useI18n } from "vue-i18n"
+import axios from "axios"
 
 const { t } = useI18n({ useScope: "global" })
-const sidebar = ref(false)
 
 const trips = ref([])
 const loading = ref(false)
@@ -21,73 +20,55 @@ async function fetchTrips() {
   }
 }
 
+function deleteTrip(id) {
+  if (!confirm(t("admin.trips.delete_confirm"))) return
+  axios.delete(`/api/admin/trips/${id}`).then(() => fetchTrips())
+}
+
 onMounted(fetchTrips)
 </script>
 
 <template>
-<div class="flex min-h-screen bg-blue-1000">
-
- 
-
-  <!-- Mobile toggle button -->
-  <button
-      @click="sidebar = !sidebar"
-      class="md:hidden absolute top-4 left-4 z-20 bg-white p-2 rounded shadow"
-  >
-    ☰
-  </button>
-
-  <!-- Mobile Sidebar -->
-  <transition
-      enter-active-class="transition-transform duration-200 ease-linear"
-      enter-from-class="-translate-x-full"
-      enter-to-class="translate-x-0"
-      leave-active-class="transition-transform duration-200 ease-linear"
-      leave-from-class="translate-x-0"
-      leave-to-class="-translate-x-full"
-  >
-    <aside
-        v-if="sidebar"
-        class="absolute left-0 top-0 bottom-0 bg-white w-56 p-4 flex flex-col gap-4 shadow-md z-30 md:hidden"
-    >
-      <h2 class="font-bold text-lg">{{ t("app.admin.title") }}</h2>
-      <router-link to="/admin/dashboard" class="hover:underline text-sm">Dashboard</router-link>
-      <router-link to="/admin/users" class="hover:underline text-sm">Users</router-link>
-      <router-link to="/admin/trips" class="hover:underline text-sm font-semibold">Trips</router-link>
-      <router-link to="/admin/places" class="hover:underline text-sm">Places</router-link>
-      <router-link to="/admin/settings" class="hover:underline text-sm">Settings</router-link>
-    </aside>
-  </transition>
-
-  <!-- Main Content -->
-  <main class="flex-1 p-6">
-    <h1 class="text-2xl font-bold text-white mb-4 bg-blue-600 p-3 rounded-md">Trips</h1>
+  <div class="min-h-screen p-6 bg-gray-100">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold">{{ t("app.admin.menu.trips") }}</h1>
+      <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        {{ t("app.admin.trips.add") }}
+      </button>
+    </div>
 
     <table class="w-full text-left bg-white rounded-lg shadow overflow-hidden">
-      <thead class="bg-gray-600">
+      <thead class="bg-gray-200">
         <tr>
           <th class="px-4 py-2">ID</th>
-          <th class="px-4 py-2">Title</th>
-          <th class="px-4 py-2">Start</th>
-          <th class="px-4 py-2">End</th>
+          <th class="px-4 py-2">{{ t("app.admin.trips.name") }}</th>
+          <th class="px-4 py-2">{{ t("app.admin.trips.start_date") }}</th>
+          <th class="px-4 py-2">{{ t("app.admin.trips.end_date") }}</th>
+          <th class="px-4 py-2">{{ t("app.admin.trips.actions") }}</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="trip in trips" :key="trip.id" class="border-b hover:bg-gray-50">
           <td class="px-4 py-2">{{ trip.id }}</td>
-          <td class="px-4 py-2">{{ trip.title }}</td>
-          <td class="px-4 py-2">{{ trip.start }}</td>
-          <td class="px-4 py-2">{{ trip.end }}</td>
+          <td class="px-4 py-2">{{ trip.name }}</td>
+          <td class="px-4 py-2">{{ trip.start_date }}</td>
+          <td class="px-4 py-2">{{ trip.end_date }}</td>
+          <td class="px-4 py-2 space-x-2">
+            <button class="px-2 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500">
+              {{ t("app.admin.edit") }}
+            </button>
+            <button class="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700" @click="deleteTrip(trip.id)">
+              {{ t("app.admin.delete") }}
+            </button>
+          </td>
         </tr>
         <tr v-if="loading">
-          <td colspan="4" class="text-center p-4">Loading...</td>
+          <td colspan="5" class="text-center p-4">{{ t("loading") }}</td>
         </tr>
         <tr v-if="!loading && trips.length === 0">
-          <td colspan="4" class="text-center p-4">No trips found</td>
+          <td colspan="5" class="text-center p-4">{{ t("app.admin.trips.no_trips") }}</td>
         </tr>
       </tbody>
     </table>
-  </main>
-
-</div>
+  </div>
 </template>

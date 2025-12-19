@@ -11,13 +11,56 @@
       "profile": "Profile"
     },
     "admin": {
-      "title": "Admin Panel",
-      "users": "Users",
-      "trips": "Trips",
-      "places": "Places",
-      "settings": "Settings"
+      "title": "Administrator Panel",
+      "subtitle": "System management dashboard",
+      "menu": {
+        "users": "Users",
+        "trips": "Trips",
+        "places": "Places",
+        "settings": "Settings"
+      },
+      "users": {
+    "add": "Dodaj użytkownika",
+    "delete_confirm": "Czy na pewno chcesz usunąć użytkownika?",
+    "name": "Imię",
+    "email": "Email",
+    "actions": "Akcje",
+    "no_users": "Brak użytkowników"
+  },
+  "trips": {
+    "add": "Dodaj podróż",
+    "delete_confirm": "Czy na pewno chcesz usunąć podróż?",
+    "name": "Nazwa",
+    "start_date": "Data rozpoczęcia",
+    "end_date": "Data zakończenia",
+    "actions": "Akcje",
+    "no_trips": "Brak podróży"
+  },
+  "places": {
+    "add": "Dodaj miejsce",
+    "delete_confirm": "Czy na pewno chcesz usunąć miejsce?",
+    "name": "Nazwa",
+    "location": "Lokalizacja",
+    "actions": "Akcje",
+    "no_places": "Brak miejsc"
+  },
+  "settings": {
+    "save": "Zapisz"
+  },
+  "edit": "Edytuj",
+  "delete": "Usuń"
+
     }
   },
+
+  "dashboard": {
+  "tiles": {
+    "users_desc": "Manage users",
+    "trips_desc": "Manage trips",
+    "places_desc": "Manage places",
+    "settings_desc": "System settings"
+  }
+},
 
   "nav": {
     "dashboard": "Dashboard",
