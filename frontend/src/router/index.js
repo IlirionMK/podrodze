@@ -24,7 +24,7 @@ const router = createRouter({
                 { path: "login", name: "auth.login", component: AuthLoginPage },
                 { path: "register", name: "auth.register", component: AuthRegisterPage },
 
-                //  GOOGLE OAUTH CALLBACK ROUTE
+                // GOOGLE OAUTH CALLBACK
                 {
                     path: "auth/google",
                     name: "auth.google",
@@ -75,11 +75,11 @@ const router = createRouter({
             component: AdminLayout,
             meta: { admin: true },
             children: [
-                {
-                    path: "",
-                    name: "admin.dashboard",
-                    component: () => import("../pages/admin/Dashboard.vue")
-                }
+                { path: "", name: "admin.dashboard", component: () => import("../pages/admin/Dashboard.vue") },
+                { path: "users", name: "admin.users", component: () => import("../pages/admin/Users.vue") },
+                { path: "trips", name: "admin.trips", component: () => import("../pages/admin/Trips.vue") },
+                { path: "places", name: "admin.places", component: () => import("../pages/admin/Places.vue") },
+                { path: "settings", name: "admin.settings", component: () => import("../pages/admin/Settings.vue") },
             ]
         },
 
@@ -96,7 +96,6 @@ const router = createRouter({
         }
     ]
 })
-
 
 // Global navigation guard
 router.beforeEach((to, from, next) => {
