@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted } from "vue"
 import { useI18n } from "vue-i18n"
 import LogoIcon from "@/components/icons/LogoIcon.vue"
 import LanguageSwitcher from "@/components/LanguageSwitcher.vue"
+import Header from "@/components/Header.vue"
+import Footer from "@/components/Footer.vue"
 
 const { t } = useI18n({ useScope: "global" })
 
@@ -32,7 +34,7 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
 
         <!-- Logo → strona główna -->
         <router-link
-          to="/"
+          to="/app/home"
           class="flex items-center gap-3 font-semibold text-xl hover:opacity-90 transition"
         >
           <LogoIcon class="w-9 h-9 text-blue-600" />
@@ -109,47 +111,7 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
     </main>
 
     <!-- ===== FOOTER ===== -->
-    <footer class="bg-[#0d1117] text-gray-300 pt-14 pb-10 mt-20 border-t border-gray-800">
-      <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12">
-
-        <!-- Brand -->
-        <div>
-          <div class="flex items-center gap-2 mb-4">
-            <LogoIcon class="w-7 h-7 text-blue-400" />
-            <span class="text-lg font-semibold bg-gradient-to-r from-blue-400 to-purple-400 text-transparent bg-clip-text">
-              PoDrodze
-            </span>
-          </div>
-          <p class="text-sm text-gray-400 leading-relaxed">
-            {{ t("footer.description") }}
-          </p>
-        </div>
-
-        <!-- Project -->
-        <div>
-          <h3 class="footer-title">{{ t("footer.section.project") }}</h3>
-          <ul class="footer-list">
-            <li>{{ t("footer.links.about_us") }}</li>
-          </ul>
-        </div>
-
-        <!-- Team -->
-        <div>
-          <h3 class="footer-title">{{ t("footer.section.team") }}</h3>
-          <ul class="footer-list">
-            <li>{{ t("footer.links.about_us") }}</li>
-            <li>{{ t("footer.links.contact") }}</li>
-          </ul>
-        </div>
-
-      </div>
-
-      <div class="max-w-6xl mx-auto mt-10 px-4">
-        <div class="border-t border-gray-800 pt-6 text-center text-sm text-gray-500">
-          © {{ new Date().getFullYear() }} PoDrodze • {{ t("footer.student_project") }}
-        </div>
-      </div>
-    </footer>
+    <Footer/>
 
   </div>
 </template>

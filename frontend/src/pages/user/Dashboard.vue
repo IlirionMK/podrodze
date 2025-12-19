@@ -9,7 +9,7 @@
     </p>
 
     <div class="mt-8">
-      <RouterLink
+      <RouterLink 
           to="/app/trips"
           class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
       >
