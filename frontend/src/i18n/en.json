@@ -20,35 +20,35 @@
         "settings": "Settings"
       },
       "users": {
-    "add": "Dodaj użytkownika",
-    "delete_confirm": "Czy na pewno chcesz usunąć użytkownika?",
-    "name": "Imię",
-    "email": "Email",
-    "actions": "Akcje",
-    "no_users": "Brak użytkowników"
-  },
-  "trips": {
-    "add": "Dodaj podróż",
-    "delete_confirm": "Czy na pewno chcesz usunąć podróż?",
-    "name": "Nazwa",
-    "start_date": "Data rozpoczęcia",
-    "end_date": "Data zakończenia",
-    "actions": "Akcje",
-    "no_trips": "Brak podróży"
-  },
-  "places": {
-    "add": "Dodaj miejsce",
-    "delete_confirm": "Czy na pewno chcesz usunąć miejsce?",
-    "name": "Nazwa",
-    "location": "Lokalizacja",
-    "actions": "Akcje",
-    "no_places": "Brak miejsc"
-  },
-  "settings": {
-    "save": "Zapisz"
-  },
-  "edit": "Edytuj",
-  "delete": "Usuń"
+        "add": "Add User",
+        "delete_confirm": "Are you sure you want to delete this user?",
+        "name": "Name",
+        "email": "Email",
+        "actions": "Actions",
+        "no_users": "No users found"
+      },
+      "trips": {
+        "add": "Add Trip",
+        "delete_confirm": "Are you sure you want to delete this trip?",
+        "name": "Name",
+        "start_date": "Start Date",
+        "end_date": "End Date",
+        "actions": "Actions",
+        "no_trips": "No trips found"
+      },
+      "places": {
+        "add": "Add Place",
+        "delete_confirm": "Are you sure you want to delete this place?",
+        "name": "Name",
+        "location": "Location",
+        "actions": "Actions",
+        "no_places": "No places found"
+      },
+      "settings": {
+        "save": "Save"
+      },
+      "edit": "Edit",
+      "delete": "Delete"
 
     }
   },
