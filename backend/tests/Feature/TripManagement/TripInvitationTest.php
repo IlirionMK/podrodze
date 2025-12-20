@@ -1,12 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\TripManagement;
 
 use App\Models\Trip;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Group;
-use Tests\TestCase;
+use Tests\TestCase\TripTestCase;
 
 /**
  * Tests for trip invitation system.
@@ -20,81 +21,89 @@ use Tests\TestCase;
  */
 #[Group('invitation')]
 #[Group('trip')]
-class TripInvitationTest extends TestCase
+class TripInvitationTest extends TripTestCase
 {
-    use RefreshDatabase;
+    protected bool $enableRateLimiting = false;
+
+    protected User $invitedUser;
+    protected User $otherUser;
+    protected User $owner;
+    protected Trip $trip;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->invitedUser = User::factory()->create(['email' => 'kumpel@example.com']);
+        $this->otherUser = User::factory()->create();
+    }
 
     public function test_owner_can_invite_user_by_email(): void
     {
-        $owner = User::factory()->create();
-        $userToInvite = User::factory()->create(['email' => 'kumpel@example.com']);
-        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
 
-        $response = $this->actingAs($owner)
-            ->postJson("/api/v1/trips/{$trip->id}/members/invite", [
+        $response = $this->actingAsUser($this->owner)
+            ->postJson("/api/v1/trips/{$this->trip->getKey()}/members/invite", [
                 'email' => 'kumpel@example.com',
                 'role' => 'editor'
             ]);
 
-        $response->assertSuccessful();
+        $response->assertStatus(200);
 
         $this->assertDatabaseHas('trip_user', [
-            'trip_id' => $trip->id,
-            'user_id' => $userToInvite->id,
+            'trip_id' => $this->trip->getKey(),
+            'user_id' => $this->invitedUser->getKey(),
             'status' => 'pending',
         ]);
     }
 
     public function test_invited_user_can_accept_invitation(): void
     {
-        $owner = User::factory()->create();
-        $invitedUser = User::factory()->create();
-        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        $members = $this->trip->members();
+        $members->attach($this->invitedUser->getKey(), [
+            'status' => 'pending',
+            'role' => 'viewer'
+        ]);
 
-        $trip->members()->attach($invitedUser->id, ['status' => 'pending', 'role' => 'viewer']);
-
-        $response = $this->actingAs($invitedUser)
-            ->postJson("/api/v1/trips/{$trip->id}/accept");
+        $response = $this->actingAsUser($this->invitedUser)
+            ->postJson("/api/v1/trips/{$this->trip->id}/accept");
 
         $response->assertSuccessful();
 
         $this->assertDatabaseHas('trip_user', [
-            'trip_id' => $trip->id,
-            'user_id' => $invitedUser->id,
+            'trip_id' => $this->trip->getKey(),
+            'user_id' => $this->invitedUser->getKey(),
             'status' => 'accepted',
         ]);
     }
 
     public function test_invited_user_can_decline_invitation(): void
     {
-        $owner = User::factory()->create();
-        $invitedUser = User::factory()->create();
-        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        $this->trip->members()->attach($this->invitedUser->getKey(), [
+            'status' => 'pending',
+            'role' => 'viewer'
+        ]);
 
-        $trip->members()->attach($invitedUser->id, ['status' => 'pending', 'role' => 'viewer']);
-
-        $response = $this->actingAs($invitedUser)
-            ->postJson("/api/v1/trips/{$trip->id}/decline");
+        $response = $this->actingAsUser($this->invitedUser)
+            ->postJson("/api/v1/trips/{$this->trip->getKey()}/decline");
 
         $response->assertSuccessful();
 
         $this->assertDatabaseHas('trip_user', [
-            'trip_id' => $trip->id,
-            'user_id' => $invitedUser->id,
+            'trip_id' => $this->trip->getKey(),
+            'user_id' => $this->invitedUser->getKey(),
             'status' => 'declined',
         ]);
     }
 
     public function test_cannot_accept_previously_declined_invitation(): void
     {
-        $owner = User::factory()->create();
-        $user = User::factory()->create();
-        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        $this->trip->members()->attach($this->invitedUser->getKey(), [
+            'status' => 'declined',
+            'role' => 'viewer'
+        ]);
 
-        $trip->members()->attach($user->id, ['status' => 'declined', 'role' => 'viewer']);
-
-        $response = $this->actingAs($user)
-            ->postJson("/api/v1/trips/{$trip->id}/accept");
+        $response = $this->actingAsUser($this->invitedUser)
+            ->postJson("/api/v1/trips/{$this->trip->id}/accept");
 
         $response->assertStatus(403);
         $this->assertEquals('This action is unauthorized.', $response->json('message'));
@@ -102,36 +111,38 @@ class TripInvitationTest extends TestCase
 
     public function test_user_can_list_pending_invitations(): void
     {
-        $owner1 = User::factory()->create();
-        $owner2 = User::factory()->create();
-        $user = User::factory()->create();
+        $trip2 = Trip::factory()->create(['owner_id' => $this->otherUser->getKey()]);
 
-        $trip1 = Trip::factory()->create(['owner_id' => $owner1->id]);
-        $trip2 = Trip::factory()->create(['owner_id' => $owner2->id]);
+        $this->trip->members()->attach($this->invitedUser->getKey(), [
+            'status' => 'pending',
+            'role' => 'viewer'
+        ]);
 
-        $trip1->members()->attach($user->id, ['status' => 'pending', 'role' => 'viewer']);
+        $trip2->members()->attach($this->invitedUser->getKey(), [
+            'status' => 'accepted',
+            'role' => 'editor'
+        ]);
 
-        $trip2->members()->attach($user->id, ['status' => 'accepted', 'role' => 'editor']);
-
-        $response = $this->actingAs($user)
+        $response = $this->actingAsUser($this->invitedUser)
             ->getJson('/api/v1/users/me/invites');
 
         $response->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.trip_id', $trip1->id);
+            ->assertJsonPath('data.0.trip_id', $this->trip->getKey());
     }
 
     public function test_owner_can_list_sent_invitations(): void
     {
-        $owner = User::factory()->create();
-        $user1 = User::factory()->create();
-        $user2 = User::factory()->create();
-        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        $this->trip->members()->attach($this->invitedUser->getKey(), [
+            'status' => 'pending',
+            'role' => 'viewer'
+        ]);
+        $this->trip->members()->attach($this->otherUser->getKey(), [
+            'status' => 'pending',
+            'role' => 'editor'
+        ]);
 
-        $trip->members()->attach($user1->id, ['status' => 'pending', 'role' => 'viewer']);
-        $trip->members()->attach($user2->id, ['status' => 'pending', 'role' => 'editor']);
-
-        $response = $this->actingAs($owner)
+        $response = $this->actingAsUser($this->owner)
             ->getJson('/api/v1/users/me/invites/sent');
 
         $response->assertOk()
@@ -140,15 +151,14 @@ class TripInvitationTest extends TestCase
 
     public function test_cannot_invite_already_accepted_member(): void
     {
-        $owner = User::factory()->create();
-        $member = User::factory()->create();
-        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        $this->trip->members()->attach($this->invitedUser->getKey(), [
+            'status' => 'accepted',
+            'role' => 'viewer'
+        ]);
 
-        $trip->members()->attach($member->id, ['status' => 'accepted', 'role' => 'viewer']);
-
-        $response = $this->actingAs($owner)
-            ->postJson("/api/v1/trips/{$trip->id}/members/invite", [
-                'email' => $member->email,
+        $response = $this->actingAsUser($this->owner)
+            ->postJson("/api/v1/trips/{$this->trip->getKey()}/members/invite", [
+                'email' => $this->invitedUser->email,
                 'role' => 'editor'
             ]);
 
@@ -158,18 +168,14 @@ class TripInvitationTest extends TestCase
 
     public function test_uninvited_user_cannot_join_trip(): void
     {
-        $owner = User::factory()->create();
-        $randomUser = User::factory()->create();
-        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
-
-        $response = $this->actingAs($randomUser)
-            ->postJson("/api/v1/trips/{$trip->id}/accept");
+        $response = $this->actingAsUser($this->otherUser)
+            ->postJson("/api/v1/trips/{$this->trip->getKey()}/accept");
 
         $this->assertTrue(in_array($response->getStatusCode(), [403, 404]));
 
         $this->assertDatabaseMissing('trip_user', [
-            'trip_id' => $trip->id,
-            'user_id' => $randomUser->id,
+            'trip_id' => $this->trip->getKey(),
+            'user_id' => $this->owner->getKey(),
             'status' => 'joined',
         ]);
     }

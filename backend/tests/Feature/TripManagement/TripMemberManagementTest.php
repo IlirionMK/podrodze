@@ -1,12 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\TripManagement;
 
-use App\Models\Trip;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Group;
-use Tests\TestCase;
+use Tests\TestCase\TripTestCase;
 
 /**
  * Tests for trip member management.
@@ -20,26 +20,15 @@ use Tests\TestCase;
  */
 #[Group('members')]
 #[Group('trip')]
-class TripMemberManagementTest extends TestCase
+class TripMemberManagementTest extends TripTestCase
 {
-    use RefreshDatabase;
-
-    protected User $owner;
-    protected Trip $trip;
-    protected User $member;
-    protected User $editor;
-    protected User $otherUser;
+    protected bool $enableRateLimiting = false;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->owner = User::factory()->create();
-        $this->trip = Trip::factory()->create(['owner_id' => $this->owner->id]);
-        $this->member = User::factory()->create();
-        $this->editor = User::factory()->create();
-        $this->otherUser = User::factory()->create();
 
-        $this->trip->members()->attach($this->editor->id, [
+        $this->trip->members()->attach($this->editor->getKey(), [
             'status' => 'accepted',
             'role' => 'editor'
         ]);
@@ -47,12 +36,12 @@ class TripMemberManagementTest extends TestCase
 
     public function test_owner_can_list_trip_members(): void
     {
-        $this->trip->members()->attach($this->member->id, [
+        $this->trip->members()->attach($this->member->getKey(), [
             'status' => 'accepted',
             'role' => 'member'
         ]);
 
-        $response = $this->actingAs($this->owner)
+        $response = $this->actingAsUser($this->owner)
             ->getJson("/api/v1/trips/{$this->trip->id}/members");
 
         $response->assertStatus(200)
@@ -61,12 +50,12 @@ class TripMemberManagementTest extends TestCase
 
     public function test_member_can_view_trip_details(): void
     {
-        $this->trip->members()->attach($this->member->id, [
+        $this->trip->members()->attach($this->member->getKey(), [
             'status' => 'accepted',
             'role' => 'member'
         ]);
 
-        $response = $this->actingAs($this->member)
+        $response = $this->actingAsUser($this->member)
             ->getJson("/api/v1/trips/{$this->trip->id}");
 
         $response->assertStatus(200)
@@ -75,9 +64,9 @@ class TripMemberManagementTest extends TestCase
 
     public function test_editor_cannot_invite_members_with_invalid_role(): void
     {
-        $response = $this->actingAs($this->editor)
+        $response = $this->actingAsUser($this->editor)
             ->postJson("/api/v1/trips/{$this->trip->id}/members/invite", [
-                'email' => $this->otherUser->email,
+                'email' => $this->otherUser->getAttribute('email'),
                 'role' => 'invalid_role'
             ]);
         $response->assertStatus(422);
@@ -85,32 +74,104 @@ class TripMemberManagementTest extends TestCase
 
     public function test_owner_can_delete_trip(): void
     {
-        $response = $this->actingAs($this->owner)
+        $response = $this->actingAsUser($this->owner)
             ->deleteJson("/api/v1/trips/{$this->trip->id}");
         $response->assertStatus(200);
     }
 
     public function test_owner_can_remove_member_from_trip(): void
     {
-        $this->trip = Trip::factory()->create(['owner_id' => $this->owner->id]);
-        $response = $this->actingAs($this->owner)
-            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->member->id}");
+        $this->trip->members()->attach($this->member->getKey(), [
+            'status' => 'accepted',
+            'role' => 'member'
+        ]);
+
+        $response = $this->actingAsUser($this->owner)
+            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->member->getKey()}");
+
         $response->assertStatus(200);
+        $this->assertDatabaseMissing('trip_user', [
+            'trip_id' => $this->trip->id,
+            'user_id' => $this->member->getKey()
+        ]);
     }
 
     public function test_owner_can_remove_editor_from_trip(): void
     {
-        $this->trip = Trip::factory()->create(['owner_id' => $this->owner->id]);
-        $response = $this->actingAs($this->owner)
-            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->editor->id}");
+        $response = $this->actingAsUser($this->owner)
+            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->editor->getKey()}");
+
         $response->assertStatus(200);
+        $this->assertDatabaseMissing('trip_user', [
+            'trip_id' => $this->trip->id,
+            'user_id' => $this->editor->getKey()
+        ]);
+    }
+
+    public function test_owner_can_change_member_role(): void
+    {
+        $this->trip->members()->attach($this->member->getKey(), [
+            'status' => 'accepted',
+            'role' => 'member'
+        ]);
+
+        $response = $this->actingAsUser($this->owner)
+            ->putJson("/api/v1/trips/{$this->trip->id}/members/{$this->member->getKey()}", [
+                'role' => 'editor'
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson(['message' => 'Role updated.']);
+
+        $this->assertDatabaseHas('trip_user', [
+            'trip_id' => $this->trip->id,
+            'user_id' => $this->member->getKey(),
+            'role' => 'editor'
+        ]);
+    }
+
+    public function test_cannot_change_owner_role(): void
+    {
+        $response = $this->actingAsUser($this->owner)
+            ->putJson("/api/v1/trips/{$this->trip->id}/members/{$this->owner->getKey()}", [
+                'role' => 'editor'
+            ]);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('trip_user', [
+            'trip_id' => $this->trip->id,
+            'user_id' => $this->owner->getKey(),
+            'role' => 'owner'
+        ]);
+    }
+
+    public function test_cannot_change_to_invalid_role(): void
+    {
+        $this->trip->members()->attach($this->member->getKey(), [
+            'status' => 'accepted',
+            'role' => 'member'
+        ]);
+
+        $response = $this->actingAsUser($this->owner)
+            ->putJson("/api/v1/trips/{$this->trip->id}/members/{$this->member->getKey()}", [
+                'role' => 'invalid_role'
+            ]);
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseHas('trip_user', [
+            'trip_id' => $this->trip->id,
+            'user_id' => $this->member->getKey(),
+            'role' => 'member'
+        ]);
     }
 
     public function test_owner_can_invite_member_to_trip(): void
     {
         $newMember = User::factory()->create();
 
-        $response = $this->actingAs($this->owner)
+        $response = $this->actingAsUser($this->owner)
             ->postJson("/api/v1/trips/{$this->trip->id}/members/invite", [
                 'email' => $newMember->email,
                 'role' => 'member'
@@ -120,7 +181,7 @@ class TripMemberManagementTest extends TestCase
 
         $this->assertDatabaseHas('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $newMember->id,
+            'user_id' => $newMember->getKey(),
             'status' => 'pending',
             'role' => 'member'
         ]);
@@ -128,11 +189,11 @@ class TripMemberManagementTest extends TestCase
     public function test_member_cannot_invite_other_members(): void
     {
         $member = User::factory()->create();
-        $this->trip->members()->attach($member->id, ['status' => 'accepted', 'role' => 'member']);
+        $this->trip->members()->attach($member->getKey(), ['status' => 'accepted', 'role' => 'member']);
 
         $newMember = User::factory()->create();
 
-        $response = $this->actingAs($member)
+        $response = $this->actingAsUser($member)
             ->postJson("/api/v1/trips/{$this->trip->id}/members/invite", [
                 'email' => $newMember->email,
                 'role' => 'member'
@@ -141,13 +202,13 @@ class TripMemberManagementTest extends TestCase
         $response->assertStatus(403);
         $this->assertDatabaseMissing('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $newMember->id
+            'user_id' => $newMember->getKey()
         ]);
     }
 
     public function test_cannot_invite_nonexistent_user(): void
     {
-        $response = $this->actingAs($this->owner)
+        $response = $this->actingAsUser($this->owner)
             ->postJson("/api/v1/trips/{$this->trip->id}/members/invite", [
                 'email' => 'nonexistent@example.com',
                 'role' => 'member'
@@ -159,18 +220,18 @@ class TripMemberManagementTest extends TestCase
     public function test_user_can_accept_trip_invitation(): void
     {
         $invitedUser = User::factory()->create();
-        $this->trip->members()->attach($invitedUser->id, [
+        $this->trip->members()->attach($invitedUser->getKey(), [
             'status' => 'pending',
             'role' => 'member'
         ]);
 
-        $response = $this->actingAs($invitedUser)
+        $response = $this->actingAsUser($invitedUser)
             ->postJson("/api/v1/trips/{$this->trip->id}/accept");
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $invitedUser->id,
+            'user_id' => $invitedUser->getKey(),
             'status' => 'accepted'
         ]);
     }
@@ -178,36 +239,36 @@ class TripMemberManagementTest extends TestCase
     public function test_user_can_decline_trip_invitation(): void
     {
         $invitedUser = User::factory()->create();
-        $this->trip->members()->attach($invitedUser->id, [
+        $this->trip->members()->attach($invitedUser->getKey(), [
             'status' => 'pending',
             'role' => 'member'
         ]);
 
-        $response = $this->actingAs($invitedUser)
+        $response = $this->actingAsUser($invitedUser)
             ->postJson("/api/v1/trips/{$this->trip->id}/decline");
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $invitedUser->id,
+            'user_id' => $invitedUser->getKey(),
             'status' => 'declined'
         ]);
     }
     public function test_owner_can_manage_members(): void
     {
         $member = User::factory()->create();
-        $this->trip->members()->attach($member->id, [
+        $this->trip->members()->attach($member->getKey(), [
             'status' => 'accepted',
             'role' => 'member'
         ]);
 
-        $response = $this->actingAs($this->owner)
-            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$member->id}");
+        $response = $this->actingAsUser($this->owner)
+            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/" . $member->getKey());
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $member->id
+            'user_id' => $member->getKey()
         ]);
     }
 
@@ -217,44 +278,44 @@ class TripMemberManagementTest extends TestCase
         $member2 = User::factory()->create();
 
         $this->trip->members()->attach([
-            $member1->id => ['status' => 'accepted', 'role' => 'member'],
-            $member2->id => ['status' => 'accepted', 'role' => 'member']
+            $member1->getKey() => ['status' => 'accepted', 'role' => 'member'],
+            $member2->getKey() => ['status' => 'accepted', 'role' => 'member']
         ]);
 
-        $response = $this->actingAs($member1)
-            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$member2->id}");
+        $response = $this->actingAsUser($member1)
+            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/" . $member2->getKey());
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $member2->id
+            'user_id' => $member2->getKey()
         ]);
     }
 
     public function test_cannot_remove_trip_owner(): void
     {
-        $member = User::factory()->create();
-        $this->trip->members()->attach($member->id, [
+        $member = $this->createUser();
+        $this->trip->members()->attach($member->getKey(), [
             'status' => 'accepted',
             'role' => 'member'
         ]);
 
-        $response = $this->actingAs($member)
-            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->owner->id}");
+        $response = $this->actingAsUser($member)
+            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->owner->getKey()}");
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $this->owner->id
+            'user_id' => $this->owner->getKey()
         ]);
     }
 
     public function test_editor_can_update_trip(): void
     {
-        $response = $this->actingAs($this->editor)
+        $response = $this->actingAsUser($this->editor)
             ->putJson("/api/v1/trips/{$this->trip->id}", [
                 'name' => 'Updated Trip Name',
-                'start_date' => now()->addDays(1)->format('Y-m-d'),
+                'start_date' => now()->addDays()->format('Y-m-d'),
                 'end_date' => now()->addDays(5)->format('Y-m-d'),
             ]);
 
@@ -267,70 +328,70 @@ class TripMemberManagementTest extends TestCase
 
     public function test_editor_can_invite_new_members(): void
     {
-        $response = $this->actingAs($this->editor)
+        $response = $this->actingAsUser($this->editor)
             ->postJson("/api/v1/trips/{$this->trip->id}/members/invite", [
-                'email' => $this->otherUser->email,
+                'email' => $this->otherUser->getAttribute('email'),
                 'role' => 'member'
             ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $this->otherUser->id,
+            'user_id' => $this->otherUser->getKey(),
             'status' => 'pending'
         ]);
     }
 
     public function test_editor_can_remove_members(): void
     {
-        $this->trip->members()->attach($this->otherUser->id, [
+        $this->trip->members()->attach($this->otherUser->getKey(), [
             'status' => 'accepted',
             'role' => 'member'
         ]);
 
-        $response = $this->actingAs($this->editor)
-            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->otherUser->id}");
+$response = $this->actingAsUser($this->editor)
+            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->otherUser->getKey()}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $this->otherUser->id
+            'user_id' => $this->otherUser->getKey()
         ]);
     }
 
     public function test_editor_cannot_remove_owner(): void
     {
-        $response = $this->actingAs($this->editor)
-            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->owner->id}");
+        $response = $this->actingAsUser($this->editor)
+            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$this->owner->getKey()}");
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $this->owner->id
+            'user_id' => $this->owner->getKey()
         ]);
     }
 
     public function test_editor_cannot_remove_other_editors(): void
     {
-        $anotherEditor = User::factory()->create();
-        $this->trip->members()->attach($anotherEditor->id, [
+        $anotherEditor = $this->createUser();
+        $this->trip->members()->attach($anotherEditor->getKey(), [
             'role' => 'editor',
             'status' => 'accepted'
         ]);
 
-        $response = $this->actingAs($this->editor)
-            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$anotherEditor->id}");
+        $response = $this->actingAsUser($this->editor)
+            ->deleteJson("/api/v1/trips/{$this->trip->id}/members/{$anotherEditor->getKey()}");
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('trip_user', [
             'trip_id' => $this->trip->id,
-            'user_id' => $anotherEditor->id
+            'user_id' => $anotherEditor->getKey()
         ]);
     }
 
     public function test_editor_cannot_delete_trip(): void
     {
-        $response = $this->actingAs($this->editor)
+        $response = $this->actingAsUser($this->editor)
             ->deleteJson("/api/v1/trips/{$this->trip->id}");
 
         $response->assertStatus(403);
