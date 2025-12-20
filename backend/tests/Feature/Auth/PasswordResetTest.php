@@ -3,109 +3,111 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Exception;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase\ApiTestCase;
+use Illuminate\Testing\TestResponse;
 
-/**
- * Tests for password reset functionality.
- *
- * This class contains tests for:
- * - Password reset request flow
- * - Password reset token validation
- * - Password update process
- * - Invalid token handling
- * - Rate limiting for password reset requests
- */
 #[Group('auth')]
 #[Group('password')]
 #[Group('security')]
-class PasswordResetTest extends TestCase
+class PasswordResetTest extends ApiTestCase
 {
-    use RefreshDatabase;
+    /**
+     * @var bool Enable rate limiting for tests
+     */
+    protected bool $enableRateLimiting = true;
+
+    /**
+     * @var string The new password for testing
+     */
+    private const NEW_PASSWORD = 'new-password-123';
+
+    /**
+     * @var string An invalid email for testing
+     */
+    private const INVALID_EMAIL = 'nonexistent@example.com';
+
+    /**
+     * Assert that the response has a successful status code (2xx).
+     *
+     * @param TestResponse $response The response to check
+     */
+    protected function assertSuccessResponse(TestResponse $response): void
+    {
+        parent::assertSuccessResponse($response);
+    }
+
+    /**
+     * Assert that the response has an unprocessable entity status code (422).
+     *
+     * @param TestResponse $response The response to check
+     */
+    protected function assertUnprocessableResponse(TestResponse $response): void
+    {
+        parent::assertUnprocessableResponse($response);
+    }
+
 
     public function test_reset_password_link_sends_notification(): void
     {
         Notification::fake();
-        $user = User::factory()->create();
+        $user = $this->createUser();
 
-        $this->postJson('/api/v1/forgot-password', [
-            'email' => $user->email,
-        ]);
+        $response = $this->postJson('/api/v1/forgot-password', ['email' => $user->getAttribute('email')]);
+        $response->assertStatus(200);
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        try {
+            Notification::assertSentTo($user, ResetPassword::class);
+        } catch (Exception $e) {
+            $this->fail('Failed to send password reset notification: ' . $e->getMessage());
+        }
     }
 
     public function test_reset_password_link_returns_success_status(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createUser();
 
         $response = $this->postJson('/api/v1/forgot-password', [
-            'email' => $user->email,
+            'email' => $user->getAttribute('email'),
         ]);
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'status' => 'We have emailed your password reset link.'
-            ]);
+        $response->assertOk()
+            ->assertJson(['status' => 'We have emailed your password reset link.']);
     }
 
-    public function test_password_reset_sends_notification(): void
+    public function test_can_reset_password_with_valid_token(): void
     {
-        Notification::fake();
-        $user = User::factory()->create();
-
-        $this->postJson('/api/v1/forgot-password', [
-            'email' => $user->email,
-        ]);
-
-        Notification::assertSentTo($user, ResetPassword::class);
-    }
-
-    public function test_password_reset_returns_success_status(): void
-    {
-        Notification::fake();
-        $user = User::factory()->create();
-
-        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
-
-        $notification = Notification::sent($user, ResetPassword::class)->first();
-        $newPassword = 'new-password-123';
+        $user = $this->createUser();
+        $token = $this->getPasswordResetToken($user);
 
         $response = $this->postJson('/api/v1/reset-password', [
-            'token' => $notification->token,
-            'email' => $user->email,
-            'password' => $newPassword,
-            'password_confirmation' => $newPassword,
+            'token' => $token,
+            'email' => $user->getAttribute('email'),
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
         ]);
 
-        $this->assertTrue(
-            in_array($response->getStatusCode(), [200, 204]),
-            'Expected status code 200 or 204, got '.$response->getStatusCode()
-        );
+        $this->assertSuccessResponse($response);
     }
 
     public function test_user_can_login_after_password_reset(): void
     {
-        Notification::fake();
-        $user = User::factory()->create();
-        $newPassword = 'new-password-123';
-
-        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
-
-        $notification = Notification::sent($user, ResetPassword::class)->first();
+        $user = $this->createUser();
+        $token = $this->getPasswordResetToken($user);
 
         $this->postJson('/api/v1/reset-password', [
-            'token' => $notification->token,
-            'email' => $user->email,
-            'password' => $newPassword,
-            'password_confirmation' => $newPassword,
+            'token' => $token,
+            'email' => $user->getAttribute('email'),
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
         ]);
 
         $response = $this->postJson('/api/v1/login', [
-            'email' => $user->email,
-            'password' => $newPassword,
+            'email' => $user->getAttribute('email'),
+            'password' => self::NEW_PASSWORD,
         ]);
 
         $response->assertOk()
@@ -117,110 +119,85 @@ class PasswordResetTest extends TestCase
 
     public function test_cannot_reset_password_with_invalid_token(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createUser();
 
         $response = $this->postJson('/api/v1/reset-password', [
             'token' => 'invalid-token',
-            'email' => $user->email,
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
+            'email' => $user->getAttribute('email'),
+            'password' => self::NEW_PASSWORD,
+            'password_confirmation' => self::NEW_PASSWORD,
         ]);
 
-        $response->assertStatus(422);
+        $this->assertUnprocessableResponse($response);
     }
 
-    public function test_cannot_reset_password_without_valid_email(): void
+    public function test_cannot_reset_password_with_nonexistent_email(): void
     {
         $response = $this->postJson('/api/v1/forgot-password', [
-            'email' => 'nonexistent@example.com',
+            'email' => self::INVALID_EMAIL,
         ]);
 
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 204, 422]));
+        $this->assertSuccessResponse($response);
     }
 
-    public function test_cannot_reset_password_with_invalid_email(): void
+    public function test_cannot_reset_password_with_invalid_email_format(): void
     {
         $response = $this->postJson('/api/v1/forgot-password', [
             'email' => 'invalid-email',
         ]);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['email']);
+        $this->assertUnprocessableResponse($response);
+        $response->assertJsonValidationErrors(['email']);
     }
 
-    public function test_password_reset_fails_with_mismatched_passwords(): void
+    public function test_cannot_reset_password_with_mismatched_passwords(): void
     {
-        Notification::fake();
-        $user = User::factory()->create();
-
-        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
-
-        $notification = Notification::sent($user, ResetPassword::class)->first();
+        $user = $this->createUser();
+        $token = $this->getPasswordResetToken($user);
 
         $response = $this->postJson('/api/v1/reset-password', [
-            'token' => $notification->token,
-            'email' => $user->email,
-            'password' => 'new-password',
+            'token' => $token,
+            'email' => $user->getAttribute('email'),
+            'password' => self::NEW_PASSWORD,
             'password_confirmation' => 'wrong-confirmation',
         ]);
 
-        $response->assertStatus(422);
-    }
+        // The API returns 422 with validation errors
+        $this->assertUnprocessableResponse($response);
 
-    public function test_password_reset_shows_validation_error_for_mismatched_passwords(): void
-    {
-        Notification::fake();
-        $user = User::factory()->create();
-
-        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
-
-        $notification = Notification::sent($user, ResetPassword::class)->first();
-
-        $response = $this->postJson('/api/v1/reset-password', [
-            'token' => $notification->token,
-            'email' => $user->email,
-            'password' => 'new-password',
-            'password_confirmation' => 'wrong-confirmation',
-        ]);
-
+        // Check for the specific validation error
         $response->assertJsonValidationErrors(['password']);
     }
 
-    public function test_password_reset_fails_with_short_password(): void
+    public function test_cannot_reset_password_with_short_password(): void
     {
-        Notification::fake();
-        $user = User::factory()->create();
-
-        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
-
-        $notification = Notification::sent($user, ResetPassword::class)->first();
+        $user = $this->createUser();
+        $token = $this->getPasswordResetToken($user);
 
         $response = $this->postJson('/api/v1/reset-password', [
-            'token' => $notification->token,
-            'email' => $user->email,
+            'token' => $token,
+            'email' => $user->getAttribute('email'),
             'password' => 'short',
             'password_confirmation' => 'short',
         ]);
 
-        $response->assertStatus(422);
+        // The API returns 422 with validation errors
+        $this->assertUnprocessableResponse($response);
+
+        // Check for the specific validation error
+        $response->assertJsonValidationErrors(['password']);
     }
 
-    public function test_password_reset_shows_validation_error_for_short_password(): void
+    /**
+     * Get password reset token for testing
+     *
+     * @param User $user The user to get the reset token for
+     * @return string The password reset token
+     */
+    private function getPasswordResetToken(User $user): string
     {
         Notification::fake();
-        $user = User::factory()->create();
-
-        $this->postJson('/api/v1/forgot-password', ['email' => $user->email]);
-
-        $notification = Notification::sent($user, ResetPassword::class)->first();
-
-        $response = $this->postJson('/api/v1/reset-password', [
-            'token' => $notification->token,
-            'email' => $user->email,
-            'password' => 'short',
-            'password_confirmation' => 'short',
-        ]);
-
-        $response->assertJsonValidationErrors(['password']);
+        $this->postJson('/api/v1/forgot-password', ['email' => $user->getAttribute('email')]);
+        return Notification::sent($user, ResetPassword::class)->first()->token;
     }
 }
