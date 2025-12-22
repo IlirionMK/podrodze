@@ -79,18 +79,12 @@ async function onSubmit() {
       data = null
     }
 
-    if (!res.ok) {
-      globalError.value = "auth.errors.incorrect_data"
-      return
-    }
-
-    if (!data?.token) {
+    if (!res.ok || !data?.token) {
       globalError.value = "auth.errors.incorrect_data"
       return
     }
 
     setAuth(data.user, data.token)
-
 
     const intended = localStorage.getItem("intended")
     if (intended) {
@@ -109,6 +103,19 @@ async function onSubmit() {
 async function redirectToGoogle() {
   try {
     const res = await fetch(import.meta.env.VITE_API_URL + "/auth/google/url", {
+      headers: { Accept: "application/json" },
+    })
+    const data = await res.json()
+
+    if (data?.url) {
+      window.location.href = data.url
+    }
+  } catch (e) {}
+}
+
+async function redirectToFacebook() {
+  try {
+    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/facebook/url", {
       headers: { Accept: "application/json" },
     })
     const data = await res.json()
@@ -178,7 +185,10 @@ async function redirectToGoogle() {
           <button
               type="submit"
               :disabled="loading"
-              class="w-full py-3 rounded-xl text-lg font-medium bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 active:opacity-80 transition disabled:opacity-50 shadow-lg"
+              class="w-full py-3 rounded-xl text-lg font-medium
+                   bg-gradient-to-r from-blue-500 to-purple-600
+                   hover:opacity-90 active:opacity-80 transition
+                   disabled:opacity-50 shadow-lg"
           >
             {{ loading ? $t("auth.loading") : $t("auth.register.submit") }}
           </button>
@@ -193,8 +203,8 @@ async function redirectToGoogle() {
           </button>
 
           <button
-              disabled
-              class="w-full py-3 rounded-xl bg-blue-600/40 text-white/70 cursor-not-allowed shadow-inner"
+              @click="redirectToFacebook"
+              class="w-full py-3 rounded-xl bg-blue-600 text-white font-medium shadow-lg hover:opacity-90 transition"
           >
             {{ $t("auth.register.facebook") }}
           </button>

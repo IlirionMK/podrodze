@@ -73,6 +73,26 @@ async function onSubmit() {
     loading.value = false
   }
 }
+
+async function redirectToGoogle() {
+  try {
+    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/google/url", {
+      headers: { Accept: "application/json" },
+    })
+    const data = await res.json()
+    if (data?.url) window.location.href = data.url
+  } catch (e) {}
+}
+
+async function redirectToFacebook() {
+  try {
+    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/facebook/url", {
+      headers: { Accept: "application/json" },
+    })
+    const data = await res.json()
+    if (data?.url) window.location.href = data.url
+  } catch (e) {}
+}
 </script>
 
 <template>
@@ -124,9 +144,9 @@ async function onSubmit() {
               type="submit"
               :disabled="loading"
               class="w-full py-3 rounded-xl text-lg font-medium
-                     bg-gradient-to-r from-blue-500 to-purple-600
-                     hover:opacity-90 active:opacity-80 transition
-                     disabled:opacity-50 shadow-lg"
+                   bg-gradient-to-r from-blue-500 to-purple-600
+                   hover:opacity-90 active:opacity-80 transition
+                   disabled:opacity-50 shadow-lg"
           >
             {{ loading ? $t("auth.loading") : $t("auth.login.submit") }}
           </button>
@@ -141,8 +161,8 @@ async function onSubmit() {
           </button>
 
           <button
-              disabled
-              class="w-full py-3 rounded-xl bg-blue-600/40 text-white/70 cursor-not-allowed shadow-inner"
+              @click="redirectToFacebook"
+              class="w-full py-3 rounded-xl bg-blue-600 text-white font-medium shadow-lg hover:opacity-90 transition"
           >
             {{ $t("auth.login.facebook") }}
           </button>

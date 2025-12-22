@@ -31,6 +31,14 @@ const router = createRouter({
                     meta: { guest: true },
                 },
 
+                // Facebook OAuth callback route (redirect_uri = http://localhost:5173/auth/facebook/callback)
+                {
+                    path: "auth/facebook/callback",
+                    name: "auth.facebook",
+                    component: () => import("../pages/auth/FacebookCallback.vue"),
+                    meta: { guest: true },
+                },
+
                 // Email verification (SPA)
                 {
                     path: "auth/verify-email",
@@ -114,13 +122,12 @@ router.beforeEach((to, from, next) => {
     const isAdmin = user?.role === "admin"
 
     // Guest restrictions
-    const allowWhenAuth = ["auth.verify", "auth.google"]
+    const allowWhenAuth = ["auth.verify", "auth.google", "auth.facebook"]
 
     if (to.meta.guest && isAuthenticated && !allowWhenAuth.includes(to.name)) {
         if (isAdmin) return next({ name: "admin.dashboard" })
         return next({ name: "app.home" })
     }
-
 
     // Auth protection
     if (to.meta.auth && !isAuthenticated) {

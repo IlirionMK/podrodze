@@ -10,7 +10,7 @@ Użytkownicy mogą dodawać uczestników, określać preferencje, wybierać miej
 
 ---
 
-## **Wymagania funkcjonalne **
+## Wymagania funkcjonalne
 
 ### **Użytkownicy i autoryzacja**
 
@@ -38,10 +38,10 @@ Użytkownicy mogą dodawać uczestników, określać preferencje, wybierać miej
 
 * Preferencje kategorii użytkowników
 * Agregacja preferencji całej grupy
-* Rekomendacje AI 
+* Rekomendacje AI
 * Sugestie ulepszeń planu podróży
 
-### **Itinerarz**
+### **Planowanie trasy**
 
 * Automatyczne generowanie **planu podróży**
 * Podział na dni i kolejność miejsc
@@ -53,7 +53,7 @@ Użytkownicy mogą dodawać uczestników, określać preferencje, wybierać miej
 
 ### **Backend (Laravel)**
 
-* REST API 
+* REST API
 * Warstwy:
 
     * **Controllers** – obsługa żądań
@@ -61,7 +61,7 @@ Użytkownicy mogą dodawać uczestników, określać preferencje, wybierać miej
     * **Models** – operacje na danych
 * Integracja z Google Places
 * Obliczenia geolokalizacyjne realizowane przez **PostGIS**
-* Dokumentacja API (Scribe / OpenAPI)
+* Dokumentacja API (OpenAPI)
 
 ### **Frontend (Vue 3)**
 
@@ -75,14 +75,13 @@ Użytkownicy mogą dodawać uczestników, określać preferencje, wybierać miej
 * Kluczowe tabele:
 
     * `users`
-    * `trips` 
+    * `trips`
     * `places`
     * `preferences`
-* Kolumny geometryczne dla lokalizacji miejsc
 
 ### **Infrastruktura**
 
-* Docker 
+* Docker
 * Kontenery: PHP-FPM, Node, PostGIS, Caddy, Mailpit.
 * Gotowe środowisko dev
 
@@ -109,7 +108,51 @@ cd podrodze
 
 ### **2. Przygotowanie plików konfiguracyjnych**
 
-W katalogach `backend` i `frontend` skopiuj pliki `.env.example` do `.env`.
+W katalogach `backend` i `frontend` skopiuj pliki `.env.example` do `.env`. backend/.env — backend (Laravel)
+frontend/.env — frontend (Vite)
+
+**Backend: najważniejsze wartości**
+
+**Adresy:**
+```bash
+
+APP_URL=http://localhost:8081
+FRONTEND_URL=http://localhost:5173 
+```
+
+**Baza:**
+```bash
+
+DB_CONNECTION=pgsql,
+DB_HOST=db,
+DB_PORT=5432,
+DB_DATABASE/DB_USERNAME/DB_PASSWORD 
+```
+
+**Redis:**
+```bash
+
+CACHE_DRIVER=redis,
+REDIS_HOST=redis,
+REDIS_PORT=6379
+QUEUE_CONNECTION=redis 
+```
+
+**Mail (dev):**
+```bash
+
+MAIL_HOST=mailpit,
+MAIL_PORT=1025
+```
+
+**Integracje:**
+```bash
+
+GOOGLE_MAPS_KEY
+GOOGLE_CLIENT_ID/SECRET  
+AI_SUGGESTIONS_
+```
+
 
 ### **3. Start kontenerów**
 
@@ -120,20 +163,14 @@ docker compose up --build
 ### **4. Backend — migracje i seedery**
 
 ```bash
-docker compose exec app bash
-php artisan migrate --seed
-exit
+docker compose exec app php artisan migrate --seed
 ```
 
 ### **5. Frontend — instalacja zależności**
 
 ```bash
-docker compose exec node bash
-npm install
-npm run dev
-exit
+docker compose exec node npm install
+docker compose exec node npm run dev
 ```
 
 ---
-
-
