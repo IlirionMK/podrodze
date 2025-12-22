@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\Auth\FacebookAuthController;
 
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripUserController;
@@ -36,6 +37,9 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/auth/google/url', [GoogleAuthController::class, 'getAuthUrl']);
     Route::post('/auth/google/callback', [GoogleAuthController::class, 'handleCallback']);
+    Route::get('/auth/facebook/url', [FacebookAuthController::class, 'getAuthUrl']);
+    Route::post('/auth/facebook/callback', [FacebookAuthController::class, 'handleCallback']);
+
 
     Route::get('/google/maps-key', function () {
         return response()->json([
