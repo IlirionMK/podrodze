@@ -1,13 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\TripManagement;
 
-use App\Models\Trip;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
-use Tests\TestCase;
+use Tests\TestCase\TripTestCase;
 
 /**
  * Tests for trip location management.
@@ -21,22 +20,18 @@ use Tests\TestCase;
  */
 #[Group('location')]
 #[Group('trip')]
-class TripLocationTest extends TestCase
+class TripLocationTest extends TripTestCase
 {
-    use RefreshDatabase;
-
-    protected User $user;
-    protected Trip $trip;
-
+    protected bool $enableRateLimiting = false;
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::factory()->create();
-        $this->trip = Trip::factory()->create([
-            'owner_id' => $this->user->id,
+
+        $this->trip->update([
             'start_latitude' => null,
             'start_longitude' => null,
         ]);
+        $this->trip->refresh();
     }
 
     public static function invalidLocationDataProvider(): array
@@ -54,7 +49,7 @@ class TripLocationTest extends TestCase
     #[DataProvider('invalidLocationDataProvider')]
     public function test_validate_location_coordinates($latitude, $longitude, $errorField): void
     {
-        $response = $this->actingAs($this->user)
+        $response = $this->actingAsUser($this->owner)
             ->patchJson("/api/v1/trips/{$this->trip->id}/start-location", [
                 'start_latitude' => $latitude,
                 'start_longitude' => $longitude,
@@ -66,7 +61,7 @@ class TripLocationTest extends TestCase
 
     public function test_can_update_trip_with_valid_location(): void
     {
-        $response = $this->actingAs($this->user)
+        $response = $this->actingAsUser($this->owner)
             ->patchJson("/api/v1/trips/{$this->trip->id}/start-location", [
                 'start_latitude' => 51.1079,
                 'start_longitude' => 17.0385,
@@ -87,7 +82,7 @@ class TripLocationTest extends TestCase
     }
     public function test_cannot_update_location_with_missing_coordinates(): void
     {
-        $response = $this->actingAs($this->user)
+        $response = $this->actingAsUser($this->owner)
             ->patchJson("/api/v1/trips/{$this->trip->id}/start-location", [
                 'start_latitude' => null,
                 'start_longitude' => 17.0385,
@@ -99,7 +94,7 @@ class TripLocationTest extends TestCase
 
     public function test_can_update_only_specific_location_fields(): void
     {
-        $response = $this->actingAs($this->user)
+        $response = $this->actingAsUser($this->owner)
             ->patchJson("/api/v1/trips/{$this->trip->id}/start-location", [
                 'start_latitude' => 51.1079,
                 'start_longitude' => 17.0385,
