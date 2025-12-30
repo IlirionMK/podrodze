@@ -28,10 +28,49 @@
     },
     "admin": {
       "title": "Admin Panel",
-      "users": "Users",
-      "trips": "Trips",
-      "places": "Places",
-      "settings": "Settings"
+      "subtitle": "Manage the application and its content",
+
+      "menu": {
+        "users": "Users",
+        "trips": "Trips",
+        "places": "Places",
+        "settings": "Settings"
+      },
+
+      "edit": "Edit",
+      "delete": "Delete",
+
+      "users": {
+        "add": "Add user",
+        "name": "Name",
+        "email": "Email",
+        "actions": "Actions",
+        "no_users": "No users found",
+        "delete_confirm": "Are you sure you want to delete this user?"
+      },
+
+      "trips": {
+        "add": "Add trip",
+        "name": "Name",
+        "start_date": "Start date",
+        "end_date": "End date",
+        "actions": "Actions",
+        "no_trips": "No trips found",
+        "delete_confirm": "Are you sure you want to delete this trip?"
+      },
+
+      "places": {
+        "add": "Add place",
+        "name": "Name",
+        "location": "Location",
+        "actions": "Actions",
+        "no_places": "No places found",
+        "delete_confirm": "Are you sure you want to delete this place?"
+      },
+
+      "settings": {
+        "save": "Save"
+      }
     }
   },
 
@@ -129,6 +168,15 @@
       "invite_desc": "Plan trips together with your group.",
       "vote": "Vote on places",
       "vote_desc": "Choose the best spots together."
+    }
+  },
+
+  "dashboard": {
+    "tiles": {
+      "users_desc": "Manage users and their roles",
+      "trips_desc": "Review and moderate trips",
+      "places_desc": "Manage places and categories",
+      "settings_desc": "Configure application settings"
     }
   },
 

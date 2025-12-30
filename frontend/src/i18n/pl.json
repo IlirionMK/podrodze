@@ -28,10 +28,49 @@
     },
     "admin": {
       "title": "Panel administratora",
-      "users": "Użytkownicy",
-      "trips": "Podróże",
-      "places": "Miejsca",
-      "settings": "Ustawienia"
+      "subtitle": "Zarządzaj aplikacją i jej treścią",
+
+      "menu": {
+        "users": "Użytkownicy",
+        "trips": "Podróże",
+        "places": "Miejsca",
+        "settings": "Ustawienia"
+      },
+
+      "edit": "Edytuj",
+      "delete": "Usuń",
+
+      "users": {
+        "add": "Dodaj użytkownika",
+        "name": "Imię i nazwisko",
+        "email": "Email",
+        "actions": "Akcje",
+        "no_users": "Brak użytkowników",
+        "delete_confirm": "Na pewno chcesz usunąć tego użytkownika?"
+      },
+
+      "trips": {
+        "add": "Dodaj podróż",
+        "name": "Nazwa",
+        "start_date": "Data rozpoczęcia",
+        "end_date": "Data zakończenia",
+        "actions": "Akcje",
+        "no_trips": "Brak podróży",
+        "delete_confirm": "Na pewno chcesz usunąć tę podróż?"
+      },
+
+      "places": {
+        "add": "Dodaj miejsce",
+        "name": "Nazwa",
+        "location": "Lokalizacja",
+        "actions": "Akcje",
+        "no_places": "Brak miejsc",
+        "delete_confirm": "Na pewno chcesz usunąć to miejsce?"
+      },
+
+      "settings": {
+        "save": "Zapisz"
+      }
     }
   },
 
@@ -129,6 +168,15 @@
       "invite_desc": "Planuj podróże razem z grupą.",
       "vote": "Głosuj na miejsca",
       "vote_desc": "Wspólnie wybierajcie najlepsze punkty."
+    }
+  },
+
+  "dashboard": {
+    "tiles": {
+      "users_desc": "Zarządzaj użytkownikami i ich rolami",
+      "trips_desc": "Przeglądaj i moderuj podróże",
+      "places_desc": "Zarządzaj miejscami i kategoriami",
+      "settings_desc": "Konfiguruj ustawienia aplikacji"
     }
   },
 

@@ -21,7 +21,7 @@ async function fetchPlaces() {
 }
 
 function deletePlace(id) {
-  if (!confirm(t("admin.places.delete_confirm"))) return
+  if (!confirm(t("app.admin.places.delete_confirm"))) return
   axios.delete(`/api/admin/places/${id}`).then(() => fetchPlaces())
 }
 
