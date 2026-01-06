@@ -6,16 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class ActivityLog extends Model
 {
-    protected $fillable = [
-        'user_id', 'action', 'target_type', 'target_id', 'details',
-    ];
+    protected $table = 'activity_logs';
 
-    protected $casts = [
-        'details' => 'array',
-    ];
+    protected $guarded = [];
 
-    public function user()
+    protected function casts(): array
     {
-        return $this->belongsTo(User::class);
+        return [
+            'details' => 'array',
+        ];
     }
 }

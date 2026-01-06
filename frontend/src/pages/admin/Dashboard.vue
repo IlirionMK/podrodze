@@ -1,11 +1,33 @@
-<template>
-  <div class="min-h-screen p-6 text-white">
-    <h1 class="text-3xl font-bold mb-6">Admin Dashboard</h1>
+<script setup>
+import { useRouter } from "vue-router"
+import { useI18n } from "vue-i18n"
 
-    <div
-        class="p-8 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl text-center"
-    >
-      <p class="text-lg opacity-80">Admin panel placeholder</p>
+const router = useRouter()
+const { t } = useI18n({ useScope: "global" })
+
+const tiles = [
+  { titleKey: "app.admin.menu.users", descKey: "dashboard.tiles.users_desc", to: "/admin/users" },
+  { titleKey: "app.admin.menu.trips", descKey: "dashboard.tiles.trips_desc", to: "/admin/trips" },
+  { titleKey: "app.admin.menu.places", descKey: "dashboard.tiles.places_desc", to: "/admin/places" },
+  { titleKey: "app.admin.menu.settings", descKey: "dashboard.tiles.settings_desc", to: "/admin/settings" },
+]
+</script>
+
+<template>
+  <div>
+    <h1 class="text-3xl  font-bold  mb-20 text-center">{{ t("app.admin.subtitle") }}</h1>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <button
+        v-for="tile in tiles"
+        :key="tile.titleKey"
+        @click="router.push(tile.to)"
+        class="bg-white rounded-xl p-6 shadow
+               hover:shadow-lg transition text-left mb-15"
+      >
+        <h2 class="text-xl font-semibold mb-2">{{ t(tile.titleKey) }}</h2>
+        <p class="text-gray-500 text-sm ">{{ t(tile.descKey) }}</p>
+      </button>
     </div>
   </div>
 </template>

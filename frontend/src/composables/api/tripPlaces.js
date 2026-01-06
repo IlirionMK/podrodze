@@ -1,12 +1,4 @@
-import axios from "axios"
-
-const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8081/api/v1",
-    headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-    },
-})
+import api from "@/composables/api/api.js"
 
 export function fetchTripPlaces(tripId) {
     return api.get(`/trips/${tripId}/places`)
@@ -16,7 +8,14 @@ export function createTripPlace(tripId, payload) {
     return api.post(`/trips/${tripId}/places`, payload)
 }
 
-export default {
-    fetchTripPlaces,
-    createTripPlace,
+export function voteTripPlace(tripId, placeId, score) {
+    return api.post(`/trips/${tripId}/places/${placeId}/vote`, { score })
+}
+
+export function updateTripPlace(tripId, placeId, payload) {
+    return api.patch(`/trips/${tripId}/places/${placeId}`, payload)
+}
+
+export function deleteTripPlace(tripId, placeId) {
+    return api.delete(`/trips/${tripId}/places/${placeId}`)
 }

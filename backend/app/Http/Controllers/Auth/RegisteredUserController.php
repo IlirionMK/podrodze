@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 
 class RegisteredUserController extends Controller
@@ -41,18 +45,30 @@ class RegisteredUserController extends Controller
      * ),
      * @OA\Response(
      * response=422,
-     * description="Validation error (e.g., email already taken or password mismatch).",
-     * @OA\JsonContent(
-     * @OA\Property(property="message", type="string", example="The given data was invalid."),
-     * @OA\Property(property="errors", type="object",
-     * @OA\Property(property="email", type="array", @OA\Items(type="string", example="The email has already been taken."))
-     * )
-     * )
+     * description="Validation error (e.g., email already taken or password mismatch)."
+     * ),
+     * @OA\Response(
+     * response=429,
+     * description="Too many attempts."
      * )
      * )
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
+        $throttleKey = Str::lower('register').'|'.$request->ip();
+
+        // allow 5 attempts per minute, 6th => 429
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            event(new Lockout($request));
+
+            return response()->json([
+                'message' => 'Too Many Attempts.',
+            ], 429);
+        }
+
+        // count the attempt (valid or invalid)
+        RateLimiter::hit($throttleKey, 60);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],

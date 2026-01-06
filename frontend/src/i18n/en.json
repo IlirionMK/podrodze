@@ -1,4 +1,20 @@
 {
+  "loading": "Loading...",
+
+  "actions": {
+    "search": "Search",
+    "cancel": "Cancel",
+    "save": "Save",
+    "add": "Add",
+    "refresh": "Refresh",
+    "close": "Close",
+    "remove": "Remove"
+  },
+
+  "errors": {
+    "default": "Something went wrong. Please try again."
+  },
+
   "app": {
     "name": "PoDrodze",
     "guest": {
@@ -12,10 +28,49 @@
     },
     "admin": {
       "title": "Admin Panel",
-      "users": "Users",
-      "trips": "Trips",
-      "places": "Places",
-      "settings": "Settings"
+      "subtitle": "Manage the application and its content",
+
+      "menu": {
+        "users": "Users",
+        "trips": "Trips",
+        "places": "Places",
+        "settings": "Settings"
+      },
+
+      "edit": "Edit",
+      "delete": "Delete",
+
+      "users": {
+        "add": "Add user",
+        "name": "Name",
+        "email": "Email",
+        "actions": "Actions",
+        "no_users": "No users found",
+        "delete_confirm": "Are you sure you want to delete this user?"
+      },
+
+      "trips": {
+        "add": "Add trip",
+        "name": "Name",
+        "start_date": "Start date",
+        "end_date": "End date",
+        "actions": "Actions",
+        "no_trips": "No trips found",
+        "delete_confirm": "Are you sure you want to delete this trip?"
+      },
+
+      "places": {
+        "add": "Add place",
+        "name": "Name",
+        "location": "Location",
+        "actions": "Actions",
+        "no_places": "No places found",
+        "delete_confirm": "Are you sure you want to delete this place?"
+      },
+
+      "settings": {
+        "save": "Save"
+      }
     }
   },
 
@@ -28,6 +83,23 @@
   "header": {
     "hello": "Hello",
     "profile": "Profile"
+  },
+
+  "common": {
+    "email": "Email",
+    "role": "Role"
+  },
+
+  "roles": {
+    "owner": "Owner",
+    "member": "Member",
+    "editor": "Editor"
+  },
+
+  "statuses": {
+    "accepted": "Accepted",
+    "pending": "Pending",
+    "rejected": "Rejected"
   },
 
   "auth": {
@@ -66,6 +138,15 @@
       "password_mismatch": "Passwords do not match",
       "login_failed": "Login failed. Incorrect email or password.",
       "network": "Network error. Please try again later."
+    },
+
+    "verify": {
+      "title": "Email verification",
+      "success": "Your email has been verified. You can now sign in.",
+      "already_verified": "This email is already verified. You can sign in.",
+      "invalid_link": "The verification link is invalid or has expired.",
+      "error": "Something went wrong. Please try again.",
+      "go_login": "Go to login"
     }
   },
 
@@ -87,6 +168,145 @@
       "invite_desc": "Plan trips together with your group.",
       "vote": "Vote on places",
       "vote_desc": "Choose the best spots together."
+    }
+  },
+
+  "dashboard": {
+    "tiles": {
+      "users_desc": "Manage users and their roles",
+      "trips_desc": "Review and moderate trips",
+      "places_desc": "Manage places and categories",
+      "settings_desc": "Configure application settings"
+    }
+  },
+
+  "trip": {
+    "stats": {
+      "places": "Places",
+      "activities": "Activities",
+      "members": "Members",
+      "other": "Other"
+    },
+
+    "tabs": {
+      "overview": "Overview",
+      "places": "Places",
+      "plan": "Plan",
+      "team": "Team",
+      "preferences": "Preferences"
+    },
+
+    "about": "About trip",
+    "no_description": "No description provided",
+    "start": "Start date",
+    "end": "End date",
+
+    "view": {
+      "places": "Places",
+      "add_place": "Add place",
+      "map": "Map",
+      "members": "Members",
+      "open": "Open place",
+      "add_member": "Add member"
+    },
+
+    "places": {
+      "search": "Search places",
+      "category_all": "All categories",
+      "sort_name_asc": "Name (A–Z)",
+      "sort_name_desc": "Name (Z–A)",
+      "sort_cat_asc": "Category (A–Z)",
+      "sort_cat_desc": "Category (Z–A)",
+
+      "empty_title": "No places yet",
+      "empty_hint": "Add your first place to start planning.",
+
+      "add_title": "Add place",
+      "add_hint": "Create a custom place for this trip.",
+      "name_label": "Name",
+      "name_placeholder": "Place name",
+      "category_label": "Category",
+      "add_submit": "Add place",
+      "coords_label": "Coordinates",
+      "coords_missing": "Select a point on the map first.",
+
+      "fixed": "Fixed",
+      "added_by": "Added by"
+    },
+
+    "categories": {
+      "other": "Other",
+      "food": "Food",
+      "museum": "Museum",
+      "nature": "Nature",
+      "nightlife": "Nightlife",
+      "attraction": "Attraction",
+      "hotel": "Hotel",
+      "airport": "Airport",
+      "station": "Station"
+    },
+
+    "map": {
+      "clear_selection": "Clear selection"
+    },
+
+    "place": {
+      "vote": "Vote",
+      "fix": "Fix",
+      "details_hint": "Click a place to see details.",
+
+      "modal": {
+        "title": "Place",
+        "category": "Category",
+        "fixed": "Fixed"
+      },
+
+      "actions": {
+        "vote": "Vote",
+        "fix": "Fix",
+        "unfix": "Unfix"
+      }
+    },
+
+    "add_place": {
+      "title_search": "Add a place",
+      "tabs": {
+        "suggested": "Suggested",
+        "search": "Search"
+      },
+      "search_placeholder": "Search by name or address",
+      "no_results": "No results"
+    },
+
+    "team": {
+      "empty_title": "No members yet",
+      "empty_hint": "Invite friends to collaborate on this trip.",
+
+      "manage_hint": "Owners and editors can manage members.",
+      "invite_hint": "Send an invitation by email.",
+      "remove_title": "Remove member",
+      "remove_hint": "This user will lose access to the trip.",
+
+      "actions": {
+        "change_role": "Change role",
+        "remove": "Remove from trip"
+      }
+    },
+
+    "plan": {
+      "coming_title": "Coming soon",
+      "coming_hint": "This section is under development."
+    },
+
+    "preferences": {
+      "coming_title": "Coming soon",
+      "coming_hint": "Preferences will be available soon.",
+      "hint": "Choose how important each category is. We’ll use this to tailor suggestions.",
+      "score_0": "Not important",
+      "score_1": "Nice to have",
+      "score_2": "Must have",
+      "empty_title": "No categories found",
+      "empty_hint": "Try changing your search query."
     }
   },
 

@@ -2,20 +2,22 @@
 
 namespace App\Services;
 
+use App\DTO\Itinerary\Itinerary;
+use App\DTO\Itinerary\ItineraryDay;
+use App\DTO\Itinerary\ItineraryPlace;
 use App\Interfaces\ItineraryServiceInterface;
 use App\Interfaces\PreferenceAggregatorServiceInterface;
 use App\Models\Trip;
 use App\Models\TripItinerary;
-use Illuminate\Support\Facades\DB;
+use App\Services\Activity\ActivityLogger;
 use DomainException;
-use App\DTO\Itinerary\Itinerary;
-use App\DTO\Itinerary\ItineraryDay;
-use App\DTO\Itinerary\ItineraryPlace;
+use Illuminate\Support\Facades\DB;
 
 class ItineraryService implements ItineraryServiceInterface
 {
     public function __construct(
         protected PreferenceAggregatorServiceInterface $aggregator,
+        private readonly ActivityLogger $activityLogger
     ) {}
 
     public function aggregatePreferences(Trip $trip): array
@@ -23,16 +25,6 @@ class ItineraryService implements ItineraryServiceInterface
         return $this->aggregator->getGroupPreferences($trip);
     }
 
-    /**
-     * Resolve origin point for itinerary:
-     * - fixed lodging place if exists
-     * - any fixed place
-     * - trip start_latitude / start_longitude
-     *
-     * @return array{lat: float, lon: float, source: string, place_id: int|null}
-     *
-     * @throws DomainException
-     */
     protected function resolveOrigin(Trip $trip): array
     {
         $fixedLodging = $trip->places()
@@ -42,9 +34,7 @@ class ItineraryService implements ItineraryServiceInterface
 
         if ($fixedLodging) {
             $coords = DB::table('places')
-                ->selectRaw(
-                    'ST_Y(location::geometry) as lat, ST_X(location::geometry) as lon'
-                )
+                ->selectRaw('ST_Y(location::geometry) as lat, ST_X(location::geometry) as lon')
                 ->where('id', $fixedLodging->id)
                 ->first();
 
@@ -64,9 +54,7 @@ class ItineraryService implements ItineraryServiceInterface
 
         if ($fixedAny) {
             $coords = DB::table('places')
-                ->selectRaw(
-                    'ST_Y(location::geometry) as lat, ST_X(location::geometry) as lon'
-                )
+                ->selectRaw('ST_Y(location::geometry) as lat, ST_X(location::geometry) as lon')
                 ->where('id', $fixedAny->id)
                 ->first();
 
@@ -92,14 +80,6 @@ class ItineraryService implements ItineraryServiceInterface
         throw new DomainException('Trip has no origin point (no fixed places and no start location).');
     }
 
-    /**
-     * Compute distances from origin to each place using PostGIS.
-     *
-     * @param float $lat
-     * @param float $lon
-     * @param array<int,int> $placeIds
-     * @return array<int,float> [place_id => distance_m]
-     */
     protected function computeDistances(float $lat, float $lon, array $placeIds): array
     {
         if (empty($placeIds)) {
@@ -187,7 +167,7 @@ class ItineraryService implements ItineraryServiceInterface
             );
         })->all();
 
-        return new Itinerary(
+        $itinerary = new Itinerary(
             trip_id:   $trip->id,
             day_count: 1,
             schedule:  [new ItineraryDay(1, $dtoPlaces)],
@@ -201,6 +181,27 @@ class ItineraryService implements ItineraryServiceInterface
                 ],
             ]
         );
+
+        $this->activityLogger->add(
+            actor: auth()->user(),
+            action: 'trip.itinerary_generated',
+            target: $trip,
+            details: [
+                'trip_id' => $trip->getKey(),
+                'mode' => 'simple_one_day',
+                'places_total' => (int) $tripPlaces->count(),
+                'places_selected' => (int) count($dtoPlaces),
+                'preferences_count' => (int) count($prefs),
+                'votes_count' => (int) $votes->count(),
+                'origin' => [
+                    'source' => $origin['source'],
+                    'place_id' => $origin['place_id'],
+                ],
+                'algorithm' => 'v3-trip-places',
+            ]
+        );
+
+        return $itinerary;
     }
 
     public function generateFullRoute(Trip $trip, int $days, int $radius): Itinerary
@@ -266,11 +267,11 @@ class ItineraryService implements ItineraryServiceInterface
             return $p;
         });
 
-        $fixed  = $scored->filter(fn($p) => (bool) ($p->pivot?->is_fixed ?? false))
+        $fixed  = $scored->filter(fn ($p) => (bool) ($p->pivot?->is_fixed ?? false))
             ->sortByDesc('itinerary_score')
             ->values();
 
-        $normal = $scored->reject(fn($p) => (bool) ($p->pivot?->is_fixed ?? false))
+        $normal = $scored->reject(fn ($p) => (bool) ($p->pivot?->is_fixed ?? false))
             ->sortByDesc('itinerary_score')
             ->values();
 
@@ -309,7 +310,7 @@ class ItineraryService implements ItineraryServiceInterface
             $placesForDay = array_merge($fixedForDay, $normalForDay);
 
             $dtoPlaces = array_map(
-                fn($p) => new ItineraryPlace(
+                fn ($p) => new ItineraryPlace(
                     id:            $p->id,
                     name:          $p->name,
                     category_slug: $p->category_slug,
@@ -331,7 +332,7 @@ class ItineraryService implements ItineraryServiceInterface
             ]
         );
 
-        return new Itinerary(
+        $itinerary = new Itinerary(
             trip_id:    $trip->id,
             day_count:  $days,
             schedule:   $schedule,
@@ -345,5 +346,28 @@ class ItineraryService implements ItineraryServiceInterface
                 ],
             ]
         );
+
+        $this->activityLogger->add(
+            actor: auth()->user(),
+            action: 'trip.itinerary_full_generated',
+            target: $trip,
+            details: [
+                'trip_id' => $trip->getKey(),
+                'mode' => 'multi_day',
+                'days' => $days,
+                'radius' => $radius,
+                'places_total' => (int) $tripPlaces->count(),
+                'preferences_count' => (int) count($prefs),
+                'votes_count' => (int) $votes->count(),
+                'origin' => [
+                    'source' => $origin['source'],
+                    'place_id' => $origin['place_id'],
+                ],
+                'algorithm' => 'v3-trip-places',
+                'cached' => true,
+            ]
+        );
+
+        return $itinerary;
     }
 }

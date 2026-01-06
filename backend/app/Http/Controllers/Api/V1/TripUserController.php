@@ -123,7 +123,7 @@ class TripUserController extends Controller
      */
     public function invite(InviteTripRequest $request, Trip $trip): JsonResponse
     {
-        $this->authorize('update', $trip);
+        $this->authorize('manageMembers', $trip);
 
         try {
             $invite = $this->tripService->inviteUser(
@@ -188,7 +188,7 @@ class TripUserController extends Controller
      */
     public function update(Request $request, Trip $trip, User $user): JsonResponse
     {
-        $this->authorize('update', $trip);
+        $this->authorize('manageMembers', $trip);
 
         $validated = $request->validate([
             'role' => ['required', Rule::in(['member', 'editor'])],
@@ -247,7 +247,7 @@ class TripUserController extends Controller
      */
     public function destroy(Request $request, Trip $trip, User $user): JsonResponse
     {
-        $this->authorize('update', $trip);
+        $this->authorize('manageMembers', $trip);
 
         try {
             $this->tripService->removeMember(

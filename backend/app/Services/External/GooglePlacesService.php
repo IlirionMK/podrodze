@@ -103,6 +103,46 @@ class GooglePlacesService
     }
 
     /**
+     * Fetch nearby places for a trip based on preferred canonical categories
+     * (food/nightlife/museum/nature/attraction).
+     *
+     * This method is designed for AI suggestions: we derive Google types from user preferences,
+     * not from already attached trip places.
+     *
+     * @param Trip $trip
+     * @param array<int,string> $preferredCategorySlugs
+     * @param int $radius
+     * @param int $limit
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchNearbyForTripByPreferredCategories(
+        Trip $trip,
+        array $preferredCategorySlugs,
+        int $radius = 1500,
+        int $limit = 20
+    ): array {
+        if (!$trip->start_latitude || !$trip->start_longitude) {
+            return [];
+        }
+
+        $lat = (float) $trip->start_latitude;
+        $lon = (float) $trip->start_longitude;
+
+        $types = $this->mapCategoriesToGoogleTypes($preferredCategorySlugs);
+
+        if (empty($types)) {
+            $types = $this->defaultTypes;
+        }
+
+        $raw = $this->fetchNearbyByTypes($lat, $lon, $radius, $types);
+
+        return collect($raw)
+            ->take($limit)
+            ->values()
+            ->all();
+    }
+
+    /**
      * Low-level nearby search by a given set of Google place types.
      *
      * @param float        $lat
@@ -173,7 +213,10 @@ class GooglePlacesService
                             'lat'           => data_get($raw, 'geometry.location.lat'),
                             'lon'           => data_get($raw, 'geometry.location.lng'),
                             'rating'        => $raw['rating'] ?? null,
+
+                            // NOTE: this is a Google type (not canonical). The AI layer will normalize types.
                             'category_slug' => $type,
+
                             'opening_hours' => $openingHours,
                             'meta'          => [
                                 'address'            => $raw['vicinity'] ?? null,
@@ -242,7 +285,7 @@ class GooglePlacesService
     }
 
     /**
-     * Map internal category slugs (museum, food, nature, nightlife, etc.)
+     * Map internal canonical category slugs (museum/food/nature/nightlife/attraction/etc.)
      * to Google place types used in Nearby Search API.
      *
      * @param array<int, string> $categorySlugs
@@ -254,19 +297,28 @@ class GooglePlacesService
             return [];
         }
 
-        // You can adjust this mapping to match your Category model.
         $map = [
-            'museum'    => ['museum', 'art_gallery', 'tourist_attraction'],
-            'nature'    => ['park', 'zoo', 'amusement_park'],
-            'food'      => ['restaurant', 'cafe'],
-            'nightlife' => ['bar', 'night_club'],
-            'religion'  => ['church', 'mosque', 'synagogue'],
-            'accommodation' => ['lodging'],
+            'museum'    => ['museum', 'art_gallery'],
+            'nature'    => ['park', 'zoo', 'campground', 'tourist_attraction'],
+            'food'      => ['restaurant', 'cafe', 'bakery', 'bar'],
+            'nightlife' => ['bar', 'night_club', 'pub'],
+
+            // Canonical attraction -> general POIs / attractions
+            'attraction' => ['tourist_attraction', 'point_of_interest', 'tourist_information_center'],
+
+            // Technical (kept for compatibility; AI layer can exclude them)
+            'hotel'     => ['lodging'],
+            'airport'   => ['airport'],
+            'station'   => ['train_station', 'subway_station', 'bus_station', 'transit_station'],
+
+            // Optional legacy aliases
+            'religion'        => ['church', 'mosque', 'synagogue'],
+            'accommodation'   => ['lodging'],
         ];
 
         $types = [];
-
         foreach ($categorySlugs as $slug) {
+            $slug = strtolower((string) $slug);
             if (isset($map[$slug])) {
                 $types = array_merge($types, $map[$slug]);
             }

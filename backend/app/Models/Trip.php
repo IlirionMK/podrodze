@@ -25,19 +25,34 @@ class Trip extends Model
     ];
 
     /**
-     * Automatically update PostGIS start_location when latitude/longitude change.
+     * Automatically update PostGIS start_location when latitude/longitude change
+     * and ensure the owner exists in trip_user (role=owner, status=accepted).
      */
-    protected static function booted()
+    protected static function booted(): void
     {
         static::saving(function (Trip $trip) {
             if (!is_null($trip->start_latitude) && !is_null($trip->start_longitude)) {
                 $lon = (float) $trip->start_longitude;
                 $lat = (float) $trip->start_latitude;
+
                 $trip->start_location = DB::raw("ST_SetSRID(ST_MakePoint($lon, $lat), 4326)");
             }
         });
-    }
 
+        static::created(function (Trip $trip) {
+            if (! $trip->owner_id) {
+                return;
+            }
+
+            // Tests expect owner to be present in trip_user as a member of the trip.
+            $trip->members()->syncWithoutDetaching([
+                $trip->owner_id => [
+                    'role' => 'owner',
+                    'status' => 'accepted',
+                ],
+            ]);
+        });
+    }
 
     public function members()
     {

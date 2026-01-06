@@ -1,15 +1,33 @@
-import axios from "axios"
-
-const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8081/api/v1",
-    headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`
-    }
-})
+import api from "@/composables/api/api"
 
 export function fetchTripMembers(tripId) {
     return api.get(`/trips/${tripId}/members`)
 }
 
-export default { fetchTripMembers }
+export function inviteTripMember(tripId, payload) {
+    return api.post(`/trips/${tripId}/members/invite`, payload)
+}
+
+export function updateTripMember(tripId, userId, payload) {
+    return api.patch(`/trips/${tripId}/members/${userId}`, payload)
+}
+
+export function removeTripMember(tripId, userId) {
+    return api.delete(`/trips/${tripId}/members/${userId}`)
+}
+
+export function acceptTripInvite(tripId) {
+    return api.post(`/trips/${tripId}/accept`)
+}
+
+export function declineTripInvite(tripId) {
+    return api.post(`/trips/${tripId}/decline`)
+}
+
+export function fetchMyInvites() {
+    return api.get("/users/me/invites")
+}
+
+export function fetchSentInvites() {
+    return api.get("/users/me/invites/sent")
+}
