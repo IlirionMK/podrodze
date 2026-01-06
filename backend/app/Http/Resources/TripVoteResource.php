@@ -17,20 +17,10 @@ use OpenApi\Attributes as OA;
 class TripVoteResource extends JsonResource
 {
     /**
-     * @OA\Property(
-     * property="avg_score",
-     * type="number",
-     * format="float",
-     * nullable=true,
-     * example=4.5,
-     * description="Average score calculated from all votes"
-     * )
-     * @OA\Property(
-     * property="votes",
-     * type="integer",
-     * example=10,
-     * description="Total count of votes"
-     * )
+     * @OA\Property(property="place_id", type="integer", example=123)
+     * @OA\Property(property="my_score", type="integer", nullable=true, minimum=1, maximum=5, example=4)
+     * @OA\Property(property="avg_score", type="number", format="float", nullable=true, example=4.5)
+     * @OA\Property(property="votes", type="integer", example=10)
      */
     public function toArray($request): array
     {
@@ -38,11 +28,10 @@ class TripVoteResource extends JsonResource
         $vote = $this->resource;
 
         return [
-            'avg_score' => $vote->avg_score !== null
-                ? (float) $vote->avg_score
-                : null,
-
-            'votes' => (int) $vote->votes,
+            'place_id'  => (int) $vote->place_id,
+            'my_score'  => $vote->my_score === null ? null : (int) $vote->my_score,
+            'avg_score' => $vote->avg_score === null ? null : (float) $vote->avg_score,
+            'votes'     => (int) $vote->votes,
         ];
     }
 }

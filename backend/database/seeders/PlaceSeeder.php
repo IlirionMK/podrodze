@@ -28,7 +28,7 @@ class PlaceSeeder extends Seeder
             ['name' => 'Szczytnicki Park', 'category_slug' => 'nature', 'rating' => 4.9],
         ];
 
-        foreach ($places as $place) {
+        foreach ($places as $idx => $place) {
             $lat = $centerLat + (rand(-30, 30) / 1000.0);
             $lon = $centerLon + (rand(-30, 30) / 1000.0);
 
@@ -36,11 +36,15 @@ class PlaceSeeder extends Seeder
                 'name' => $place['name'],
                 'category_slug' => $place['category_slug'],
                 'rating' => $place['rating'],
-                'meta' => json_encode(['source' => 'seeder']),
+                'meta' => json_encode(['source' => 'seeder'], JSON_UNESCAPED_UNICODE),
+                'opening_hours' => null,
+                'google_place_id' => 'seed_place_' . ($idx + 1),
                 'location' => DB::raw("ST_SetSRID(ST_MakePoint($lon, $lat), 4326)::geography"),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
+
+        $this->command->info('Places seeded successfully.');
     }
 }

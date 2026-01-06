@@ -31,6 +31,7 @@ class TripService implements TripInterface
     {
         $trip = Trip::create([
             'name'       => $data['name'],
+            'description' => $data['description'] ?? null,
             'start_date' => $data['start_date'] ?? null,
             'end_date'   => $data['end_date'] ?? null,
             'owner_id'   => $owner->id,

@@ -35,6 +35,7 @@ final class TripPlace
         public readonly ?int $order_index,
         public readonly ?string $note,
         public readonly ?int $added_by,
+
     ) {}
 
     /**

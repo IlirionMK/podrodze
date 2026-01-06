@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
+use Carbon\Carbon;
 
 class UpdateTripRequest extends FormRequest
 {
@@ -13,30 +15,42 @@ class UpdateTripRequest extends FormRequest
 
     public function rules(): array
     {
-        $trip = $this->route('trip');
-
         return [
             'name' => ['sometimes', 'string', 'max:255'],
 
             'start_date' => ['sometimes', 'nullable', 'date'],
 
-            'end_date' => [
-                'sometimes',
-                'nullable',
-                'date',
-                function ($attribute, $value, $fail) use ($trip) {
-                    $newEnd   = $value;
-                    $oldStart = $trip->start_date;
+            'end_date' => ['sometimes', 'nullable', 'date'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:500'],
 
-                    // Only validate based on old start date if start_date is not being changed
-                    if ($this->input('start_date') === null && $oldStart !== null) {
-                        if ($newEnd < $oldStart) {
-                            $fail("The end_date must be after or equal to the trip start_date ($oldStart).");
-                        }
-                    }
-                }
-            ],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            /** @var \App\Models\Trip|null $trip */
+            $trip = $this->route('trip');
+
+            $start = $this->input('start_date') ?? ($trip?->start_date);
+
+            $end = $this->input('end_date');
+
+            if ($end === null || $start === null) {
+                return;
+            }
+
+            try {
+                $startDate = Carbon::parse($start)->startOfDay();
+                $endDate   = Carbon::parse($end)->startOfDay();
+            } catch (\Throwable $e) {
+                return;
+            }
+
+            if ($endDate->lt($startDate)) {
+                $validator->errors()->add('end_date', 'The end_date must be after or equal to start_date.');
+            }
+        });
     }
 
     /**
@@ -59,8 +73,7 @@ class UpdateTripRequest extends FormRequest
 
             'end_date' => [
                 'description' =>
-                    'New end date in YYYY-MM-DD format. Optional. ' .
-                    'Must be after or equal to start_date. ' .
+                    'New end date in YYYY-MM-DD format. Optional. Must be after or equal to start_date. ' .
                     'If start_date is not provided in this request, it must not be earlier than the existing trip start_date.',
                 'example' => '2025-12-21',
             ],

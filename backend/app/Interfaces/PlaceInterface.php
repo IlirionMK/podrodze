@@ -4,6 +4,7 @@ namespace App\Interfaces;
 
 use App\DTO\Trip\TripPlace;
 use App\DTO\Trip\TripVote;
+use App\DTO\Trip\TripPlaceVoteSummary;
 use App\Models\Place;
 use App\Models\Trip;
 use App\Models\User;
@@ -12,6 +13,8 @@ use Illuminate\Support\Collection;
 interface PlaceInterface
 {
     public function listForTrip(Trip $trip): Collection;
+
+    public function listTripVotes(Trip $trip, User $user): Collection;
 
     public function createCustomPlace(array $data, User $user): Place;
 
@@ -28,4 +31,17 @@ interface PlaceInterface
     public function saveTripVote(Trip $trip, Place $place, User $user, int $score): TripVote;
 
     public function findNearby(float $lat, float $lon, int $radius = 2000): Collection;
+
+    public function nearbyWithSync(float $lat, float $lon, int $radius = 2000): array;
+
+    public function googleAutocomplete(
+        string $query,
+        ?float $lat = null,
+        ?float $lon = null,
+        ?int $radius = null,
+        string $language = 'pl',
+        ?string $sessionToken = null
+    ): array;
+
+    public function googleDetails(string $googlePlaceId, string $language = 'pl', ?string $sessionToken = null): ?array;
 }

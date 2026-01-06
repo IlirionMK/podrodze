@@ -18,7 +18,7 @@ class PreferenceAggregatorService implements PreferenceAggregatorServiceInterfac
     public function getGroupPreferences(Trip $trip): array
     {
         // Collect unique user IDs: owner + members
-        $userIds = $trip->members()->pluck('users.id')->toArray();
+        $userIds = $trip->acceptedMembers()->pluck('users.id')->toArray();
         $userIds[] = $trip->owner_id;
         $userIds = array_unique($userIds);
 
