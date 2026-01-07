@@ -5,7 +5,13 @@ import { useI18n } from "vue-i18n"
 import { X, Vote, Pin, Trash2 } from "lucide-vue-next"
 
 import { fetchTrip } from "@/composables/api/trips.js"
-import { fetchTripPlaces, voteTripPlace, updateTripPlace, deleteTripPlace } from "@/composables/api/tripPlaces.js"
+import {
+  fetchTripPlaces,
+  createTripPlace,
+  voteTripPlace,
+  updateTripPlace,
+  deleteTripPlace
+} from "@/composables/api/tripPlaces.js"
 import { fetchTripMembers } from "@/composables/api/tripMembers.js"
 
 import TripHeaderBar from "@/components/trips/TripHeaderBar.vue"
@@ -239,6 +245,25 @@ watch(
     }
 )
 
+async function onAddPlace(payload) {
+  placeSearchOpen.value = false
+  placesLoading.value = true
+
+  try {
+    await createTripPlace(tripId.value, payload)
+
+    if (activeTab.value !== 'places') {
+      setTab('places')
+    }
+
+    await refreshPlaces()
+  } catch (e) {
+    errorMsg.value = getErrMessage(e)
+  } finally {
+    placesLoading.value = false
+  }
+}
+
 async function doVote() {
   if (!selectedBackendId.value) return
   actionBusy.value = true
@@ -397,7 +422,11 @@ async function doRemove() {
             @error="errorMsg = $event"
         />
 
-        <PlaceSearchModal v-model="placeSearchOpen" :trip-id="route.params.id" />
+        <PlaceSearchModal
+            v-model="placeSearchOpen"
+            :trip-id="route.params.id"
+            @picked="onAddPlace"
+        />
 
         <Teleport to="body">
           <Transition

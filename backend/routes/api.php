@@ -73,16 +73,28 @@ Route::prefix('v1')->group(function () {
         Route::get('/trips/{trip}/itinerary/generate', [ItineraryController::class, 'generate']);
         Route::post('/trips/{trip}/itinerary/generate-full', [ItineraryController::class, 'generateFullRoute']);
 
+        // --- Trip Places & Suggestions ---
+
+        // 1. AI Suggestions (Existing)
+        // URL: /api/v1/trips/{trip}/places/suggestions
+        Route::get('/trips/{trip}/places/suggestions', TripPlaceSuggestionsController::class)
+            ->middleware('throttle:30,1');
+
+        // 2. Google Nearby Search (New)
+        // URL: /api/v1/trips/{trip}/places/nearby
+        Route::get('/trips/{trip}/places/nearby', [TripPlaceController::class, 'nearbyGoogle'])
+            ->middleware('throttle:30,1');
+
+        // CRUD for Trip Places
         Route::get('/trips/{trip}/places', [TripPlaceController::class, 'index']);
         Route::post('/trips/{trip}/places', [TripPlaceController::class, 'store']);
         Route::patch('/trips/{trip}/places/{place}', [TripPlaceController::class, 'update']);
         Route::delete('/trips/{trip}/places/{place}', [TripPlaceController::class, 'destroy']);
+
         Route::get('/trips/{trip}/places/votes', [TripPlaceController::class, 'votes']);
         Route::post('/trips/{trip}/places/{place}/vote', [TripPlaceController::class, 'vote']);
 
-        Route::get('/trips/{trip}/places/suggestions', TripPlaceSuggestionsController::class)
-            ->middleware('throttle:30,1');
-
+        // --- General Places ---
         Route::get('/places/nearby', [PlaceController::class, 'nearby']);
 
         Route::get('/places/autocomplete', [PlaceController::class, 'autocomplete'])
