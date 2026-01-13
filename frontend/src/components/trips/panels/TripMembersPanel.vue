@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  ChevronDown,
 } from "lucide-vue-next"
 
 import { useAuth } from "@/composables/useAuth.js"
@@ -39,10 +40,8 @@ const btnBase =
     "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
 const btnPrimary =
     btnBase + " bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 active:opacity-80 shadow"
-const btnSecondary =
-    btnBase + " border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
-const btnDanger =
-    btnBase + " border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+const btnSecondary = btnBase + " border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
+const btnDanger = btnBase + " border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
 
 const iconBtnBase =
     "h-10 w-10 rounded-xl border transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
@@ -273,7 +272,6 @@ function sectionTitle(key, fallback) {
     </div>
 
     <div v-else class="space-y-6">
-      <!-- Accepted -->
       <div>
         <div class="flex items-center justify-between gap-3 mb-2">
           <div class="text-sm font-semibold text-gray-900">
@@ -343,7 +341,6 @@ function sectionTitle(key, fallback) {
         </div>
       </div>
 
-      <!-- Pending invites -->
       <div>
         <div class="flex items-center justify-between gap-3 mb-2">
           <div class="text-sm font-semibold text-gray-900">
@@ -425,7 +422,6 @@ function sectionTitle(key, fallback) {
           </div>
         </div>
 
-        <!-- Declined (toggle) -->
         <div v-if="canManage && showDeclined" class="mt-4">
           <div class="text-sm font-semibold text-gray-900 mb-2">
             {{ sectionTitle("trip.team.sections.declined", "Declined") }}
@@ -508,7 +504,6 @@ function sectionTitle(key, fallback) {
       </div>
     </div>
 
-    <!-- Invite modal (glass) -->
     <Teleport to="body">
       <Transition
           appear
@@ -519,17 +514,10 @@ function sectionTitle(key, fallback) {
           leave-from-class="opacity-100 scale-100"
           leave-to-class="opacity-0 scale-95"
       >
-        <div
-            v-if="inviteOpen"
-            class="fixed inset-0 z-50 flex items-center justify-center px-4"
-            role="dialog"
-            aria-modal="true"
-        >
+        <div v-if="inviteOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
           <button class="absolute inset-0 bg-black/60" @click="closeInvite" aria-label="Close" />
 
-          <div
-              class="relative w-full max-w-lg rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden"
-          >
+          <div class="relative w-full max-w-lg rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden">
             <div class="p-6">
               <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
@@ -571,14 +559,19 @@ function sectionTitle(key, fallback) {
                   <label class="block text-sm font-medium mb-1">
                     {{ tr("common.role", "Role") }}
                   </label>
-                  <select
-                      v-model="inviteRole"
-                      class="w-full h-11 px-4 rounded-xl border border-white/15 bg-white/10 text-white outline-none focus:ring-2 focus:ring-white/20"
-                      :disabled="inviteBusy"
-                  >
-                    <option class="bg-[#0d1117]" value="member">{{ tr("roles.member", "member") }}</option>
-                    <option class="bg-[#0d1117]" value="editor">{{ tr("roles.editor", "editor") }}</option>
-                  </select>
+
+                  <div class="relative">
+                    <select
+                        v-model="inviteRole"
+                        class="w-full h-11 px-4 pr-11 rounded-xl border border-white/15 bg-white/10 text-white outline-none focus:ring-2 focus:ring-white/20 appearance-none"
+                        :disabled="inviteBusy"
+                    >
+                      <option class="bg-[#0d1117]" value="member">{{ tr("roles.member", "member") }}</option>
+                      <option class="bg-[#0d1117]" value="editor">{{ tr("roles.editor", "editor") }}</option>
+                    </select>
+
+                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/70" />
+                  </div>
                 </div>
 
                 <div class="pt-2 flex flex-col sm:flex-row gap-2 sm:justify-end">
@@ -608,7 +601,6 @@ function sectionTitle(key, fallback) {
       </Transition>
     </Teleport>
 
-    <!-- Remove confirm modal (glass) -->
     <Teleport to="body">
       <Transition
           appear
@@ -619,17 +611,10 @@ function sectionTitle(key, fallback) {
           leave-from-class="opacity-100 scale-100"
           leave-to-class="opacity-0 scale-95"
       >
-        <div
-            v-if="confirmOpen"
-            class="fixed inset-0 z-50 flex items-center justify-center px-4"
-            role="dialog"
-            aria-modal="true"
-        >
+        <div v-if="confirmOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
           <button class="absolute inset-0 bg-black/60" @click="closeRemoveConfirm" aria-label="Close" />
 
-          <div
-              class="relative w-full max-w-md rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden"
-          >
+          <div class="relative w-full max-w-md rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden">
             <div class="p-6">
               <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
@@ -686,3 +671,16 @@ function sectionTitle(key, fallback) {
     </Teleport>
   </section>
 </template>
+
+<style scoped>
+select {
+  color-scheme: dark;
+}
+select option {
+  background-color: #0d1117;
+  color: #fff;
+}
+select option:checked {
+  background-color: rgba(99, 102, 241, 0.55);
+}
+</style>

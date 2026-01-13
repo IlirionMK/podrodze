@@ -19,11 +19,17 @@ export function voteTripPlace(tripId, placeId) {
 export function deleteTripPlace(tripId, placeId) {
     return api.delete(`/trips/${tripId}/places/${placeId}`)
 }
+
 export function searchExternalPlaces(query) {
     return api.get('/places/autocomplete', {
         params: { q: query }
     })
 }
+
 export function getPlaceDetails(googlePlaceId) {
     return api.get(`/places/google/${googlePlaceId}`)
+}
+
+export function getAiSuggestions(tripId, params = {}) {
+    return api.get(`/trips/${tripId}/places/suggestions`, { params })
 }

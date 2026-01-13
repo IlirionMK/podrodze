@@ -14,6 +14,7 @@ import {
   MoonStar,
   HelpCircle,
   UserRound,
+  ChevronDown,
 } from "lucide-vue-next"
 import TripMap from "@/components/trips/TripMap.vue"
 
@@ -87,8 +88,7 @@ const btnBase =
     "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
 const btnPrimary =
     btnBase + " bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 active:opacity-80 shadow"
-const btnSecondary =
-    btnBase + " border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
+const btnSecondary = btnBase + " border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
 
 function isFixed(pl) {
   return Boolean(pl?.is_fixed ?? pl?.fixed ?? pl?.is_mandatory ?? false)
@@ -150,37 +150,43 @@ function addedByName(pl) {
         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
           <div class="md:col-span-6">
             <div class="relative">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search class="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                   v-model="queryModel"
                   type="text"
-                  class="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
+                  class="w-full h-11 pl-11 pr-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500/40"
                   :placeholder="placeholder"
               />
             </div>
           </div>
 
           <div class="md:col-span-3">
-            <select
-                v-model="categoryModel"
-                class="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
-            >
-              <option v-for="c in categories" :key="c" :value="c">
-                <slot name="categoryLabel" :c="c">{{ c }}</slot>
-              </option>
-            </select>
+            <div class="relative">
+              <select
+                  v-model="categoryModel"
+                  class="w-full h-11 px-4 pr-11 rounded-xl border border-gray-200 bg-white text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500/40 appearance-none"
+              >
+                <option v-for="c in categories" :key="c" :value="c">
+                  <slot name="categoryLabel" :c="c">{{ c }}</slot>
+                </option>
+              </select>
+              <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            </div>
           </div>
 
           <div class="md:col-span-3">
-            <select
-                v-model="sortModel"
-                class="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
-            >
-              <option value="name_asc"><slot name="sortNameAsc">Name A→Z</slot></option>
-              <option value="name_desc"><slot name="sortNameDesc">Name Z→A</slot></option>
-              <option value="cat_asc"><slot name="sortCatAsc">Category A→Z</slot></option>
-              <option value="cat_desc"><slot name="sortCatDesc">Category Z→A</slot></option>
-            </select>
+            <div class="relative">
+              <select
+                  v-model="sortModel"
+                  class="w-full h-11 px-4 pr-11 rounded-xl border border-gray-200 bg-white text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500/40 appearance-none"
+              >
+                <option value="name_asc"><slot name="sortNameAsc">Name A→Z</slot></option>
+                <option value="name_desc"><slot name="sortNameDesc">Name Z→A</slot></option>
+                <option value="cat_asc"><slot name="sortCatAsc">Category A→Z</slot></option>
+                <option value="cat_desc"><slot name="sortCatDesc">Category Z→A</slot></option>
+              </select>
+              <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            </div>
           </div>
         </div>
 
@@ -188,10 +194,7 @@ function addedByName(pl) {
           <slot name="loading">{{ localLabels.loading }}</slot>
         </div>
 
-        <div
-            v-else-if="filteredPlaces.length === 0"
-            class="p-6 rounded-xl border border-gray-200 bg-gray-50 text-gray-700"
-        >
+        <div v-else-if="filteredPlaces.length === 0" class="p-6 rounded-xl border border-gray-200 bg-gray-50 text-gray-700">
           <div class="font-semibold mb-1"><slot name="emptyTitle">{{ localLabels.emptyTitle }}</slot></div>
           <div class="text-sm text-gray-600"><slot name="emptyHint">{{ localLabels.emptyHint }}</slot></div>
         </div>
@@ -201,8 +204,12 @@ function addedByName(pl) {
               v-for="pl in filteredPlaces"
               :key="pl.id"
               type="button"
-              class="text-left border border-gray-200 rounded-xl p-4 flex items-center justify-between gap-4 transition hover:bg-gray-50"
-              :class="selectedTripPlaceId === pl.id ? 'ring-2 ring-black/10 bg-gray-50' : ''"
+              class="text-left border rounded-2xl p-4 flex items-center justify-between gap-4 transition"
+              :class="
+              selectedTripPlaceId === pl.id
+                ? 'border-blue-200 bg-blue-50 ring-2 ring-blue-200/40'
+                : 'border-gray-200 bg-white hover:bg-gray-50'
+            "
               @click="$emit('select-place', pl.id)"
           >
             <div class="flex items-start gap-3 min-w-0">
@@ -285,3 +292,10 @@ function addedByName(pl) {
     </div>
   </div>
 </template>
+
+<style scoped>
+select option {
+  background: #ffffff;
+  color: #111827;
+}
+</style>
