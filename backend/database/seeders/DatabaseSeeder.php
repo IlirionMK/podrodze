@@ -31,6 +31,8 @@ class DatabaseSeeder extends Seeder
             TripSeeder::class,
             UserPreferenceSeeder::class,
             PlaceSeeder::class,
+            TripPlaceSeeder::class,
+            TripPlaceVotesSeeder::class,
         ]);
     }
 }

@@ -1,4 +1,20 @@
 {
+  "loading": "Ładowanie...",
+
+  "actions": {
+    "search": "Szukaj",
+    "cancel": "Anuluj",
+    "add": "Dodaj",
+    "save": "Zapisz",
+    "refresh": "Odśwież",
+    "close": "Zamknij",
+    "remove": "Usuń"
+  },
+
+  "errors": {
+    "default": "Coś poszło nie tak. Spróbuj ponownie."
+  },
+
   "app": {
     "name": "PoDrodze",
     "guest": {
@@ -12,21 +28,52 @@
     },
     "admin": {
       "title": "Panel administratora",
-      "subtitle": "System zarządzania",
+
+      "subtitle": "Zarządzaj aplikacją i jej treścią",
+
       "menu": {
         "users": "Użytkownicy",
         "trips": "Podróże",
         "places": "Miejsca",
         "settings": "Ustawienia"
+
+      },
+
+      "edit": "Edytuj",
+      "delete": "Usuń",
+
+      "users": {
+        "add": "Dodaj użytkownika",
+        "name": "Imię i nazwisko",
+        "email": "Email",
+        "actions": "Akcje",
+        "no_users": "Brak użytkowników",
+        "delete_confirm": "Na pewno chcesz usunąć tego użytkownika?"
+      },
+
+      "trips": {
+        "add": "Dodaj podróż",
+        "name": "Nazwa",
+        "start_date": "Data rozpoczęcia",
+        "end_date": "Data zakończenia",
+        "actions": "Akcje",
+        "no_trips": "Brak podróży",
+        "delete_confirm": "Na pewno chcesz usunąć tę podróż?"
+      },
+
+      "places": {
+        "add": "Dodaj miejsce",
+        "name": "Nazwa",
+        "location": "Lokalizacja",
+        "actions": "Akcje",
+        "no_places": "Brak miejsc",
+        "delete_confirm": "Na pewno chcesz usunąć to miejsce?"
+      },
+
+      "settings": {
+        "save": "Zapisz"
+      }
     },
-    "users": {
-    "add": "Dodaj użytkownika",
-    "delete_confirm": "Czy na pewno chcesz usunąć użytkownika?",
-    "name": "Imię",
-    "email": "Email",
-    "actions": "Akcje",
-    "no_users": "Brak użytkowników"
-  },
   "trips": {
     "add": "Dodaj podróż",
     "delete_confirm": "Czy na pewno chcesz usunąć podróż?",
@@ -48,12 +95,12 @@
     "save": "Zapisz"
   },
   "edit": "Edytuj",
-  "delete": "Usuń"
+  "delete": "Usuń",
 
-  }
+  
   
 
-  },
+  
   "dashboard": {
   "tiles": {
     "users_desc": "Zarządzaj użytkownikami",
@@ -72,6 +119,23 @@
   "header": {
     "hello": "Cześć",
     "profile": "Profil"
+  },
+
+  "common": {
+    "email": "Email",
+    "role": "Rola"
+  },
+
+  "roles": {
+    "owner": "Właściciel",
+    "member": "Uczestnik",
+    "editor": "Edytor"
+  },
+
+  "statuses": {
+    "accepted": "Zaakceptowany",
+    "pending": "Oczekuje",
+    "rejected": "Odrzucony"
   },
 
   "auth": {
@@ -102,7 +166,7 @@
     },
 
     "errors": {
-      "incorrect_data": "Niepoprawne dane logowania.",
+      "incorrect_data": "Niepoprawny email lub hasło.",
       "email_required": "Email jest wymagany",
       "invalid_email": "Niepoprawny format adresu email",
       "password_required": "Hasło jest wymagane",
@@ -110,6 +174,15 @@
       "password_mismatch": "Hasła nie są takie same",
       "login_failed": "Logowanie nie powiodło się. Niepoprawny email lub hasło.",
       "network": "Błąd połączenia. Spróbuj ponownie później."
+    },
+
+    "verify": {
+      "title": "Weryfikacja e-mail",
+      "success": "Twój adres e-mail został zweryfikowany. Możesz się teraz zalogować.",
+      "already_verified": "Ten adres e-mail jest już zweryfikowany. Możesz się zalogować.",
+      "invalid_link": "Link weryfikacyjny jest nieprawidłowy lub wygasł.",
+      "error": "Coś poszło nie tak. Spróbuj ponownie.",
+      "go_login": "Przejdź do logowania"
     }
   },
 
@@ -131,6 +204,145 @@
       "invite_desc": "Planuj podróże razem z grupą.",
       "vote": "Głosuj na miejsca",
       "vote_desc": "Wspólnie wybierajcie najlepsze punkty."
+    }
+  },
+
+  "dashboard": {
+    "tiles": {
+      "users_desc": "Zarządzaj użytkownikami i ich rolami",
+      "trips_desc": "Przeglądaj i moderuj podróże",
+      "places_desc": "Zarządzaj miejscami i kategoriami",
+      "settings_desc": "Konfiguruj ustawienia aplikacji"
+    }
+  },
+
+  "trip": {
+    "stats": {
+      "places": "Miejsca",
+      "activities": "Aktywności",
+      "members": "Uczestnicy",
+      "other": "Inne"
+    },
+
+    "tabs": {
+      "overview": "Przegląd",
+      "places": "Miejsca",
+      "plan": "Plan",
+      "team": "Zespół",
+      "preferences": "Preferencje"
+    },
+
+    "about": "O podróży",
+    "no_description": "Brak opisu",
+    "start": "Data rozpoczęcia",
+    "end": "Data zakończenia",
+
+    "view": {
+      "places": "Miejsca",
+      "add_place": "Dodaj miejsce",
+      "map": "Mapa",
+      "members": "Uczestnicy",
+      "open": "Otwórz miejsce",
+      "add_member": "Dodaj uczestnika"
+    },
+
+    "places": {
+      "search": "Szukaj miejsc",
+      "category_all": "Wszystkie kategorie",
+      "sort_name_asc": "Nazwa (A–Z)",
+      "sort_name_desc": "Nazwa (Z–A)",
+      "sort_cat_asc": "Kategoria (A–Z)",
+      "sort_cat_desc": "Kategoria (Z–A)",
+
+      "empty_title": "Brak miejsc",
+      "empty_hint": "Dodaj pierwsze miejsce, aby rozpocząć planowanie.",
+
+      "add_title": "Dodaj miejsce",
+      "add_hint": "Utwórz własne miejsce dla tej podróży.",
+      "name_label": "Nazwa",
+      "name_placeholder": "Nazwa miejsca",
+      "category_label": "Kategoria",
+      "add_submit": "Dodaj miejsce",
+      "coords_label": "Współrzędne",
+      "coords_missing": "Najpierw wybierz punkt na mapie.",
+
+      "fixed": "Stałe",
+      "added_by": "Dodane przez"
+    },
+
+    "categories": {
+      "other": "Inne",
+      "food": "Jedzenie",
+      "museum": "Muzeum",
+      "nature": "Natura",
+      "nightlife": "Nocne życie",
+      "attraction": "Atrakcja",
+      "hotel": "Hotel",
+      "airport": "Lotnisko",
+      "station": "Stacja"
+    },
+
+    "map": {
+      "clear_selection": "Wyczyść zaznaczenie"
+    },
+
+    "place": {
+      "vote": "Głosuj",
+      "fix": "Przypnij",
+      "details_hint": "Kliknij miejsce, aby zobaczyć szczegóły.",
+
+      "modal": {
+        "title": "Miejsce",
+        "category": "Kategoria",
+        "fixed": "Stałe"
+      },
+
+      "actions": {
+        "vote": "Głosuj",
+        "fix": "Przypnij",
+        "unfix": "Odepnij"
+      }
+    },
+
+    "add_place": {
+      "title_search": "Dodaj miejsce",
+      "tabs": {
+        "suggested": "Propozycje",
+        "search": "Wyszukaj"
+      },
+      "search_placeholder": "Szukaj po nazwie lub adresie",
+      "no_results": "Brak wyników"
+    },
+
+    "team": {
+      "empty_title": "Brak uczestników",
+      "empty_hint": "Zaproś znajomych, aby wspólnie planować podróż.",
+
+      "manage_hint": "Właściciel i edytorzy mogą zarządzać uczestnikami.",
+      "invite_hint": "Wyślij zaproszenie e-mailem.",
+      "remove_title": "Usuń uczestnika",
+      "remove_hint": "Ta osoba straci dostęp do wycieczki.",
+
+      "actions": {
+        "change_role": "Zmień rolę",
+        "remove": "Usuń z wycieczki"
+      }
+    },
+
+    "plan": {
+      "coming_title": "Wkrótce",
+      "coming_hint": "Ta sekcja jest w trakcie tworzenia."
+    },
+
+    "preferences": {
+      "coming_title": "Wkrótce",
+      "coming_hint": "Preferencje będą dostępne wkrótce.",
+      "hint": "Wybierz, jak ważna jest każda kategoria. Użyjemy tego, aby dopasować sugestie.",
+      "score_0": "Nieważne",
+      "score_1": "Miło, gdyby było",
+      "score_2": "Bardzo ważne",
+      "empty_title": "Nie znaleziono kategorii",
+      "empty_hint": "Spróbuj zmienić zapytanie wyszukiwania."
     }
   },
 

@@ -21,7 +21,8 @@ async function fetchUsers() {
 }
 
 function deleteUser(id) {
-  if (!confirm(t("admin.users.delete_confirm"))) return
+
+  if (!confirm(t("app.admin.users.delete_confirm"))) return
   axios.delete(`/api/admin/users/${id}`).then(() => fetchUsers())
 }
 

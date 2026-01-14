@@ -38,6 +38,8 @@ class TripResource extends JsonResource
         return [
             'id'             => $this->id,
             'name'           => $this->name,
+            'description' => $this->description,
+
 
             'start_date'     => optional($this->start_date)->toISOString(),
             'end_date'       => optional($this->end_date)->toISOString(),

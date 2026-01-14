@@ -6,7 +6,7 @@ import { useValidator } from "@/composables/useValidator"
 import BaseInput from "@/components/forms/BaseInput.vue"
 
 const router = useRouter()
-const { setToken, setUser } = useAuth()
+const { setAuth } = useAuth()
 
 const email = ref("")
 const password = ref("")
@@ -26,8 +26,8 @@ async function onSubmit() {
       email: true,
       messages: {
         required: "auth.errors.incorrect_data",
-        email: "auth.errors.incorrect_data"
-      }
+        email: "auth.errors.incorrect_data",
+      },
     },
     password: {
       value: password.value,
@@ -35,19 +35,20 @@ async function onSubmit() {
       min: 6,
       messages: {
         required: "auth.errors.incorrect_data",
-        min: "auth.errors.incorrect_data"
-      }
+        min: "auth.errors.incorrect_data",
+      },
     },
     confirmPassword: {
       value: confirmPassword.value,
       required: true,
       messages: {
-        required: "auth.errors.incorrect_data"
-      }
-    }
+        required: "auth.errors.incorrect_data",
+      },
+    },
   })
 
   if (!isValid) return
+
   if (password.value !== confirmPassword.value) {
     globalError.value = "auth.errors.incorrect_data"
     return
@@ -58,23 +59,32 @@ async function onSubmit() {
   try {
     const res = await fetch(import.meta.env.VITE_API_URL + "/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: JSON.stringify({
+        name: email.value?.split("@")?.[0] || "User",
         email: email.value,
         password: password.value,
-        password_confirmation: confirmPassword.value
-      })
+        password_confirmation: confirmPassword.value,
+      }),
     })
 
-    const data = await res.json()
+    let data = null
+    try {
+      data = await res.json()
+    } catch (_) {
+      data = null
+    }
 
-    if (!data?.token) {
+    if (!res.ok || !data?.token) {
       globalError.value = "auth.errors.incorrect_data"
       return
     }
 
-    setToken(data.token)
-    setUser(data.user)
+    setAuth(data.user, data.token)
 
     const intended = localStorage.getItem("intended")
     if (intended) {
@@ -92,7 +102,22 @@ async function onSubmit() {
 
 async function redirectToGoogle() {
   try {
-    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/google/url")
+    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/google/url", {
+      headers: { Accept: "application/json" },
+    })
+    const data = await res.json()
+
+    if (data?.url) {
+      window.location.href = data.url
+    }
+  } catch (e) {}
+}
+
+async function redirectToFacebook() {
+  try {
+    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/facebook/url", {
+      headers: { Accept: "application/json" },
+    })
     const data = await res.json()
 
     if (data?.url) {
@@ -114,8 +139,7 @@ async function redirectToGoogle() {
     >
       <div
           v-if="true"
-          class="relative w-full max-w-md p-8 rounded-2xl border border-white/20 bg-white/10
-               backdrop-blur-xl shadow-2xl text-white"
+          class="relative w-full max-w-md p-8 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl text-white"
       >
         <h1 class="text-3xl font-semibold mb-6 text-center drop-shadow">
           {{ $t("auth.register.title") }}
@@ -162,9 +186,9 @@ async function redirectToGoogle() {
               type="submit"
               :disabled="loading"
               class="w-full py-3 rounded-xl text-lg font-medium
-                     bg-gradient-to-r from-blue-500 to-purple-600
-                     hover:opacity-90 active:opacity-80 transition
-                     disabled:opacity-50 shadow-lg"
+                   bg-gradient-to-r from-blue-500 to-purple-600
+                   hover:opacity-90 active:opacity-80 transition
+                   disabled:opacity-50 shadow-lg"
           >
             {{ loading ? $t("auth.loading") : $t("auth.register.submit") }}
           </button>
@@ -179,8 +203,8 @@ async function redirectToGoogle() {
           </button>
 
           <button
-              disabled
-              class="w-full py-3 rounded-xl bg-blue-600/40 text-white/70 cursor-not-allowed shadow-inner"
+              @click="redirectToFacebook"
+              class="w-full py-3 rounded-xl bg-blue-600 text-white font-medium shadow-lg hover:opacity-90 transition"
           >
             {{ $t("auth.register.facebook") }}
           </button>

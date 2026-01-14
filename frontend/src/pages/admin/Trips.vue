@@ -21,7 +21,8 @@ async function fetchTrips() {
 }
 
 function deleteTrip(id) {
-  if (!confirm(t("admin.trips.delete_confirm"))) return
+
+  if (!confirm(t("app.admin.trips.delete_confirm"))) return
   axios.delete(`/api/admin/trips/${id}`).then(() => fetchTrips())
 }
 
