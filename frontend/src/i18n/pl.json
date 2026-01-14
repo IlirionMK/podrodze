@@ -97,19 +97,6 @@
   "edit": "Edytuj",
   "delete": "Usuń",
 
-  
-  
-
-  
-  "dashboard": {
-  "tiles": {
-    "users_desc": "Zarządzaj użytkownikami",
-    "trips_desc": "Zarządzaj podróżami",
-    "places_desc": "Zarządzaj miejscami",
-    "settings_desc": "Ustawienia systemu"
-  }
-},
-
   "nav": {
     "dashboard": "Panel",
     "trips": "Podróże",
@@ -361,4 +348,4 @@
 
     "student_project": "Projekt studencki"
   }
-}
+}}

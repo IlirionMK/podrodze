@@ -76,15 +76,6 @@
     }
   },
 
-  "dashboard": {
-  "tiles": {
-    "users_desc": "Manage users",
-    "trips_desc": "Manage trips",
-    "places_desc": "Manage places",
-    "settings_desc": "System settings"
-  }
-},
-
   "nav": {
     "dashboard": "Dashboard",
     "trips": "Trips",
