@@ -92,11 +92,13 @@ async function fetchSuggestions() {
         place_id: item.internal_place_id,
         google_place_id: gId,
         name: item.name,
-        address: item.address || item.meta?.vicinity || "",
+        address: item.address || "",
         category_slug: item.category,
-        ai_reason: item.ai_recommendation || item.reason,
+        ai_reason: item.reason,
         image: item.image_url,
         rating: item.rating,
+        distance_m: item.distance_m,
+        reviews_count: item.reviews_count,
         source: "suggestion",
       }
     })
@@ -303,8 +305,16 @@ async function addSelected() {
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <div class="font-semibold text-white truncate">{{ it.name }}</div>
-                        <div class="text-sm text-white/60 mt-0.5 truncate">
-                          {{ it.address || "—" }}
+                        <div class="text-sm text-white/60 mt-0.5 flex items-center gap-1.5 truncate">
+                          <span>{{ it.address || "—" }}</span>
+                          <template v-if="it.distance_m">
+                            <span class="text-white/20">•</span>
+                            <span class="text-blue-400 font-medium">{{ it.distance_m }}m</span>
+                          </template>
+                          <template v-if="it.reviews_count">
+                            <span class="text-white/20">•</span>
+                            <span>{{ it.reviews_count }} reviews</span>
+                          </template>
                         </div>
                       </div>
 

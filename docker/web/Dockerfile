@@ -34,10 +34,12 @@ COPY --from=frontend /app/frontend/dist /var/www/backend/public
 
 COPY docker/caddy/Caddyfile /etc/caddy/Caddyfile
 
-RUN mkdir -p storage bootstrap/cache \
+COPY docker/web/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+ && mkdir -p storage bootstrap/cache \
  && chown -R www-data:www-data /var/www/backend \
  && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8081
 
-CMD ["sh", "-lc", "php-fpm -D && caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
+CMD ["/entrypoint.sh"]

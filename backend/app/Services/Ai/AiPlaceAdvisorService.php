@@ -39,14 +39,10 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
         $prefs = $this->preferences->getGroupPreferences($trip);
         $prefsHash = hash('sha256', json_encode($prefs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-        // 1. Строим контекст
         $context = $this->buildContext($trip, $query);
 
         $cacheKey = $this->cacheKey($trip->id, $query, $prefsHash, $context);
         $ttl = now()->addMinutes((int) config('ai.suggestions.cache_ttl_minutes'));
-
-        // Для отладки можно раскомментировать
-        // Cache::forget($cacheKey);
 
         $payload = Cache::remember($cacheKey, $ttl, function () use ($trip, $query, $prefs, $prefsHash, $context) {
 
@@ -73,7 +69,9 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
                 $aiRow = $ai[$idx] ?? ['score' => 0.0, 'reason' => 'Context match.'];
                 $canonical = $c['category'] ?? 'other';
 
-                if (!$this->categories->isRecommendable((string) $canonical)) continue;
+                if (!$this->categories->isRecommendable((string) $canonical)) {
+                    continue;
+                }
 
                 $items[] = new SuggestedPlace(
                     source: (string) $c['source'],
@@ -111,7 +109,6 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
 
     private function buildContext(Trip $trip, PlaceSuggestionQuery $query): array
     {
-        // 1. Ручной выбор (если передан ID)
         if ($query->basedOnPlaceId) {
             $place = Place::find($query->basedOnPlaceId);
             if ($place) {
@@ -126,23 +123,19 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
             }
         }
 
-        // 2. Последнее добавленное место (БЕЗОПАСНЫЙ SQL)
         try {
-            // Мы НЕ выбираем lat/lon, так как их нет. Мы берем только location в текстовом виде.
             $lastPlace = DB::table('trip_place')
                 ->join('places', 'trip_place.place_id', '=', 'places.id')
                 ->where('trip_place.trip_id', $trip->id)
                 ->whereNotNull('places.location')
-                ->orderBy('trip_place.id', 'desc') // Сортируем по ID связи (хронология добавления)
+                ->orderBy('trip_place.id', 'desc')
                 ->selectRaw('ST_AsText(places.location) as location_text')
                 ->first();
 
             if ($lastPlace && !empty($lastPlace->location_text)) {
-                // Парсим формат PostGIS: POINT(17.036 51.109)
-                // Регулярка ищет два числа внутри скобок
-                if (preg_match('/POINT\s*\(\s*([0-9\.]+)[,\s]+([0-9\.]+)\s*\)/i', $lastPlace->location_text, $matches)) {
-                    $lon = (float) $matches[1]; // Первое число - долгота
-                    $lat = (float) $matches[2]; // Второе число - широта
+                if (preg_match('/POINT\s*\(\s*(-?[0-9\.]+)[,\s]+(-?[0-9\.]+)\s*\)/i', $lastPlace->location_text, $matches)) {
+                    $lon = (float) $matches[1];
+                    $lat = (float) $matches[2];
 
                     if (abs($lat) > 0.0001 && abs($lon) > 0.0001) {
                         return [
@@ -157,7 +150,6 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
             Log::error('AI BuildContext Failed: ' . $e->getMessage());
         }
 
-        // 3. Fallback: Старт поездки
         if ($trip->start_latitude && $trip->start_longitude) {
             return [
                 'origin' => ['lat' => (float) $trip->start_latitude, 'lon' => (float) $trip->start_longitude],
@@ -166,7 +158,6 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
             ];
         }
 
-        // 4. Fallback: Назначение
         if ($trip->destination_latitude && $trip->destination_longitude) {
             return [
                 'origin' => ['lat' => (float) $trip->destination_latitude, 'lon' => (float) $trip->destination_longitude],
@@ -175,7 +166,6 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
             ];
         }
 
-        // 5. Fallback: Геокодинг города
         $searchQuery = $trip->destination ?: $trip->name;
         if ($searchQuery) {
             $foundCoords = $this->fetchCoordinatesFromGoogle($searchQuery);
@@ -227,18 +217,12 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
 
     private function placeCoords(Place $place): array
     {
-        // Удалена проверка на $place->lat, так как этих колонок нет.
-        // Берем сразу location.
         $loc = $place->location;
-
-        // Попытка распарсить строку, если она пришла как текст
         if (is_string($loc)) {
-            if (preg_match('/POINT\s*\(\s*([0-9\.]+)[,\s]+([0-9\.]+)\s*\)/i', $loc, $matches) ||
-                preg_match('/\(\s*([0-9\.]+)\s+([0-9\.]+)\s*\)/', $loc, $matches)) {
+            if (preg_match('/POINT\s*\(\s*(-?[0-9\.]+)[,\s]+(-?[0-9\.]+)\s*\)/i', $loc, $matches)) {
                 return ['lat' => (float) $matches[2], 'lon' => (float) $matches[1]];
             }
         }
-
         return ['lat' => 0.0, 'lon' => 0.0];
     }
 
@@ -247,21 +231,29 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
         return abs($coords['lat']) > 0.0001 || abs($coords['lon']) > 0.0001;
     }
 
-    private function applyQualityFilters(array $items): array {
+    private function applyQualityFilters(array $items): array
+    {
         $minScore = (float) config('ai.suggestions.quality.min_score');
         return array_values(array_filter($items, fn (SuggestedPlace $p) => $p->score >= $minScore));
     }
 
-    private function cacheKey(int $tripId, PlaceSuggestionQuery $query, string $prefsHash, array $context): string {
+    private function cacheKey(int $tripId, PlaceSuggestionQuery $query, string $prefsHash, array $context): string
+    {
         $origin = $context['origin'] ?? null;
-        return 'ai:suggestions:trip:' . $tripId . ':src=' . ($context['origin_source'] ?? 'none') . ':orig=' . ($origin ? round($origin['lat'],4).','.round($origin['lon'],4) : 'x') . ':r=' . $query->radiusMeters . ':p=' . Str::substr($prefsHash, 0, 10);
+        return 'ai:suggestions:v16:trip:' . $tripId .
+            ':lang:' . $query->locale .
+            ':src=' . ($context['origin_source'] ?? 'none') .
+            ':orig=' . ($origin ? round($origin['lat'],4).','.round($origin['lon'],4) : 'x') .
+            ':p=' . Str::substr($prefsHash, 0, 10);
     }
 
-    private function meta(Trip $trip, PlaceSuggestionQuery $query, string $prefsHash, array $context, bool $empty): array {
+    private function meta(Trip $trip, PlaceSuggestionQuery $query, string $prefsHash, array $context, bool $empty): array
+    {
         return ['trip_id' => $trip->id, 'origin_source' => $context['origin_source'] ?? 'unknown', 'radius_m' => $query->radiusMeters, 'empty' => $empty];
     }
 
-    private function buildAddPayload(array $candidate): array {
+    private function buildAddPayload(array $candidate): array
+    {
         if (($candidate['source'] ?? null) === 'internal_db' && isset($candidate['internal_place_id'])) {
             return ['source' => 'internal_db', 'place_id' => (int) $candidate['internal_place_id']];
         }
@@ -278,28 +270,55 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
 
     private function enhanceTopItemsWithGemini(array &$items, Trip $trip, array $prefs, string $locale): void
     {
-        $topCandidates = array_slice($items, 0, 3);
+        $topCandidates = array_slice($items, 0, 5);
         $payloadForAi = [];
         foreach ($topCandidates as $item) {
-            $id = $item->externalId ?? $item->internalPlaceId;
-            if (!$id) continue;
-            $payloadForAi[] = ['external_id' => $id, 'name' => $item->name, 'category' => $item->category];
+            $id = (string)($item->externalId ?: $item->internalPlaceId);
+            $payloadForAi[] = [
+                'external_id' => $id,
+                'name' => $item->name,
+                'category' => $item->category,
+                'distance' => $item->distanceMeters,
+                'rating' => $item->rating
+            ];
         }
         if (empty($payloadForAi)) return;
 
         $tripContext = $trip->destination ? "Trip to {$trip->destination}" : "Trip ID: {$trip->id}";
-        $aiReasons = $this->aiEnhancer->enhancePlaces($payloadForAi, $prefs, $tripContext, $locale);
+        $rawAiReasons = $this->aiEnhancer->enhancePlaces($payloadForAi, $prefs, $tripContext, $locale);
 
-        if (empty($aiReasons)) return;
+        $aiReasons = [];
+        foreach ($rawAiReasons as $k => $v) {
+            $cleanK = strtolower(trim(str_replace(['google:', 'internal:'], '', (string)$k)));
+            $aiReasons[$cleanK] = $v;
+        }
+
+        $fallbacks = [
+            'en' => 'Recommended based on your preferences and location.',
+            'pl' => 'Polecane na podstawie Twoich preferencji и lokalizacji.'
+        ];
+        $defaultReason = $fallbacks[$locale] ?? $fallbacks['en'];
 
         foreach ($items as $idx => $item) {
-            $key = $item->externalId ?? $item->internalPlaceId;
-            if (isset($aiReasons[$key])) {
+            $originalKey = (string)($item->externalId ?: $item->internalPlaceId);
+            $cleanKey = strtolower(trim(str_replace(['google:', 'internal:'], '', $originalKey)));
+            $newReason = $aiReasons[$cleanKey] ?? null;
+
+            if ($newReason || $item->reason === 'Loading AI recommendation...') {
                 $items[$idx] = new SuggestedPlace(
-                    source: $item->source, internalPlaceId: $item->internalPlaceId, externalId: $item->externalId,
-                    name: $item->name, category: $item->category, rating: $item->rating, reviewsCount: $item->reviewsCount,
-                    lat: $item->lat, lon: $item->lon, distanceMeters: $item->distanceMeters,
-                    estimatedVisitMinutes: $item->estimatedVisitMinutes, score: $item->score, reason: $aiReasons[$key],
+                    source: $item->source,
+                    internalPlaceId: $item->internalPlaceId,
+                    externalId: $item->externalId,
+                    name: $item->name,
+                    category: $item->category,
+                    rating: $item->rating,
+                    reviewsCount: $item->reviewsCount,
+                    lat: $item->lat,
+                    lon: $item->lon,
+                    distanceMeters: $item->distanceMeters,
+                    estimatedVisitMinutes: $item->estimatedVisitMinutes,
+                    score: $item->score,
+                    reason: (string)($newReason ?? $defaultReason),
                     addPayload: $item->addPayload
                 );
             }

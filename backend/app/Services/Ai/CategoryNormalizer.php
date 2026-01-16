@@ -4,14 +4,16 @@ namespace App\Services\Ai;
 
 final class CategoryNormalizer
 {
-    private const RECOMMENDABLE = ['food', 'nightlife', 'museum', 'nature', 'attraction'];
-    private const TECHNICAL = ['hotel', 'airport', 'station', 'other'];
+    private const RECOMMENDABLE = [
+        'food', 'nightlife', 'museum', 'nature', 'attraction',
+        'park', 'cafe', 'restaurant', 'zoo', 'aquarium', 'gallery', 'other'
+    ];
+
+    private const TECHNICAL = ['hotel', 'airport', 'station', 'transport', 'lodging'];
 
     public function normalize(?string $raw): string
     {
         $raw = $raw ? strtolower(trim($raw)) : 'other';
-
-        // Your existing config is a mapping raw_type => canonical
         $map = (array) config('place_categories', []);
         return $map[$raw] ?? ($map['other'] ?? 'other');
     }

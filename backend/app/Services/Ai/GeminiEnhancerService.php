@@ -17,71 +17,54 @@ class GeminiEnhancerService
         $this->model = config('services.google.gemini.model', 'gemini-1.5-flash');
     }
 
-    public function enhancePlaces(array $places, array $preferences, string $tripContext, string $locale = 'pl'): array
+    public function enhancePlaces(array $places, array $preferences, string $tripContext, string $locale = 'en'): array
     {
-        if (empty($this->apiKey) || empty($places)) {
-            return [];
-        }
+        if (empty($this->apiKey) || empty($places)) return [];
 
         $placesListText = "";
         foreach ($places as $p) {
-            $id = $p['external_id'] ?? $p['name'];
-            $name = $p['name'];
-            $cat = $p['category'] ?? 'general';
-            $placesListText .= "- ID: \"{$id}\", Name: \"{$name}\", Category: \"{$cat}\"\n";
+            // Очищаем ID для ИИ, чтобы он вернул их в простом виде
+            $id = strtolower(trim(str_replace(['google:', 'internal:'], '', (string)($p['external_id'] ?? $p['id']))));
+            $placesListText .= "- ID: \"{$id}\", Name: \"{$p['name']}\", Category: \"{$p['category']}\"\n";
         }
 
-        $topPrefs = array_keys(array_filter($preferences, fn($v) => (float)$v >= 0.6));
+        $languageName = ($locale === 'pl') ? 'Polish' : 'English';
+        $topPrefs = array_keys(array_filter($preferences, fn($v) => (float)$v >= 0.5));
         $prefString = implode(', ', $topPrefs);
 
         $prompt = <<<TEXT
-You are a helpful travel assistant.
-Context: {$tripContext}.
-User loves: [{$prefString}].
-Target Language: {$locale}.
-
-Task: Write ONE persuasive sentence explaining why the user should visit each place, connecting it to their interests.
-If the place doesn't strongly match specific interests, give a general positive recommendation.
-
-Format strictly as JSON object where keys are IDs and values are strings.
-Example:
-{
-  "PLACE_123": "Great spot for art lovers.",
-  "PLACE_456": "Perfect for relaxing."
-}
-
-Places to review:
-{$placesListText}
+You are a charismatic local travel guide.
+Task: Write ONE short, emotional recommendation (max 12 words) for each place in {$languageName}.
+IMPORTANT: DO NOT start with "Recommended because..." or "Based on your interests...".
+Be creative!
+Example: "Perfect spot for your morning coffee with a stunning view!" or "Since you love history, this museum is a hidden gem you can't miss."
+Return ONLY a valid JSON object where keys are the IDs provided.
 TEXT;
 
         try {
-            $url = "{$this->baseUrl}/{$this->model}:generateContent?key={$this->apiKey}";
-
-            $response = Http::timeout(3)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post($url, [
-                    'contents' => [
-                        ['parts' => [['text' => $prompt]]]
-                    ],
-                    'generationConfig' => [
-                        'response_mime_type' => 'application/json',
-                        'temperature' => 0.6,
-                    ]
-                ]);
+            $response = Http::timeout(15)->post("{$this->baseUrl}/{$this->model}:generateContent?key={$this->apiKey}", [
+                'contents' => [['parts' => [['text' => $prompt]]]],
+                'generationConfig' => [
+                    'response_mime_type' => 'application/json',
+                    'temperature' => 0.8
+                ]
+            ]);
 
             if ($response->failed()) {
-                Log::warning('Gemini API Error: ' . $response->body());
+                Log::error('Gemini API Error: ' . $response->body());
                 return [];
             }
 
-            $data = $response->json();
-            $rawText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            $json = json_decode($rawText, true);
+            $rawText = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-            return is_array($json) ? $json : [];
+            // Надежный парсинг JSON из ответа
+            if (preg_match('/\{(?:[^{}]|(?R))*\}/s', $rawText, $matches)) {
+                return json_decode($matches[0], true) ?? [];
+            }
 
+            return [];
         } catch (\Throwable $e) {
-            Log::warning('Gemini Exception: ' . $e->getMessage());
+            Log::error('Gemini Exception: ' . $e->getMessage());
             return [];
         }
     }
