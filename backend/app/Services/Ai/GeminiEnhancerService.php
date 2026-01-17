@@ -7,64 +7,45 @@ use Illuminate\Support\Facades\Log;
 
 class GeminiEnhancerService
 {
-    private ?string $apiKey;
-    private string $model;
-    private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-    public function __construct()
-    {
-        $this->apiKey = config('services.google.gemini.key');
-        $this->model = config('services.google.gemini.model', 'gemini-1.5-flash');
-    }
-
     public function enhancePlaces(array $places, array $preferences, string $tripContext, string $locale = 'en'): array
     {
-        if (empty($this->apiKey) || empty($places)) return [];
-
-        $placesListText = "";
-        foreach ($places as $p) {
-            // Очищаем ID для ИИ, чтобы он вернул их в простом виде
-            $id = strtolower(trim(str_replace(['google:', 'internal:'], '', (string)($p['external_id'] ?? $p['id']))));
-            $placesListText .= "- ID: \"{$id}\", Name: \"{$p['name']}\", Category: \"{$p['category']}\"\n";
+        $apiKey = (string) config('services.google.gemini.key');
+        if ($apiKey === '' || empty($places)) {
+            return [];
         }
 
-        $languageName = ($locale === 'pl') ? 'Polish' : 'English';
-        $topPrefs = array_keys(array_filter($preferences, fn($v) => (float)$v >= 0.5));
-        $prefString = implode(', ', $topPrefs);
+        $list = collect($places)
+            ->map(static fn ($p) => "- ID: {$p['external_id']}, Name: {$p['name']}, Category: {$p['category']}")
+            ->implode("\n");
+
+        $topPrefs = collect($preferences)
+            ->filter(static fn ($v) => (float) $v > 0.5)
+            ->keys()
+            ->implode(', ');
 
         $prompt = <<<TEXT
-You are a charismatic local travel guide.
-Task: Write ONE short, emotional recommendation (max 12 words) for each place in {$languageName}.
-IMPORTANT: DO NOT start with "Recommended because..." or "Based on your interests...".
-Be creative!
-Example: "Perfect spot for your morning coffee with a stunning view!" or "Since you love history, this museum is a hidden gem you can't miss."
-Return ONLY a valid JSON object where keys are the IDs provided.
+You are a charismatic travel guide for: {$tripContext}.
+User likes: {$topPrefs}.
+Task: Write 1 very short, emotional recommendation (max 10 words) for each ID in {$locale}.
+Return ONLY valid JSON as an object where keys are IDs (without prefixes like "google:") and values are strings.
+Places:
+{$list}
 TEXT;
 
         try {
-            $response = Http::timeout(15)->post("{$this->baseUrl}/{$this->model}:generateContent?key={$this->apiKey}", [
-                'contents' => [['parts' => [['text' => $prompt]]]],
-                'generationConfig' => [
-                    'response_mime_type' => 'application/json',
-                    'temperature' => 0.8
-                ]
-            ]);
+            $response = Http::timeout(15)
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+                    'contents' => [['parts' => [['text' => $prompt]]]],
+                    'generationConfig' => ['response_mime_type' => 'application/json'],
+                ])
+                ->throw();
 
-            if ($response->failed()) {
-                Log::error('Gemini API Error: ' . $response->body());
-                return [];
-            }
+            $text = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
 
-            $rawText = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
-
-            // Надежный парсинг JSON из ответа
-            if (preg_match('/\{(?:[^{}]|(?R))*\}/s', $rawText, $matches)) {
-                return json_decode($matches[0], true) ?? [];
-            }
-
-            return [];
+            $decoded = json_decode($text, true);
+            return is_array($decoded) ? $decoded : [];
         } catch (\Throwable $e) {
-            Log::error('Gemini Exception: ' . $e->getMessage());
+            Log::error('Gemini failed: ' . $e->getMessage());
             return [];
         }
     }

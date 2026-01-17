@@ -8,18 +8,11 @@ use App\Models\Place;
 use App\Models\Trip;
 use App\Services\Ai\CategoryNormalizer;
 use App\Services\External\GooglePlacesService;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 final class DatabasePlacesCandidateProvider implements PlacesCandidateProviderInterface
 {
-    private const RECOMMENDABLE = [
-        'food', 'nightlife', 'museum', 'nature', 'attraction',
-        'park', 'cafe', 'restaurant', 'zoo', 'aquarium', 'gallery',
-        'establishment', 'point_of_interest', 'store', 'other'
-    ];
-
     public function __construct(
         private readonly CategoryNormalizer $categories,
         private readonly GooglePlacesService $googlePlaces,
@@ -27,116 +20,134 @@ final class DatabasePlacesCandidateProvider implements PlacesCandidateProviderIn
 
     public function getCandidates(Trip $trip, PlaceSuggestionQuery $query, array $preferences, array $context): array
     {
-        $origin = $context['origin'] ?? null;
-        if (!$origin || empty($origin['lat']) || empty($origin['lon'])) return [];
+        $origins = $context['origins'] ?? [];
+        if (empty($origins)) return [];
 
-        $preferred = array_values(array_unique(array_intersect(
-            array_keys(array_filter($preferences, fn($v) => (float)$v > 0)),
-            self::RECOMMENDABLE
-        )));
-
-        if (empty($preferred)) $preferred = self::RECOMMENDABLE;
-
+        $preferred = array_keys(array_filter($preferences, fn($v) => (float)$v > 0));
         $existingPlaceIds = DB::table('trip_place')->where('trip_id', $trip->id)->pluck('place_id')->all();
 
-        $dbCandidates = $this->getDbCandidates($origin, $preferred, $query->radiusMeters, $existingPlaceIds);
+        // 1. Поиск в локальной базе
+        $dbCandidates = $this->getDbCandidates($origins, $preferred, $query->radiusMeters, $existingPlaceIds);
 
-        if (empty($dbCandidates)) {
-            $dbCandidates = $this->getDbCandidates($origin, [], max(20000, $query->radiusMeters * 5), $existingPlaceIds);
-        }
-
-        if (config('ai.suggestions.external.enabled') && count($dbCandidates) < $query->limit) {
-            try {
-                $googleCandidates = $this->getGoogleCandidates($trip, $origin, $preferred, $query);
-                return $this->mergePreferDb($dbCandidates, $googleCandidates);
-            } catch (\Exception $e) {
-                Log::error('AI Google Search Error: ' . $e->getMessage());
+        // 2. Если результатов мало, опрашиваем Google Places
+        if (count($dbCandidates) < $query->limit && config('ai.suggestions.external.enabled')) {
+            foreach ($origins as $origin) {
+                try {
+                    $googleResults = $this->getGoogleCandidates($trip, $origin, $preferred, $query);
+                    $dbCandidates = $this->mergeResults($dbCandidates, $googleResults);
+                } catch (\Exception $e) {
+                    Log::error("Google search failed for origin: {$origin['name']}");
+                }
             }
         }
 
         return $dbCandidates;
     }
 
-    private function getDbCandidates(array $origin, array $categories, int $radius, array $existingPlaceIds): array
+    private function getDbCandidates(array $origins, array $categories, int $radius, array $existingPlaceIds): array
     {
-        $originSql = sprintf("ST_GeogFromText('POINT(%F %F)')", $origin['lon'], $origin['lat']);
+        $pointsSql = collect($origins)->map(fn($p) => "{$p['lon']} {$p['lat']}")->implode(',');
+        $multiPoint = "ST_GeogFromText('MULTIPOINT($pointsSql)')";
 
-        $qb = Place::query()
-            ->select(['id', 'name', 'category_slug', 'rating', 'meta', 'google_place_id', 'opening_hours'])
+        $results = Place::query()
+            ->select(['id', 'name', 'category_slug', 'rating', 'meta', 'google_place_id'])
             ->selectRaw('ST_Y(location::geometry) as lat, ST_X(location::geometry) as lon')
-            ->selectRaw("ST_Distance(location, $originSql) as distance_m")
+            ->whereRaw("ST_DWithin(location, $multiPoint, ?)", [$radius])
             ->whereNotNull('location')
-            ->whereRaw("ST_DWithin(location, $originSql, ?)", [$radius])
-            ->orderBy('distance_m', 'asc')
+            ->orderBy('rating', 'desc')
             ->limit(50);
 
-        if (!empty($categories)) $qb->whereIn('category_slug', $categories);
-        if (!empty($existingPlaceIds)) $qb->whereNotIn('id', $existingPlaceIds);
+        if (!empty($categories)) {
+            $results->whereIn('category_slug', $categories);
+        }
 
-        return $qb->get()->map(fn($row) => [
-            'source' => 'internal_db',
-            'internal_place_id' => (int) $row->id,
-            'external_id' => $row->google_place_id ? ('google:' . $row->google_place_id) : null,
-            'name' => (string) $row->name,
-            'category' => $row->category_slug ?? 'other',
-            'rating' => $row->rating ? (float) $row->rating : null,
-            'reviews_count' => $this->extractReviewsCount($row->meta),
-            'lat' => (float) $row->lat,
-            'lon' => (float) $row->lon,
-            'distance_m' => (int) round($row->distance_m),
-            'opening_hours' => $row->opening_hours,
-        ])->all();
+        if (!empty($existingPlaceIds)) {
+            $results->whereNotIn('id', $existingPlaceIds);
+        }
+
+        return $results->get()->map(function($row) use ($origins) {
+            $lat = (float)$row->lat;
+            $lon = (float)$row->lon;
+            $closest = $this->findNearestOrigin($lat, $lon, $origins);
+
+            return [
+                'source' => 'internal_db',
+                'internal_place_id' => (int) $row->id,
+                'external_id' => $row->google_place_id ? 'google:' . $row->google_place_id : null,
+                'name' => (string) $row->name,
+                'category' => $row->category_slug ?? 'other',
+                'rating' => (float) $row->rating,
+                'reviews_count' => $this->extractReviews($row->meta), // Исправленный вызов
+                'lat' => $lat,
+                'lon' => $lon,
+                'distance_m' => $closest['dist'],
+                'near_place_name' => $closest['name']
+            ];
+        })->all();
     }
 
-    private function getGoogleCandidates(Trip $trip, array $origin, array $preferred, PlaceSuggestionQuery $query): array
+    private function getGoogleCandidates(Trip $trip, array $origin, array $preferred, $query): array
     {
-        $raw = $this->googlePlaces->fetchNearbyForTripByPreferredCategories($trip, $preferred, $query->radiusMeters, 20);
+        $raw = $this->googlePlaces->fetchNearbyForTripByPreferredCategories($trip, $preferred, $query->radiusMeters, 15);
         return collect($raw)->map(fn($p) => [
             'source' => 'google',
-            'internal_place_id' => null,
             'external_id' => 'google:' . $p['place_id'],
             'name' => (string) ($p['name'] ?? 'Unknown'),
-            'category' => $this->canonicalFromGooglePayload($p),
-            'rating' => isset($p['rating']) ? (float) $p['rating'] : null,
-            'reviews_count' => (int) Arr::get($p, 'meta.user_ratings_total', 0),
+            'category' => $this->categories->normalize($p['category_slug'] ?? 'other'),
+            'rating' => (float) ($p['rating'] ?? 0),
+            'reviews_count' => (int) ($p['user_ratings_total'] ?? 0),
             'lat' => (float) $p['lat'],
             'lon' => (float) $p['lon'],
-            'distance_m' => $this->haversineMeters((float)$origin['lat'], (float)$origin['lon'], (float)$p['lat'], (float)$p['lon']),
-            'opening_hours' => $p['opening_hours'] ?? Arr::get($p, 'meta.opening_hours'),
-            'meta' => $p['meta'] ?? [],
+            'distance_m' => $this->haversineMeters($origin['lat'], $origin['lon'], (float)$p['lat'], (float)$p['lon']),
+            'near_place_name' => $origin['name']
         ])->all();
     }
 
-    private function canonicalFromGooglePayload(array $p): string
+    /**
+     * Безопасное извлечение отзывов, даже если meta — это строка или null
+     */
+    private function extractReviews(mixed $meta): int
     {
-        foreach ((array)Arr::get($p, 'meta.types', []) as $t) {
-            $c = $this->categories->normalize($t);
-            if ($this->categories->isRecommendable($c)) return $c;
+        if (empty($meta)) return 0;
+
+        // Если meta пришла как JSON-строка (бывает в некоторых драйверах)
+        if (is_string($meta)) {
+            $meta = json_decode($meta, true);
         }
-        return $this->categories->normalize($p['category_slug'] ?? 'other');
+
+        if (!is_array($meta)) return 0;
+
+        return (int) ($meta['user_ratings_total'] ?? $meta['reviews_count'] ?? 0);
     }
 
-    private function mergePreferDb(array $db, array $google): array
+    private function findNearestOrigin(float $lat, float $lon, array $origins): array
     {
-        $dbByExternal = collect($db)->filter(fn($x)=>!empty($x['external_id']))->keyBy('external_id');
-        $merged = $db;
-        foreach ($google as $g) {
-            if (!isset($g['external_id']) || !$dbByExternal->has($g['external_id'])) $merged[] = $g;
+        $minDist = 9999999;
+        $best = ['dist' => 0, 'name' => 'your route'];
+
+        foreach ($origins as $o) {
+            $d = $this->haversineMeters($lat, $lon, $o['lat'], $o['lon']);
+            if ($d < $minDist) {
+                $minDist = $d;
+                $best = ['dist' => (int)$d, 'name' => $o['name']];
+            }
         }
-        return array_values($merged);
+        return $best;
     }
 
-    private function extractReviewsCount(mixed $meta): ?int
+    private function haversineMeters(float $lat1, float $lon1, float $lat2, float $lon2): float
     {
-        if (is_string($meta)) $meta = json_decode($meta, true);
-        return $meta['user_ratings_total'] ?? $meta['reviews_count'] ?? null;
-    }
-
-    private function haversineMeters(float $lat1, float $lon1, float $lat2, float $lon2): int
-    {
+        $R = 6371000;
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
         $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
-        return (int) round(6371000.0 * 2 * atan2(sqrt($a), sqrt(1 - $a)));
+        return $R * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    private function mergeResults(array $existing, array $new): array
+    {
+        $existingIds = collect($existing)->pluck('external_id')->filter()->all();
+        $filteredNew = collect($new)->reject(fn($item) => in_array($item['external_id'], $existingIds))->all();
+        return array_merge($existing, $filteredNew);
     }
 }
