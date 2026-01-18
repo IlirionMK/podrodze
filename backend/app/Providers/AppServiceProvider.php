@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\URL;
 
 use App\Interfaces\{
     ItineraryServiceInterface,
@@ -20,7 +21,6 @@ use App\Services\{
     TripService
 };
 
-// NEW: AI suggestions
 use App\Interfaces\Ai\AiPlaceAdvisorInterface;
 use App\Interfaces\Ai\AiPlaceReasonerInterface;
 use App\Interfaces\Ai\PlacesCandidateProviderInterface;
@@ -34,14 +34,12 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Existing bindings
         $this->app->bind(ItineraryServiceInterface::class, ItineraryService::class);
         $this->app->bind(PreferenceServiceInterface::class, PreferenceService::class);
         $this->app->bind(TripInterface::class, TripService::class);
         $this->app->bind(PlaceInterface::class, PlaceService::class);
         $this->app->bind(PreferenceAggregatorServiceInterface::class, PreferenceAggregatorService::class);
 
-        // NEW: AI suggestions bindings
         $this->app->singleton(CategoryNormalizer::class);
 
         $this->app->bind(AiPlaceAdvisorInterface::class, AiPlaceAdvisorService::class);
@@ -51,8 +49,16 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if (app()->environment('local')) {
+            URL::useOrigin(config('app.url'));
+        }
+
+        if (app()->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
-            return config('app.frontend_url') .
+            return rtrim(config('app.frontend_url'), '/') .
                 "/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
         });
     }

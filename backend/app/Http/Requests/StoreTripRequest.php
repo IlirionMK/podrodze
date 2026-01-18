@@ -17,6 +17,8 @@ class StoreTripRequest extends FormRequest
             'name'       => ['required', 'string', 'min:2', 'max:255'],
             'start_date' => ['nullable', 'date'],
             'end_date'   => ['nullable', 'date', 'after_or_equal:start_date'],
+            'description' => ['nullable', 'string', 'max:500'],
+
         ];
     }
 

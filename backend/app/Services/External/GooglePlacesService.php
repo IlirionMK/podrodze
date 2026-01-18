@@ -3,294 +3,411 @@
 namespace App\Services\External;
 
 use App\Models\Trip;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class GooglePlacesService
 {
-    protected string $nearbyUrl  = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
-    protected string $detailsUrl = 'https://maps.googleapis.com/maps/api/place/details/json';
+    protected string $nearbyUrlV1     = 'https://places.googleapis.com/v1/places:searchNearby';
+    protected string $detailsUrl      = 'https://maps.googleapis.com/maps/api/place/details/json';
+    protected string $autocompleteUrl = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
 
-    /**
-     * Default allowed Google place types for generic nearby search.
-     *
-     * @var array<int, string>
-     */
     protected array $defaultTypes = [
         'tourist_attraction', 'museum', 'art_gallery', 'park',
         'cafe', 'restaurant', 'bar', 'night_club',
-        'church', 'mosque', 'hindu_temple', 'synagogue',
         'zoo', 'amusement_park', 'lodging',
+        'church', 'mosque', 'hindu_temple', 'synagogue',
+        'campground',
+        'airport', 'train_station', 'subway_station', 'bus_station', 'transit_station',
+        'tourist_information_center',
+        'bakery',
     ];
 
-    /**
-     * Generic nearby search (kept for backward compatibility).
-     *
-     * @param float $lat
-     * @param float $lon
-     * @param int   $radius
-     * @return array<int, array<string, mixed>>
-     */
-    public function fetchNearby(float $lat, float $lon, int $radius = 3000): array
-    {
-        return $this->fetchNearbyByTypes($lat, $lon, $radius, $this->defaultTypes);
-    }
+    protected array $unsupportedIncludedTypesV1 = [
+        'point_of_interest',
+        'pub',
+    ];
 
-    /**
-     * Fetch nearby places tailored for a specific trip.
-     *
-     * - Uses trip start location as the center.
-     * - Narrows down Google place types based on trip place categories.
-     * - Applies basic quality filters (rating, reviews).
-     * - Returns a limited list of recommended places for this trip context.
-     *
-     * This method returns raw external data; it does NOT attach places to the trip.
-     *
-     * @param Trip $trip
-     * @param int  $radius  Search radius in meters.
-     * @param int  $limit   Max number of places to return.
-     * @return array<int, array<string, mixed>>
-     */
-    public function fetchNearbyForTrip(Trip $trip, int $radius = 1500, int $limit = 20): array
-    {
-        if (!$trip->start_latitude || !$trip->start_longitude) {
-            // No start location – we cannot search meaningfully.
+    protected array $typeMapping = [
+        'restaurant' => 'food',
+        'cafe' => 'food',
+        'meal_takeaway' => 'food',
+        'meal_delivery' => 'food',
+        'bakery' => 'food',
+        'bar' => 'food',
+        'food' => 'food',
+
+        'night_club' => 'nightlife',
+        'pub' => 'nightlife',
+
+        'museum' => 'museum',
+        'art_gallery' => 'museum',
+        'library' => 'museum',
+
+        'park' => 'nature',
+        'natural_feature' => 'nature',
+        'campground' => 'nature',
+        'tourist_attraction' => 'nature',
+
+        'point_of_interest' => 'attraction',
+        'tourist_information_center' => 'attraction',
+
+        'lodging' => 'hotel',
+        'hotel' => 'hotel',
+        'hostel' => 'hotel',
+        'motel' => 'hotel',
+        'guest_house' => 'hotel',
+        'apartment' => 'hotel',
+
+        'airport' => 'airport',
+        'train_station' => 'station',
+        'subway_station' => 'station',
+        'bus_station' => 'station',
+        'transit_station' => 'station',
+
+        'church' => 'religion',
+        'mosque' => 'religion',
+        'synagogue' => 'religion',
+        'hindu_temple' => 'religion',
+    ];
+
+    public function autocomplete(
+        string $query,
+        ?float $lat = null,
+        ?float $lon = null,
+        ?int $radius = null,
+        string $language = 'pl',
+        ?string $sessionToken = null
+    ): array {
+        $query = trim($query);
+        if ($query === '') {
             return [];
         }
 
-        $lat = (float) $trip->start_latitude;
-        $lon = (float) $trip->start_longitude;
+        try {
+            $params = [
+                'input'    => $query,
+                'language' => $language,
+                'key'      => config('services.google.maps_server_key'),
+            ];
 
-        // Collect distinct category slugs used in this trip (e.g. museum, food, nature, nightlife).
+            if ($lat !== null && $lon !== null) {
+                $params['location'] = "{$lat},{$lon}";
+                if ($radius !== null) {
+                    $params['radius'] = $radius;
+                }
+            }
+
+            if ($sessionToken) {
+                $params['sessiontoken'] = $sessionToken;
+            }
+
+            $res = Http::timeout(5)->get($this->autocompleteUrl, $params);
+
+            if (!$res->ok()) {
+                Log::warning("[GooglePlaces] Autocomplete HTTP {$res->status()}");
+                return [];
+            }
+
+            $data = $res->json();
+            $status = $data['status'] ?? 'unknown';
+
+            if ($status !== 'OK') {
+                if ($status !== 'ZERO_RESULTS') {
+                    Log::info("[GooglePlaces] Autocomplete status={$status}");
+                }
+                return [];
+            }
+
+            $predictions = $data['predictions'] ?? [];
+
+            return collect($predictions)
+                ->map(static function (array $p): array {
+                    return [
+                        'google_place_id' => $p['place_id'] ?? null,
+                        'description'     => $p['description'] ?? null,
+                        'main_text'       => data_get($p, 'structured_formatting.main_text'),
+                        'secondary_text'  => data_get($p, 'structured_formatting.secondary_text'),
+                        'types'           => $p['types'] ?? [],
+                    ];
+                })
+                ->filter(static fn ($x) => !empty($x['google_place_id']))
+                ->values()
+                ->all();
+        } catch (Throwable $e) {
+            Log::error("[GooglePlaces] Autocomplete error: {$e->getMessage()}");
+            return [];
+        }
+    }
+
+    public function getPlaceDetails(string $googlePlaceId, string $language = 'pl', ?string $sessionToken = null): ?array
+    {
+        $googlePlaceId = trim($googlePlaceId);
+        if ($googlePlaceId === '') {
+            return null;
+        }
+
+        $cacheKey = "google:place_details_full:{$googlePlaceId}:{$language}";
+
+        return Cache::remember($cacheKey, now()->addHours(24), function () use ($googlePlaceId, $language, $sessionToken) {
+            try {
+                $params = [
+                    'place_id' => $googlePlaceId,
+                    'language' => $language,
+                    'fields'   => 'place_id,name,geometry,types,rating,user_ratings_total,vicinity,formatted_address,opening_hours,website,international_phone_number',
+                    'key'      => config('services.google.maps_server_key'),
+                ];
+
+                if ($sessionToken) {
+                    $params['sessiontoken'] = $sessionToken;
+                }
+
+                $res = Http::timeout(8)->get($this->detailsUrl, $params);
+
+                if (!$res->ok()) {
+                    Log::warning("[GooglePlaces] Details HTTP {$res->status()} pid={$googlePlaceId}");
+                    return null;
+                }
+
+                $data = $res->json();
+                if (($data['status'] ?? '') !== 'OK') {
+                    Log::info("[GooglePlaces] Details status=" . ($data['status'] ?? 'unknown') . " pid={$googlePlaceId}");
+                    return null;
+                }
+
+                $r = $data['result'] ?? null;
+                if (!$r) {
+                    return null;
+                }
+
+                $lat = data_get($r, 'geometry.location.lat');
+                $lon = data_get($r, 'geometry.location.lng');
+
+                if ($lat === null || $lon === null) {
+                    return null;
+                }
+
+                $googleTypes = $r['types'] ?? [];
+                $internalCategory = $this->resolveInternalCategory($googleTypes);
+
+                return [
+                    'google_place_id' => $r['place_id'] ?? $googlePlaceId,
+                    'place_id'        => $r['place_id'] ?? $googlePlaceId,
+                    'name'            => $r['name'] ?? 'Unknown place',
+                    'lat'             => (float) $lat,
+                    'lon'             => (float) $lon,
+                    'category_slug'   => $internalCategory,
+                    'types'           => $googleTypes,
+                    'rating'          => isset($r['rating']) ? (float) $r['rating'] : null,
+                    'opening_hours'   => $r['opening_hours'] ?? null,
+                    'meta'            => [
+                        'address'            => $r['formatted_address'] ?? ($r['vicinity'] ?? null),
+                        'user_ratings_total' => $r['user_ratings_total'] ?? 0,
+                        'website'            => $r['website'] ?? null,
+                        'phone'              => $r['international_phone_number'] ?? null,
+                        'types'              => $googleTypes,
+                    ],
+                ];
+            } catch (Throwable $e) {
+                Log::error("[GooglePlaces] Details error pid={$googlePlaceId}: {$e->getMessage()}");
+                return null;
+            }
+        });
+    }
+
+    public function fetchNearby(float $lat, float $lon, int $radius = 3000, string $language = 'pl'): array
+    {
+        return $this->fetchNearbyByTypes($lat, $lon, $radius, $this->defaultTypes, $language);
+    }
+
+    public function fetchNearbyForTrip(Trip $trip, int $radius = 1500, int $limit = 20, string $language = 'pl'): array
+    {
+        $coords = $this->resolveTripCoords($trip);
+        if (!$coords) {
+            return [];
+        }
+
+        [$lat, $lon] = $coords;
+
         $categorySlugs = $trip->places()
             ->select('places.category_slug')
             ->distinct()
             ->pluck('category_slug')
             ->all();
 
-        // Map trip categories to Google place types.
         $types = $this->mapCategoriesToGoogleTypes($categorySlugs);
 
-        // Fallback to defaults if we could not derive anything.
-        if (empty($types)) {
-            $types = $this->defaultTypes;
-        }
+        $raw = $this->fetchNearbyByTypes($lat, $lon, $radius, $types, $language);
 
-        $raw = $this->fetchNearbyByTypes($lat, $lon, $radius, $types);
+        $minRating = (float) config('ai.suggestions.quality.min_rating', 0);
+        $minReviews = (int) config('ai.suggestions.quality.min_reviews', 0);
 
-        // Filter and rank results for this trip:
-        // - rating >= 4.2
-        // - non-zero or decent number of reviews
-        // - sort by rating desc, then user_ratings_total desc
         return collect($raw)
-            ->filter(function (array $place): bool {
-                $rating = $place['rating'] ?? 0.0;
-                $reviews = $place['meta']['user_ratings_total'] ?? 0;
-
-                return $rating >= 4.2 && $reviews >= 5;
+            ->filter(static function (array $place) use ($minRating, $minReviews): bool {
+                $rating = (float) ($place['rating'] ?? 0.0);
+                $reviews = (int) data_get($place, 'meta.user_ratings_total', 0);
+                return $rating >= $minRating && $reviews >= $minReviews;
             })
-            ->sortByDesc(function (array $place): array {
-                return [
-                    $place['rating'] ?? 0.0,
-                    $place['meta']['user_ratings_total'] ?? 0,
-                ];
-            })
+            ->sortByDesc('meta.user_ratings_total')
+            ->sortByDesc('rating')
             ->take($limit)
             ->values()
             ->all();
     }
 
-    /**
-     * Fetch nearby places for a trip based on preferred canonical categories
-     * (food/nightlife/museum/nature/attraction).
-     *
-     * This method is designed for AI suggestions: we derive Google types from user preferences,
-     * not from already attached trip places.
-     *
-     * @param Trip $trip
-     * @param array<int,string> $preferredCategorySlugs
-     * @param int $radius
-     * @param int $limit
-     * @return array<int, array<string, mixed>>
-     */
     public function fetchNearbyForTripByPreferredCategories(
         Trip $trip,
         array $preferredCategorySlugs,
         int $radius = 1500,
-        int $limit = 20
+        int $limit = 20,
+        string $language = 'pl'
     ): array {
-        if (!$trip->start_latitude || !$trip->start_longitude) {
+        $coords = $this->resolveTripCoords($trip);
+        if (!$coords) {
             return [];
         }
 
-        $lat = (float) $trip->start_latitude;
-        $lon = (float) $trip->start_longitude;
+        [$lat, $lon] = $coords;
 
         $types = $this->mapCategoriesToGoogleTypes($preferredCategorySlugs);
+        $raw = $this->fetchNearbyByTypes($lat, $lon, $radius, $types, $language);
 
-        if (empty($types)) {
-            $types = $this->defaultTypes;
-        }
-
-        $raw = $this->fetchNearbyByTypes($lat, $lon, $radius, $types);
-
-        return collect($raw)
-            ->take($limit)
-            ->values()
-            ->all();
+        return collect($raw)->take($limit)->values()->all();
     }
 
-    /**
-     * Low-level nearby search by a given set of Google place types.
-     *
-     * @param float        $lat
-     * @param float        $lon
-     * @param int          $radius
-     * @param array<int,string> $types
-     * @return array<int, array<string, mixed>>
-     */
-    protected function fetchNearbyByTypes(float $lat, float $lon, int $radius, array $types): array
+    public function fetchNearbyByPointAndPreferredCategories(
+        float $lat,
+        float $lon,
+        array $preferredCategorySlugs,
+        int $radius = 1500,
+        int $limit = 20,
+        string $language = 'pl'
+    ): array {
+        $types = $this->mapCategoriesToGoogleTypes($preferredCategorySlugs);
+        $raw = $this->fetchNearbyByTypes($lat, $lon, $radius, $types, $language);
+
+        return collect($raw)->take($limit)->values()->all();
+    }
+
+    protected function fetchNearbyByTypes(float $lat, float $lon, int $radius, array $types, string $language = 'pl'): array
     {
+        $types = $this->sanitizeIncludedTypes($types);
+        sort($types);
+
+        $typesKey = empty($types) ? 'ALL' : md5(implode(',', $types));
+
         $cacheKey = sprintf(
-            'google:places:%.4f:%.4f:%d:%s',
+            'google:places:v1:%.4f:%.4f:%d:%s:%s',
             $lat,
             $lon,
             $radius,
-            md5(implode(',', $types))
+            $language,
+            $typesKey
         );
 
-        return Cache::remember($cacheKey, now()->addHours(12), function () use ($lat, $lon, $radius, $types) {
-            $results = [];
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return $cached;
+        }
 
-            foreach ($types as $type) {
-                try {
-                    $response = Http::timeout(8)->get($this->nearbyUrl, [
-                        'location' => "{$lat},{$lon}",
-                        'radius'   => $radius,
-                        'type'     => $type,
-                        'language' => 'pl',
-                        'key'      => config('services.google.maps_key'),
-                    ]);
+        $result = $this->doNearbyRequest($lat, $lon, $radius, $types, $language);
 
-                    if (!$response->ok()) {
-                        Log::warning("[GooglePlaces] HTTP {$response->status()} for type={$type}");
-                        continue;
-                    }
+        if ($result['ok'] === false) {
+            return [];
+        }
 
-                    $data = $response->json();
+        Cache::put($cacheKey, $result['places'], now()->addHours(6));
+        return $result['places'];
+    }
 
-                    if (($data['status'] ?? 'ZERO_RESULTS') !== 'OK' || empty($data['results'])) {
-                        $status = $data['status'] ?? 'unknown';
-                        Log::info("[GooglePlaces] Skipped type {$type}: {$status}");
-                        continue;
-                    }
+    private function doNearbyRequest(float $lat, float $lon, int $radius, array $types, string $language): array
+    {
+        try {
+            $body = [
+                'maxResultCount' => 20,
+                'locationRestriction' => [
+                    'circle' => [
+                        'center' => [
+                            'latitude'  => (float) $lat,
+                            'longitude' => (float) $lon,
+                        ],
+                        'radius' => (float) $radius,
+                    ],
+                ],
+                'languageCode' => $language,
+            ];
 
-                    foreach ($data['results'] as $raw) {
-                        if (empty($raw['place_id']) || empty($raw['geometry']['location'])) {
-                            continue;
-                        }
-
-                        // Skip irrelevant business/service types
-                        if (collect($raw['types'])->contains(function ($t) {
-                            return in_array($t, [
-                                'accounting', 'bank', 'pharmacy', 'hospital', 'car_repair',
-                                'car_wash', 'insurance_agency', 'lawyer', 'real_estate_agency',
-                                'hardware_store', 'supermarket', 'store', 'gas_station',
-                            ], true);
-                        })) {
-                            continue;
-                        }
-
-                        // Extra details (opening_hours, website, phone, etc.)
-                        $details      = $this->fetchPlaceDetails($raw['place_id']);
-                        $openingHours = $details['opening_hours'] ?? null;
-
-                        $results[] = [
-                            'place_id'      => $raw['place_id'],
-                            'name'          => $raw['name'] ?? 'Unknown place',
-                            'lat'           => data_get($raw, 'geometry.location.lat'),
-                            'lon'           => data_get($raw, 'geometry.location.lng'),
-                            'rating'        => $raw['rating'] ?? null,
-
-                            // NOTE: this is a Google type (not canonical). The AI layer will normalize types.
-                            'category_slug' => $type,
-
-                            'opening_hours' => $openingHours,
-                            'meta'          => [
-                                'address'            => $raw['vicinity'] ?? null,
-                                'types'              => $raw['types'] ?? [],
-                                'user_ratings_total' => $raw['user_ratings_total'] ?? 0,
-                                'business_status'    => $raw['business_status'] ?? null,
-                                'icon'               => $raw['icon'] ?? null,
-                                'website'            => $details['website'] ?? null,
-                                'phone'              => $details['international_phone_number'] ?? null,
-                            ],
-                        ];
-                    }
-
-                    // Small delay to reduce chance of hitting rate limits.
-                    usleep(200_000);
-                } catch (Throwable $e) {
-                    Log::error("[GooglePlaces] Error fetching type={$type}: " . $e->getMessage());
-                    continue;
-                }
+            if (!empty($types)) {
+                $body['includedTypes'] = $types;
             }
 
-            return collect($results)
-                ->unique('place_id')
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'X-Goog-Api-Key'   => config('services.google.maps_server_key'),
+                    'X-Goog-FieldMask' => 'places.id,places.displayName,places.location,places.types,places.rating,places.userRatingCount,places.formattedAddress',
+                    'Referer'          => (string) config('app.url'),
+                ])
+                ->post($this->nearbyUrlV1, $body);
+
+            if (!$response->successful()) {
+                Log::warning("[GooglePlaces V1] Error {$response->status()} types=[" . implode(',', $types) . "]: " . $response->body());
+                return ['ok' => false, 'places' => []];
+            }
+
+            $data = $response->json();
+            $places = $data['places'] ?? [];
+
+            $mapped = collect($places)
+                ->map(function ($place) {
+                    $googleTypes = $place['types'] ?? [];
+                    $internalCategory = $this->resolveInternalCategory($googleTypes);
+
+                    return [
+                        'place_id'        => $place['id'] ?? null,
+                        'google_place_id' => $place['id'] ?? null,
+                        'name'            => data_get($place, 'displayName.text', 'Unknown'),
+                        'lat'             => (float) data_get($place, 'location.latitude', 0),
+                        'lon'             => (float) data_get($place, 'location.longitude', 0),
+                        'rating'          => isset($place['rating']) ? (float) $place['rating'] : null,
+                        'category_slug'   => $internalCategory,
+                        'opening_hours'   => null,
+                        'meta'            => [
+                            'address'            => $place['formattedAddress'] ?? null,
+                            'types'              => $googleTypes,
+                            'user_ratings_total' => $place['userRatingCount'] ?? 0,
+                            'business_status'    => null,
+                            'icon'               => null,
+                        ],
+                    ];
+                })
+                ->filter(static fn ($p) => !empty($p['place_id']))
                 ->values()
                 ->all();
-        });
+
+            return ['ok' => true, 'places' => $mapped];
+        } catch (Throwable $e) {
+            Log::error("[GooglePlaces V1] Exception: {$e->getMessage()}");
+            return ['ok' => false, 'places' => []];
+        }
     }
 
-    /**
-     * Fetch extra details for a place — opening hours, website, phone, etc.
-     *
-     * @param string $placeId
-     * @return array<string, mixed>
-     */
-    protected function fetchPlaceDetails(string $placeId): array
+    private function sanitizeIncludedTypes(array $types): array
     {
-        $cacheKey = "google:place_details:{$placeId}";
+        $types = array_map(static fn ($t) => strtolower(trim((string) $t)), $types);
+        $types = array_values(array_filter($types, static fn ($t) => $t !== ''));
+        $types = array_values(array_diff($types, $this->unsupportedIncludedTypesV1));
+        $types = array_values(array_unique($types));
 
-        return Cache::remember($cacheKey, now()->addHours(24), function () use ($placeId) {
-            try {
-                $response = Http::timeout(8)->get($this->detailsUrl, [
-                    'place_id' => $placeId,
-                    'language' => 'pl',
-                    'fields'   => 'opening_hours,website,international_phone_number',
-                    'key'      => config('services.google.maps_key'),
-                ]);
+        if (empty($types)) {
+            $types = array_values(array_diff($this->defaultTypes, $this->unsupportedIncludedTypesV1));
+        }
 
-                if (!$response->ok()) {
-                    Log::warning("[GooglePlaces] Details HTTP {$response->status()} pid={$placeId}");
-                    return [];
-                }
-
-                $data = $response->json();
-
-                if (($data['status'] ?? '') !== 'OK') {
-                    Log::info("[GooglePlaces] Details skipped pid={$placeId}: " . ($data['status'] ?? 'unknown'));
-                    return [];
-                }
-
-                return $data['result'] ?? [];
-            } catch (Throwable $e) {
-                Log::error("[GooglePlaces] Error fetching details pid={$placeId}: {$e->getMessage()}");
-                return [];
-            }
-        });
+        return $types;
     }
 
-    /**
-     * Map internal canonical category slugs (museum/food/nature/nightlife/attraction/etc.)
-     * to Google place types used in Nearby Search API.
-     *
-     * @param array<int, string> $categorySlugs
-     * @return array<int, string>
-     */
     protected function mapCategoriesToGoogleTypes(array $categorySlugs): array
     {
         if (empty($categorySlugs)) {
@@ -298,22 +415,16 @@ class GooglePlacesService
         }
 
         $map = [
-            'museum'    => ['museum', 'art_gallery'],
-            'nature'    => ['park', 'zoo', 'campground', 'tourist_attraction'],
-            'food'      => ['restaurant', 'cafe', 'bakery', 'bar'],
-            'nightlife' => ['bar', 'night_club', 'pub'],
-
-            // Canonical attraction -> general POIs / attractions
-            'attraction' => ['tourist_attraction', 'point_of_interest', 'tourist_information_center'],
-
-            // Technical (kept for compatibility; AI layer can exclude them)
-            'hotel'     => ['lodging'],
-            'airport'   => ['airport'],
-            'station'   => ['train_station', 'subway_station', 'bus_station', 'transit_station'],
-
-            // Optional legacy aliases
-            'religion'        => ['church', 'mosque', 'synagogue'],
-            'accommodation'   => ['lodging'],
+            'museum'         => ['museum', 'art_gallery'],
+            'nature'         => ['park', 'zoo', 'campground', 'tourist_attraction'],
+            'food'           => ['restaurant', 'cafe', 'bakery', 'bar'],
+            'nightlife'      => ['bar', 'night_club'],
+            'attraction'     => ['tourist_attraction', 'tourist_information_center'],
+            'hotel'          => ['lodging'],
+            'airport'        => ['airport'],
+            'station'        => ['train_station', 'subway_station', 'bus_station', 'transit_station'],
+            'religion'       => ['church', 'mosque', 'synagogue', 'hindu_temple'],
+            'accommodation'  => ['lodging'],
         ];
 
         $types = [];
@@ -325,5 +436,36 @@ class GooglePlacesService
         }
 
         return array_values(array_unique($types));
+    }
+
+    private function resolveInternalCategory(array $googleTypes): string
+    {
+        foreach ($googleTypes as $gType) {
+            if (isset($this->typeMapping[$gType])) {
+                return $this->typeMapping[$gType];
+            }
+        }
+
+        return 'other';
+    }
+
+    private function resolveTripCoords(Trip $trip): ?array
+    {
+        if ($trip->start_latitude !== null && $trip->start_longitude !== null) {
+            return [(float) $trip->start_latitude, (float) $trip->start_longitude];
+        }
+
+        if (!empty($trip->start_location)) {
+            $row = DB::table('trips')
+                ->where('id', $trip->id)
+                ->selectRaw('ST_Y(start_location::geometry) as lat, ST_X(start_location::geometry) as lon')
+                ->first();
+
+            if ($row && $row->lat !== null && $row->lon !== null) {
+                return [(float) $row->lat, (float) $row->lon];
+            }
+        }
+
+        return null;
     }
 }

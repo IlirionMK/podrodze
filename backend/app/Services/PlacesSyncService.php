@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Interfaces\PlacesSyncInterface;
 use App\Models\Place;
 use App\Services\External\GooglePlacesService;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Throwable;
 
 class PlacesSyncService implements PlacesSyncInterface
 {
@@ -15,73 +15,94 @@ class PlacesSyncService implements PlacesSyncInterface
         protected GooglePlacesService $googlePlaces
     ) {}
 
-    /**
-     * Fetch and store nearby interesting places from Google API.
-     *
-     * @param float $lat
-     * @param float $lon
-     * @param int $radius
-     * @return array{added: int, updated: int}
-     */
     public function fetchAndStore(float $lat, float $lon, int $radius = 3000): array
     {
         $places = $this->googlePlaces->fetchNearby($lat, $lon, $radius);
 
-        $added = 0;
-        $updated = 0;
+        $result = DB::transaction(function () use ($places) {
+            $added = 0;
+            $updated = 0;
 
-        DB::beginTransaction();
-
-        try {
             foreach ($places as $item) {
                 if (empty($item['place_id']) || empty($item['lat']) || empty($item['lon'])) {
                     continue;
                 }
 
-                $locationWKT = sprintf('SRID=4326;POINT(%F %F)', $item['lon'], $item['lat']);
+                $placeId = (string) $item['place_id'];
+
+                $meta = $item['meta'] ?? [];
+                if (!is_array($meta)) {
+                    $meta = [];
+                }
+
+                $googleTypes = [];
+
+                if (!empty($item['category_slug'])) {
+                    $googleTypes[] = (string) $item['category_slug'];
+                }
+
+                $metaTypes = $meta['types'] ?? [];
+                if (is_array($metaTypes)) {
+                    $googleTypes = array_merge($googleTypes, $metaTypes);
+                }
+
+                $googleTypes = array_values(array_unique(array_filter(array_map(
+                    fn ($t) => strtolower(trim((string) $t)),
+                    $googleTypes
+                ))));
+
+                $categorySlug = $this->mapGoogleTypesToCategory($googleTypes);
+
+                $meta = array_merge($meta, [
+                    'source' => $meta['source'] ?? 'google',
+                    'google_types' => $googleTypes,
+                ]);
 
                 $payload = [
-                    'name'          => $item['name'],
-                    'category_slug' => $item['category_slug'],
-                    'rating'        => $item['rating'],
-                    'meta'          => json_encode($item['meta'] ?? []),
-                    'opening_hours' => json_encode($item['opening_hours'] ?? null),
-                    'location'      => DB::raw("ST_GeomFromText('$locationWKT')"),
-                    'updated_at'    => now(),
+                    'name'          => $item['name'] ?? 'Unknown place',
+                    'category_slug' => $categorySlug,
+                    'rating'        => $item['rating'] ?? null,
+                    'meta'          => $meta,
+                    'opening_hours' => $item['opening_hours'] ?? null,
+                    'location'      => DB::raw(sprintf(
+                        "ST_SetSRID(ST_MakePoint(%F, %F), 4326)",
+                        (float) $item['lon'],
+                        (float) $item['lat']
+                    )),
                 ];
 
-                $existing = Place::where('google_place_id', $item['place_id'])->first();
+                $model = Place::updateOrCreate(
+                    ['google_place_id' => $placeId],
+                    $payload
+                );
 
-                if ($existing) {
-                    $existing->update($payload);
-                    $updated++;
-                } else {
-                    $payload['google_place_id'] = $item['place_id'];
-                    $payload['created_at'] = now();
-
-                    Place::create($payload);
+                if ($model->wasRecentlyCreated) {
                     $added++;
+                } else {
+                    $updated++;
                 }
             }
 
-            DB::commit();
+            return [
+                'added' => $added,
+                'updated' => $updated,
+            ];
+        });
 
-        } catch (Throwable $e) {
-            DB::rollBack();
+        Log::info('[PlacesSyncService] Synced places', $result);
 
-            Log::error('[PlacesSyncService] Error syncing places', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+        return $result;
+    }
 
-            throw $e;
+    private function mapGoogleTypesToCategory(array $types): string
+    {
+        foreach ($types as $type) {
+            $mapped = Config::get("google_category_map.$type");
+            if ($mapped) {
+                return (string) $mapped;
+            }
         }
 
-        Log::info("[PlacesSyncService] Synced {$added} added / {$updated} updated places");
-
-        return [
-            'added'   => $added,
-            'updated' => $updated,
-        ];
+        return 'other';
     }
 }

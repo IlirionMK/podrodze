@@ -24,9 +24,18 @@ class FacebookAuthController extends Controller
         try {
             $user = $this->facebookOAuth->authenticate($request->code);
         } catch (\Throwable $e) {
+            $msg = $e->getMessage();
+
+            if ($msg === 'facebook_email_missing') {
+                return response()->json([
+                    'message' => 'Facebook OAuth failed',
+                    'error'   => 'facebook_email_missing',
+                ], 422);
+            }
+
             return response()->json([
                 'message' => 'Facebook OAuth failed',
-                'error'   => $e->getMessage(),
+                'error'   => $msg,
             ], 422);
         }
 

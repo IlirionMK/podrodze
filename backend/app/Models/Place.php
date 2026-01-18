@@ -12,6 +12,7 @@ class Place extends Model
         'category_slug',
         'rating',
         'meta',
+        'opening_hours',
         'location',
 
     ];

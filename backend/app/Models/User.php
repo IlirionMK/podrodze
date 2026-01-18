@@ -47,6 +47,14 @@ class User extends Authenticatable implements MustVerifyEmail
             ->withPivot(['role', 'status', 'created_at', 'updated_at'])
             ->withTimestamps();
     }
+    public function acceptedJoinedTrips()
+    {
+        return $this->belongsToMany(Trip::class, 'trip_user')
+            ->wherePivot('status', 'accepted')
+            ->withPivot(['role', 'status', 'created_at', 'updated_at'])
+            ->withTimestamps();
+    }
+
 
     public function preferences()
     {

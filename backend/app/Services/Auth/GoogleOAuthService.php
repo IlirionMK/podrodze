@@ -55,23 +55,34 @@ class GoogleOAuthService
             throw new \RuntimeException("Google did not return a valid user ID.");
         }
 
-        $user = User::where('google_id', $googleId)->first();
+         $user = User::where('google_id', $googleId)->first();
 
-        if (!$user && $googleUser->getEmail()) {
+         if (!$user && $googleUser->getEmail()) {
             $user = User::where('email', $googleUser->getEmail())->first();
         }
 
-        if (!$user) {
+         if (!$user) {
             return User::create([
-                'name'      => $googleUser->getName() ?? 'Google User',
-                'email'     => $googleUser->getEmail(),
-                'password'  => bcrypt(Str::random(32)),
-                'google_id' => $googleId,
+                'name'              => $googleUser->getName() ?? 'Google User',
+                'email'             => $googleUser->getEmail(),
+                'password'          => bcrypt(Str::random(32)),
+                'google_id'         => $googleId,
+                'email_verified_at' => now(),
             ]);
         }
 
+         $updates = [];
+
         if (!$user->google_id) {
-            $user->update(['google_id' => $googleId]);
+            $updates['google_id'] = $googleId;
+        }
+
+         if (!$user->email_verified_at) {
+            $updates['email_verified_at'] = now();
+        }
+
+        if (!empty($updates)) {
+            $user->update($updates);
         }
 
         return $user;

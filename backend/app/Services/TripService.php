@@ -20,17 +20,22 @@ class TripService implements TripInterface
     public function list(User $user): LengthAwarePaginator
     {
         return Trip::query()
-            ->where('owner_id', $user->id)
-            ->orWhereHas('members', fn ($q) => $q->where('trip_user.user_id', $user->id))
+            ->where(function ($query) use ($user) {
+                $query->where('owner_id', $user->id)
+                ->orWhereHas('members', function ($q) use ($user) {
+                    $q->where('trip_user.user_id', $user->id)
+                        ->where('trip_user.status', 'accepted');
+                });
+            })
             ->with(['members:id,name,email'])
             ->latest()
             ->paginate(10);
     }
-
     public function create(array $data, User $owner): Trip
     {
         $trip = Trip::create([
             'name'       => $data['name'],
+            'description' => $data['description'] ?? null,
             'start_date' => $data['start_date'] ?? null,
             'end_date'   => $data['end_date'] ?? null,
             'owner_id'   => $owner->id,

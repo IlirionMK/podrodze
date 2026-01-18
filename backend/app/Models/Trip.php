@@ -12,6 +12,7 @@ class Trip extends Model
 
     protected $fillable = [
         'name',
+        'description',
         'start_date',
         'end_date',
         'owner_id',
@@ -60,6 +61,14 @@ class Trip extends Model
             ->withPivot(['role', 'status', 'created_at', 'updated_at'])
             ->withTimestamps();
     }
+    public function acceptedMembers()
+    {
+        return $this->belongsToMany(User::class, 'trip_user')
+            ->wherePivot('status', 'accepted')
+            ->withPivot(['role', 'status', 'created_at', 'updated_at'])
+            ->withTimestamps();
+    }
+
 
     public function owner()
     {
@@ -69,7 +78,7 @@ class Trip extends Model
     public function places()
     {
         return $this->belongsToMany(Place::class, 'trip_place')
-            ->withPivot(['order_index', 'status', 'note'])
+            ->withPivot(['order_index', 'status', 'note', 'is_fixed', 'day', 'added_by'])
             ->withTimestamps();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 
 class FacebookOAuthService
 {
@@ -34,7 +35,6 @@ class FacebookOAuthService
         $accessToken = $tokenResponse['access_token'];
 
         try {
-            // Важно: fields() — чтобы запросить email явно (Facebook иногда не возвращает его без fields)
             $facebookUser = Socialite::driver('facebook')
                 ->stateless()
                 ->fields(['id', 'name', 'email'])
@@ -43,23 +43,22 @@ class FacebookOAuthService
             throw new \RuntimeException('Failed to fetch Facebook user: ' . $e->getMessage());
         }
 
-        // Facebook ID
         $facebookId = $facebookUser->getId() ?? ($facebookUser->user['id'] ?? null);
         if (!$facebookId) {
             throw new \RuntimeException('Facebook did not return a valid user ID.');
         }
 
-        // В стиле Google: если email нет — ошибка (у Facebook это реально возможно)
         if (!$facebookUser->getEmail()) {
-            throw new \RuntimeException('Facebook account does not provide an email address.');
+            throw new \RuntimeException('facebook_email_missing');
         }
 
-        return $this->findOrCreateUser($facebookUser, $facebookId);
+        return $this->findOrCreateUser($facebookUser, (string) $facebookId);
     }
 
     protected function findOrCreateUser($facebookUser, string $facebookId): User
     {
         $email = $facebookUser->getEmail();
+        $name = $facebookUser->getName() ?? 'Facebook User';
 
         $user = User::where('facebook_id', $facebookId)->first();
 
@@ -67,17 +66,31 @@ class FacebookOAuthService
             $user = User::where('email', $email)->first();
         }
 
+        $now = Carbon::now();
+
         if (!$user) {
             return User::create([
-                'name'        => $facebookUser->getName() ?? 'Facebook User',
-                'email'       => $email,
-                'password'    => bcrypt(Str::random(32)),
-                'facebook_id' => $facebookId,
+                'name'              => $name,
+                'email'             => $email,
+                'password'          => bcrypt(Str::random(32)),
+                'facebook_id'       => $facebookId,
+                'email_verified_at' => $now,
             ]);
         }
 
+        $updates = [];
+
         if (!$user->facebook_id) {
-            $user->update(['facebook_id' => $facebookId]);
+            $updates['facebook_id'] = $facebookId;
+        }
+
+        if (!$user->email_verified_at) {
+            $updates['email_verified_at'] = $now;
+        }
+
+        if (!empty($updates)) {
+            $user->update($updates);
+            $user->refresh();
         }
 
         return $user;
