@@ -37,10 +37,16 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
 
         $context = $this->buildContext($trip, $query);
 
+        // ✅ NEW: include origins hash in cache key so cache changes when trip places change
+        $originsHash = hash('sha256', json_encode($context['origins'] ?? []));
+        $originsShort = Str::substr($originsHash, 0, 8);
+
+        // ✅ bump cache version v22 -> v23
         $cacheKey = sprintf(
-            'ai:sug:v22:trip:%d:%s:l:%s:r:%d:n:%d',
+            'ai:sug:v23:trip:%d:%s:%s:l:%s:r:%d:n:%d',
             (int) $trip->id,
             Str::substr($prefsHash, 0, 8),
+            $originsShort,
             $query->locale,
             (int) $query->radiusMeters,
             (int) $query->limit
@@ -48,12 +54,26 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
 
         $payload = Cache::remember($cacheKey, now()->addHours(12), function () use ($trip, $query, $prefs, $context) {
             if (empty($context['origins'])) {
-                return ['items' => [], 'meta' => ['trip_id' => $trip->id, 'empty' => true, 'origin_source' => $context['origin_source'] ?? 'none']];
+                return [
+                    'items' => [],
+                    'meta' => [
+                        'trip_id' => (int) $trip->id,
+                        'empty' => true,
+                        'origin_source' => $context['origin_source'] ?? 'none',
+                    ],
+                ];
             }
 
             $candidates = $this->candidateProvider->getCandidates($trip, $query, $prefs, $context);
             if (empty($candidates)) {
-                return ['items' => [], 'meta' => ['trip_id' => $trip->id, 'empty' => true, 'origin_source' => $context['origin_source'] ?? 'none']];
+                return [
+                    'items' => [],
+                    'meta' => [
+                        'trip_id' => (int) $trip->id,
+                        'empty' => true,
+                        'origin_source' => $context['origin_source'] ?? 'none',
+                    ],
+                ];
             }
 
             $aiRows = $this->reasoner->rankAndExplain($candidates, $prefs, $context, $query->locale);
@@ -149,7 +169,11 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
             ];
         }
 
-        return ['origins' => [], 'origin_source' => 'none', 'radius_m' => (int) $query->radiusMeters];
+        return [
+            'origins' => [],
+            'origin_source' => 'none',
+            'radius_m' => (int) $query->radiusMeters,
+        ];
     }
 
     private function clampQuery(PlaceSuggestionQuery $query): PlaceSuggestionQuery

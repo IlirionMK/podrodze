@@ -21,22 +21,22 @@ final class DatabasePlacesCandidateProvider implements PlacesCandidateProviderIn
     public function getCandidates(Trip $trip, PlaceSuggestionQuery $query, array $preferences, array $context): array
     {
         $origins = $context['origins'] ?? [];
-        if (empty($origins)) return [];
+        if (empty($origins)) {
+            return [];
+        }
 
-        $preferred = array_keys(array_filter($preferences, fn($v) => (float)$v > 0));
+        $preferred = array_keys(array_filter($preferences, static fn ($v) => (float) $v > 0));
         $existingPlaceIds = DB::table('trip_place')->where('trip_id', $trip->id)->pluck('place_id')->all();
 
-        // 1. Поиск в локальной базе
-        $dbCandidates = $this->getDbCandidates($origins, $preferred, $query->radiusMeters, $existingPlaceIds);
+        $dbCandidates = $this->getDbCandidates($origins, $preferred, (int) $query->radiusMeters, $existingPlaceIds);
 
-        // 2. Если результатов мало, опрашиваем Google Places
-        if (count($dbCandidates) < $query->limit && config('ai.suggestions.external.enabled')) {
+        if (count($dbCandidates) < (int) $query->limit && (bool) config('ai.suggestions.external.enabled')) {
             foreach ($origins as $origin) {
                 try {
                     $googleResults = $this->getGoogleCandidates($trip, $origin, $preferred, $query);
                     $dbCandidates = $this->mergeResults($dbCandidates, $googleResults);
-                } catch (\Exception $e) {
-                    Log::error("Google search failed for origin: {$origin['name']}");
+                } catch (\Throwable $e) {
+                    Log::error("Google search failed for origin: " . ($origin['name'] ?? 'unknown') . "; " . $e->getMessage());
                 }
             }
         }
@@ -46,14 +46,14 @@ final class DatabasePlacesCandidateProvider implements PlacesCandidateProviderIn
 
     private function getDbCandidates(array $origins, array $categories, int $radius, array $existingPlaceIds): array
     {
-        $pointsSql = collect($origins)->map(fn($p) => "{$p['lon']} {$p['lat']}")->implode(',');
+        $pointsSql = collect($origins)->map(static fn ($p) => "{$p['lon']} {$p['lat']}")->implode(',');
         $multiPoint = "ST_GeogFromText('MULTIPOINT($pointsSql)')";
 
         $results = Place::query()
             ->select(['id', 'name', 'category_slug', 'rating', 'meta', 'google_place_id'])
             ->selectRaw('ST_Y(location::geometry) as lat, ST_X(location::geometry) as lon')
-            ->whereRaw("ST_DWithin(location, $multiPoint, ?)", [$radius])
             ->whereNotNull('location')
+            ->whereRaw("ST_DWithin(location, $multiPoint, ?)", [$radius])
             ->orderBy('rating', 'desc')
             ->limit(50);
 
@@ -65,9 +65,9 @@ final class DatabasePlacesCandidateProvider implements PlacesCandidateProviderIn
             $results->whereNotIn('id', $existingPlaceIds);
         }
 
-        return $results->get()->map(function($row) use ($origins) {
-            $lat = (float)$row->lat;
-            $lon = (float)$row->lon;
+        return $results->get()->map(function ($row) use ($origins) {
+            $lat = (float) $row->lat;
+            $lon = (float) $row->lon;
             $closest = $this->findNearestOrigin($lat, $lon, $origins);
 
             return [
@@ -77,61 +77,78 @@ final class DatabasePlacesCandidateProvider implements PlacesCandidateProviderIn
                 'name' => (string) $row->name,
                 'category' => $row->category_slug ?? 'other',
                 'rating' => (float) $row->rating,
-                'reviews_count' => $this->extractReviews($row->meta), // Исправленный вызов
+                'reviews_count' => $this->extractReviews($row->meta),
                 'lat' => $lat,
                 'lon' => $lon,
-                'distance_m' => $closest['dist'],
-                'near_place_name' => $closest['name']
+                'distance_m' => (int) ($closest['dist'] ?? 0),
+                'near_place_name' => $closest['name'] ?? null,
             ];
         })->all();
     }
 
-    private function getGoogleCandidates(Trip $trip, array $origin, array $preferred, $query): array
+    private function getGoogleCandidates(Trip $trip, array $origin, array $preferred, PlaceSuggestionQuery $query): array
     {
-        $raw = $this->googlePlaces->fetchNearbyForTripByPreferredCategories($trip, $preferred, $query->radiusMeters, 15);
-        return collect($raw)->map(fn($p) => [
-            'source' => 'google',
-            'external_id' => 'google:' . $p['place_id'],
-            'name' => (string) ($p['name'] ?? 'Unknown'),
-            'category' => $this->categories->normalize($p['category_slug'] ?? 'other'),
-            'rating' => (float) ($p['rating'] ?? 0),
-            'reviews_count' => (int) ($p['user_ratings_total'] ?? 0),
-            'lat' => (float) $p['lat'],
-            'lon' => (float) $p['lon'],
-            'distance_m' => $this->haversineMeters($origin['lat'], $origin['lon'], (float)$p['lat'], (float)$p['lon']),
-            'near_place_name' => $origin['name']
-        ])->all();
+        // ✅ FIX: use origin point instead of resolveTripCoords($trip)
+        $raw = $this->googlePlaces->fetchNearbyByPointAndPreferredCategories(
+            (float) ($origin['lat'] ?? 0),
+            (float) ($origin['lon'] ?? 0),
+            $preferred,
+            (int) $query->radiusMeters,
+            15,
+            (string) $query->locale
+        );
+
+        return collect($raw)->map(function ($p) use ($origin) {
+            return [
+                'source' => 'google',
+                'external_id' => 'google:' . (string) ($p['place_id'] ?? ''),
+                'name' => (string) ($p['name'] ?? 'Unknown'),
+                'category' => $this->categories->normalize($p['category_slug'] ?? 'other'),
+                'rating' => (float) ($p['rating'] ?? 0),
+                'reviews_count' => (int) data_get($p, 'meta.user_ratings_total', $p['user_ratings_total'] ?? 0),
+                'lat' => (float) ($p['lat'] ?? 0),
+                'lon' => (float) ($p['lon'] ?? 0),
+                'distance_m' => (int) $this->haversineMeters(
+                    (float) ($origin['lat'] ?? 0),
+                    (float) ($origin['lon'] ?? 0),
+                    (float) ($p['lat'] ?? 0),
+                    (float) ($p['lon'] ?? 0),
+                ),
+                'near_place_name' => $origin['name'] ?? null,
+            ];
+        })->filter(static fn ($x) => !empty($x['external_id']))->values()->all();
     }
 
-    /**
-     * Безопасное извлечение отзывов, даже если meta — это строка или null
-     */
     private function extractReviews(mixed $meta): int
     {
-        if (empty($meta)) return 0;
+        if (empty($meta)) {
+            return 0;
+        }
 
-        // Если meta пришла как JSON-строка (бывает в некоторых драйверах)
         if (is_string($meta)) {
             $meta = json_decode($meta, true);
         }
 
-        if (!is_array($meta)) return 0;
+        if (!is_array($meta)) {
+            return 0;
+        }
 
         return (int) ($meta['user_ratings_total'] ?? $meta['reviews_count'] ?? 0);
     }
 
     private function findNearestOrigin(float $lat, float $lon, array $origins): array
     {
-        $minDist = 9999999;
+        $minDist = PHP_FLOAT_MAX;
         $best = ['dist' => 0, 'name' => 'your route'];
 
         foreach ($origins as $o) {
-            $d = $this->haversineMeters($lat, $lon, $o['lat'], $o['lon']);
+            $d = $this->haversineMeters($lat, $lon, (float) $o['lat'], (float) $o['lon']);
             if ($d < $minDist) {
                 $minDist = $d;
-                $best = ['dist' => (int)$d, 'name' => $o['name']];
+                $best = ['dist' => (int) $d, 'name' => (string) ($o['name'] ?? 'your route')];
             }
         }
+
         return $best;
     }
 
@@ -147,7 +164,7 @@ final class DatabasePlacesCandidateProvider implements PlacesCandidateProviderIn
     private function mergeResults(array $existing, array $new): array
     {
         $existingIds = collect($existing)->pluck('external_id')->filter()->all();
-        $filteredNew = collect($new)->reject(fn($item) => in_array($item['external_id'], $existingIds))->all();
+        $filteredNew = collect($new)->reject(static fn ($item) => in_array($item['external_id'] ?? null, $existingIds, true))->all();
         return array_merge($existing, $filteredNew);
     }
 }
