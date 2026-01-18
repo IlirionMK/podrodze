@@ -3,7 +3,11 @@
     encode gzip
 
     handle /api* {
-        php_fastcgi {$PHP_FPM_UPSTREAM:127.0.0.1}:9000
+        php_fastcgi {$PHP_FPM_UPSTREAM:127.0.0.1}:9000 {
+            header_up Host {host}
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto {scheme}
+        }
     }
 
     handle {

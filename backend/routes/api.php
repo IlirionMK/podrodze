@@ -30,7 +30,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/reset-password', [NewPasswordController::class, 'store']);
 
     Route::get('/email/verify/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
+        ->middleware(['signed:relative', 'throttle:6,1'])
         ->name('verification.verify');
 
     Route::get('/auth/google/url', [GoogleAuthController::class, 'getAuthUrl']);
