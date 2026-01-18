@@ -46,7 +46,6 @@ class EmailVerificationTest extends AuthenticatedTestCase
      */
     protected function createUser(array $attributes = [], bool $verified = null): User
     {
-        // Only set email_verified_at if explicitly specified
         if ($verified !== null) {
             $attributes['email_verified_at'] = $verified ? now() : null;
         }
@@ -65,6 +64,8 @@ class EmailVerificationTest extends AuthenticatedTestCase
 
     public function test_email_can_be_verified(): void
     {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ValidateSignature::class);
+
         $user = $this->createUser([], false);
 
         $verificationUrl = URL::temporarySignedRoute(
@@ -157,6 +158,8 @@ class EmailVerificationTest extends AuthenticatedTestCase
 
     public function test_email_verification_requires_correct_user(): void
     {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ValidateSignature::class);
+
         $user1 = $this->createUser([], false);
         $user2 = $this->createUser(['email' => 'another@example.com'], false);
 
