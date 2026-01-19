@@ -10,7 +10,15 @@ use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase\TripTestCase;
-
+/**
+ * Tests for AI-powered trip suggestions.
+ *
+ * This class verifies that:
+ * - AI suggestions are generated based on trip context
+ * - Suggestions are relevant and personalized
+ * - Suggestion quality meets expectations
+ * - User feedback on suggestions is processed correctly
+ */
 class TripAiSuggestionsTest extends TripTestCase
 {
     protected function setUp(): void

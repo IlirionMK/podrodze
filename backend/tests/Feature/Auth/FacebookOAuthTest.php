@@ -9,6 +9,18 @@ use Mockery;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
 
+/**
+ * Tests for Facebook OAuth authentication flow.
+ *
+ * This class verifies that:
+ * - Users can authenticate using Facebook OAuth
+ * - Existing users can link their accounts with Facebook
+ * - Error cases are properly handled (invalid codes, missing emails)
+ * - User data is properly synchronized with Facebook
+ *
+ * @covers \App\Http\Controllers\Auth\FacebookAuthController
+ */
+
 #[Group('authentication')]
 #[Group('oauth')]
 #[Group('facebook')]

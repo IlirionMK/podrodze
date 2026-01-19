@@ -11,8 +11,14 @@ use Tests\Traits\HandlesRateLimiting;
 
 /**
  * Base test case class for all application tests.
+ *
  * This is the foundation class that all other test cases should extend.
  * It provides the basic testing environment setup and common testing traits.
+ *
+ * @package Tests
+ * @uses \Illuminate\Foundation\Testing\TestCase
+ * @see \Tests\Traits\CreatesApplication
+ * @see \Tests\Traits\HandlesRateLimiting
  */
 abstract class TestCase extends BaseFrameworkTestCase
 {
@@ -32,6 +38,5 @@ abstract class TestCase extends BaseFrameworkTestCase
     {
         parent::setUp();
 
-        // Additional setup can be added here that should run for all tests
     }
 }

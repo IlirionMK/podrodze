@@ -12,11 +12,12 @@ use Tests\TestCase\TripTestCase;
  * Tests for trip member management.
  *
  * This class verifies that:
- * - Members can be added to and removed from trips
- * - Role-based permissions are enforced
- * - Member status changes are handled correctly
- * - Editor permissions work as expected
- * - Owner privileges are maintained
+ * - Members can be added and removed from trips
+ * - Member roles and permissions work as expected
+ * - Member lists are properly filtered
+ * - Member count limits are enforced
+ *
+ * @covers \App\Http\Controllers\Api\V1\TripUserController
  */
 #[Group('members')]
 #[Group('trip')]

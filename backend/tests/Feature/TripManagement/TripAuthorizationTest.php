@@ -13,11 +13,12 @@ use Tests\TestCase\TripTestCase;
  * Tests for trip authorization and access control.
  *
  * This class verifies that:
- * - Unauthorized users cannot perform restricted actions on trips
- * - Proper HTTP status codes are returned for unauthorized access attempts
- * - Trip ownership is correctly enforced
- * - Role-based permissions are properly validated
- * - Guest access is restricted for protected routes
+ * - Only trip owners and members can access trip details
+ * - Unauthorized users are denied access
+ * - Role-based permissions are enforced
+ * - Public/private trip visibility works as expected
+ *
+ * @covers \App\Policies\TripPolicy
  */
 #[Group('authorization')]
 #[Group('trip')]

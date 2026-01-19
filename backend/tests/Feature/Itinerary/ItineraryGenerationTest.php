@@ -15,7 +15,15 @@ use Tests\TestCase;
 use Illuminate\Support\Facades\DB;
 use App\Interfaces\ItineraryServiceInterface;
 use Mockery;
-
+/**
+ * Tests for itinerary generation functionality.
+ *
+ * This class verifies that:
+ * - Itineraries can be generated based on trip details
+ * - Generated itineraries include all required information
+ * - Itinerary suggestions are relevant and accurate
+ * - Itinerary updates are properly reflected
+ */
 class ItineraryGenerationTest extends TestCase
 {
     use RefreshDatabase;

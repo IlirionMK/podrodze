@@ -9,6 +9,18 @@ use Mockery;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
 
+/**
+ * Tests for Google OAuth authentication flow.
+ *
+ * This class verifies that:
+ * - Users can authenticate using Google OAuth
+ * - Existing users can link their accounts with Google
+ * - Error cases are properly handled (invalid codes, missing emails)
+ * - User data is properly synchronized with Google
+ *
+ * @covers \App\Http\Controllers\Auth\GoogleAuthController
+ */
+
 #[Group('authentication')]
 #[Group('oauth')]
 #[Group('google')]

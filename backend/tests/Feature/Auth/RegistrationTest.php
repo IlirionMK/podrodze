@@ -10,6 +10,12 @@ use Tests\TestCase\ApiTestCase;
 /**
  * Tests for user registration functionality.
  *
+ * This class verifies that:
+ * - New users can register with valid information
+ * - Registration validations work as expected
+ * - Required fields are properly enforced
+ * - User data is correctly stored in the database
+ *
  * @covers \App\Http\Controllers\Auth\RegisteredUserController
  */
 #[Group('auth')]

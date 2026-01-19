@@ -11,7 +11,20 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\AuthenticatedTestCase;
-
+/**
+ * Tests for email verification functionality.
+ *
+ * This class verifies that:
+ * - Email verification links can be requested
+ * - Email verification links are valid and can be used
+ * - Verified users can access protected routes
+ * - Unverified users are restricted as configured
+ *
+ * @covers \App\Http\Controllers\Auth\{
+ *     EmailVerificationNotificationController,
+ *     VerifyEmailController
+ * }
+ */
 #[Group('auth')]
 #[Group('verification')]
 class EmailVerificationTest extends AuthenticatedTestCase

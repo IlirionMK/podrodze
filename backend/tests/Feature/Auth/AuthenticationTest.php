@@ -7,7 +7,18 @@ use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
 
 /**
- * Integration tests for the user authentication process.
+ * Tests for user authentication functionality.
+ *
+ * This class verifies that:
+ * - Users can log in with valid credentials
+ * - Invalid login attempts are rejected
+ * - Authenticated users can log out
+ * - Authentication state is properly maintained
+ *
+ * @covers \App\Http\Controllers\Auth\{
+ *     AuthenticatedSessionController,
+ *     RegisteredUserController
+ * }
  */
 #[Group('authentication')]
 #[Group('auth')]

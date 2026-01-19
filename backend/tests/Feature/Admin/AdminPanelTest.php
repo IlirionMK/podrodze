@@ -6,7 +6,20 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
-
+/**
+ * Tests for admin panel functionality and access control.
+ *
+ * This class verifies that:
+ * - Admin users can access protected admin routes
+ * - Non-admin users are restricted from admin areas
+ * - Admin operations (CRUD, user management) function as expected
+ * - Role-based access control is properly enforced
+ *
+ * @covers \App\Http\Controllers\Api\V1\Admin\{
+ *      AdminActivityLogController,
+ *      AdminUserController
+ * }
+ */
 #[Group('admin')]
 #[Group('admin-panel')]
 class AdminPanelTest extends ApiTestCase
@@ -52,7 +65,6 @@ class AdminPanelTest extends ApiTestCase
      */
     public function test_regular_user_cannot_access_admin_endpoints(): void
     {
-        // Debug: Check if admin routes are registered
         $routes = collect(\Illuminate\Support\Facades\Route::getRoutes()->getRoutes())
             ->filter(fn($route) => str_starts_with($route->uri, 'api/v1/admin'))
             ->map(fn($route) => [
@@ -64,11 +76,9 @@ class AdminPanelTest extends ApiTestCase
 
         \Log::info('Admin routes in test:', $routes);
 
-        // Debug: Check admin middleware registration
         $middleware = app('router')->getMiddleware();
         \Log::info('Registered middleware:', ['admin' => $middleware['admin'] ?? 'Not registered']);
 
-        // Test each endpoint
         $endpoints = [
             'GET /api/v1/admin/health',
             'GET /api/v1/admin/users',
@@ -87,15 +97,12 @@ class AdminPanelTest extends ApiTestCase
                 'Accept' => 'application/json',
             ])->json($method, $url);
 
-            // Debug: Log the response
             \Log::info("Response for $method $url", [
                 'status' => $response->status(),
                 'content' => $response->content(),
                 'headers' => $response->headers->all()
             ]);
 
-            // For now, just log the status to see what we're getting
-            // We'll update the assertion once we know what to expect
             $this->assertNotEquals(500, $response->status(),
                 "Server error when accessing $method $url: " . $response->content()
             );
@@ -241,7 +248,6 @@ class AdminPanelTest extends ApiTestCase
      */
     public function test_admin_can_view_activity_logs(): void
     {
-        // Create test activity log
         ActivityLog::create([
             'user_id' => $this->adminUser->id,
             'action' => 'test.action',

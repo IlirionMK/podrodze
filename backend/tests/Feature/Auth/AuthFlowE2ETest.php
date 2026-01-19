@@ -13,11 +13,17 @@ use Tests\TestCase\ApiTestCase;
 /**
  * End-to-end tests for the complete authentication flow.
  *
+ * This class verifies that:
+ * - The complete user journey from registration to authentication works
+ * - Session management functions correctly
+ * - Authentication state persists as expected
+ * - Edge cases in the auth flow are handled properly
+ *
  * @covers \App\Http\Controllers\Auth\{
  *     RegisteredUserController,
  *     AuthenticatedSessionController,
  *     EmailVerificationController
- *
+ * }
  */
 #[Group('auth')]
 #[Group('e2e')]
