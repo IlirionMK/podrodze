@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\V1\ItineraryController;
 use App\Http\Controllers\Api\V1\TripPlaceController;
 use App\Http\Controllers\Api\V1\PlaceController;
 use App\Http\Controllers\Api\V1\TripPlaceSuggestionsController;
+use App\Http\Controllers\Api\V1\UserProfileController;
+
 
 use App\Http\Controllers\Api\V1\Admin\AdminUserController;
 use App\Http\Controllers\Api\V1\Admin\AdminActivityLogController;
@@ -61,6 +63,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/users/me/invites', [TripUserController::class, 'myInvites']);
         Route::get('/users/me/invites/sent', [TripUserController::class, 'sentInvites']);
 
+        Route::get('/user', fn (Request $request) => $request->user());
+        Route::put('/user/profile', [UserProfileController::class, 'update']);
+        Route::post('/trips/{trip}/leave', [TripUserController::class, 'leave']);
+        Route::get('/user/current-trip', [TripController::class, 'current']);
+
+
         Route::get('/trips/{trip}/members', [TripUserController::class, 'index']);
         Route::put('/trips/{trip}/members/{user}', [TripUserController::class, 'update'])->withoutScopedBindings();
         Route::patch('/trips/{trip}/members/{user}', [TripUserController::class, 'update'])->withoutScopedBindings();
@@ -93,6 +101,8 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/trips/{trip}/places/votes', [TripPlaceController::class, 'votes']);
         Route::post('/trips/{trip}/places/{place}/vote', [TripPlaceController::class, 'vote']);
+
+        
 
         // --- General Places ---
         Route::get('/places/nearby', [PlaceController::class, 'nearby']);

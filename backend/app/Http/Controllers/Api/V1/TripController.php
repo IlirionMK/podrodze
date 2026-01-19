@@ -265,4 +265,33 @@ class TripController extends Controller
             'data'    => new TripResource($updated),
         ]);
     }
+
+    public function leave(Request $request, Trip $trip)
+{
+    $user = $request->user();
+
+    // sprawdzamy, czy użytkownik jest w podróży
+    if (!$trip->users()->where('user_id', $user->id)->exists()) {
+        return response()->json(['message' => 'Nie należysz do tej podróży'], 403);
+    }
+
+    // usuwa użytkownika z podróży
+    $trip->users()->detach($user->id);
+
+    return response()->json(['message' => 'Opusciłeś podróż']);
+}
+
+public function current(Request $request)
+{
+    $user = $request->user();
+
+    $trip = Trip::whereHas('users', function ($q) use ($user) {
+        $q->where('users.id', $user->id);
+    })
+    ->latest()
+    ->first();
+
+    return response()->json($trip);
+}
+
 }

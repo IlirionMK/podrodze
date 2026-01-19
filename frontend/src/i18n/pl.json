@@ -22,9 +22,31 @@
     },
     "user": {
       "title": "Panel użytkownika",
+      "user.subtitle": "Zarządzaj swoim profilem i podróżami",
       "dashboard": "Panel",
       "trips": "Podróże",
-      "profile": "Profil"
+      "profile": "Profil",
+      "saved": "Profil został zaktualizowany",
+      "edit_name": "Edytuj imię",
+      "edit_email": "Edytuj email",
+      "start_date": "Data rozpoczęcia",
+      "members": "Liczba uczestników",
+      "current_trip": "Obecna podróż",
+      "view_details": "Zobacz szczegóły",
+      "leave_trip": "Opuść podróż",
+      "leave_confirm": "Czy na pewno chcesz opuścić podróż ?",
+      "user.pass_mismatch": "Nowe hasła nie są zgodne.",
+      "user.pass_too_short": "Hasło musi mieć minimum 8 znaków.",
+      "pass_changed": "Hasło zostało zmienione.",
+      "user.invitesaccepted": "Zaproszenie zostało zaakceptowane.",
+      "user.invitesdeclined": "Zaproszenie zostało odrzucone.",
+      "joined": "Dołączono",
+      "rola":"Rola",
+      "fields.id": "ID użytkownika",
+      "change_password": "Zmień hasło",
+      "delete_account": "Usuń konto",
+      "delete_hint": "Po usunięciu konta wszystkie Twoje dane zostaną trwale usunięte.",
+      "invites": "Zaproszenia"
     },
     "admin": {
       "title": "Panel administratora",
@@ -58,7 +80,8 @@
         "end_date": "Data zakończenia",
         "actions": "Akcje",
         "no_trips": "Brak podróży",
-        "delete_confirm": "Na pewno chcesz usunąć tę podróż?"
+        "delete_confirm": "Na pewno chcesz usunąć tę podróż?",
+        "left":"Opuśćileś podróż."
       },
 
       "places": {
@@ -208,7 +231,9 @@
       "places": "Miejsca",
       "activities": "Aktywności",
       "members": "Uczestnicy",
-      "other": "Inne"
+      "other": "Inne",
+      "no_current_trip": "Brak bieżącej podróży",
+      "no_current_hint": "Nie jesteś obecnie przypisany do żadnej podróży."
     },
 
     "tabs": {
@@ -216,13 +241,26 @@
       "places": "Miejsca",
       "plan": "Plan",
       "team": "Zespół",
-      "preferences": "Preferencje"
+      "preferences": "Preferencje",
+      "current_trip": "Bieżąca podróż",
+      "invitations": "Zaproszenia",
+      "my_trip": "Moje podróże"
     },
-
+    
+    
     "about": "O podróży",
     "no_description": "Brak opisu",
     "start": "Data rozpoczęcia",
     "end": "Data zakończenia",
+    "details": "Szczegóły podróży",
+    "start_location": "Miejsce startowe",
+    "date": "Data podróży",
+    "visited": "Odwiedzone ",
+    "pllaned": "Zaplanowane",
+    "route": "Trasa podróży",
+    "route_created": "Trasa została utworzona.",
+    "distance": "Całkowity dystans",
+    "no_route": "Trasa nie została jeszcze utworzona.",
 
     "view": {
       "places": "Miejsca",

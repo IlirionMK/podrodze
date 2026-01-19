@@ -18,6 +18,12 @@ export default defineConfig({
         watch: {
             usePolling: true,
             interval: 100
+        },
+        proxy: {
+            '/api': {
+                target: 'http://caddy:8081/',
+                changeOrigin: true,
+            }
         }
     }
 })

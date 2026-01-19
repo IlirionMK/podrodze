@@ -75,6 +75,13 @@ class Trip extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
+     public function users()
+    {
+        return $this->belongsToMany(User::class, 'trip_user')
+                    ->withPivot('status') // jeśli masz kolumnę status w tabeli pivot
+                    ->withTimestamps();
+    }
+    
     public function places()
     {
         return $this->belongsToMany(Place::class, 'trip_place')

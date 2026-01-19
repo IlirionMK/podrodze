@@ -1,10 +1,9 @@
-:8081 {
+:{$PORT} {
     root * /var/www/backend/public
     encode gzip
 
-    @api path /api/*
-    handle @api {
-        php_fastcgi 127.0.0.1:9000
+    handle /api* {
+        php_fastcgi {$PHP_FPM_UPSTREAM:127.0.0.1}:9000
     }
 
     handle {

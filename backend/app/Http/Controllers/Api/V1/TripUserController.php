@@ -32,6 +32,14 @@ class TripUserController extends Controller
     public function __construct(
         protected TripInterface $tripService
     ) {}
+    public function leave($tripId, Request $request)
+{
+    $trip = \App\Models\Trip::findOrFail($tripId);
+    $trip->users()->detach($request->user()->id);
+
+    return response()->json(['message' => 'Opuściłeś podróż']);
+}
+
 
     /**
      * @OA\Get(

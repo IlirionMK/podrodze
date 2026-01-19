@@ -24,6 +24,9 @@ services:
     container_name: travel_app-caddy
     ports:
       - "8081:8081"
+    environment:
+      PORT: 8081
+      PHP_FPM_UPSTREAM: app
     volumes:
       - ./backend:/var/www/backend
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile
