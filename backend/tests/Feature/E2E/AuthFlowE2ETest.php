@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Auth;
-
-use Illuminate\Support\Facades\DB;
+namespace Tests\Feature\E2E;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
 
@@ -31,6 +30,24 @@ use Tests\TestCase\ApiTestCase;
 class AuthFlowE2ETest extends ApiTestCase
 {
     protected bool $enableRateLimiting = false;
+
+    /**
+     * Set up the test environment.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->bind(\Illuminate\Cache\RateLimiter::class, function () {
+            $mock = $this->createMock(\Illuminate\Cache\RateLimiter::class);
+            $mock->method('tooManyAttempts')->willReturn(false);
+            $mock->method('hit')->willReturn(1);
+            $mock->method('availableIn')->willReturn(0);
+            return $mock;
+        });
+
+        $this->clearRateLimits();
+    }
 
     /**
      * Clear rate limiting for a given feature.
