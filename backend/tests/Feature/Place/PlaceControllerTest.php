@@ -10,13 +10,34 @@ use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use PHPUnit\Framework\Attributes\Group;
 
+/**
+ * Test suite for PlaceController API endpoints.
+ *
+ * This test verifies the functionality of place-related operations including:
+ * 1. Searching for nearby places using Google Places API
+ * 2. Managing saved/favorite places
+ * 3. Place details retrieval
+ * 4. Place search and filtering
+ *
+ * @covers \App\Http\Controllers\Place\PlaceController
+ * @covers \App\Models\Place
+ */
+#[Group('place')]
+#[Group('api')]
+#[Group('feature')]
 class PlaceControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @var User Authenticated test user */
     protected User $user;
 
+    /**
+     * Set up the test environment.
+     * Creates a test user and authenticates the test client.
+     */
     protected function setUp(): void
     {
         parent::setUp();
@@ -35,6 +56,11 @@ class PlaceControllerTest extends TestCase
         ]);
     }
 
+    /**
+     * Test retrieving nearby places from Google Places API.
+     *
+     * @return void
+     */
     #[Test]
     public function it_returns_nearby_places()
     {
@@ -146,15 +172,15 @@ class PlaceControllerTest extends TestCase
             ->getJson('/api/v1/places/autocomplete?q=test');
 
         $response->assertStatus(200);
-        
+
         $responseData = $response->json();
-        
+
         $this->assertArrayHasKey('data', $responseData);
         $this->assertIsArray($responseData['data']);
-        
+
         if (!empty($responseData['data'])) {
             $firstItem = $responseData['data'][0];
-            
+
             $this->assertArrayHasKey('google_place_id', $firstItem);
             $this->assertArrayHasKey('description', $firstItem);
             $this->assertArrayHasKey('main_text', $firstItem);

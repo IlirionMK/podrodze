@@ -10,15 +10,43 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Illuminate\Support\Facades\Hash;
+use PHPUnit\Framework\Attributes\Group;
 
+/**
+ * Test suite for TripPlaceController API endpoints.
+ *
+ * This test verifies the functionality of trip place management, including:
+ * 1. Adding/removing places to/from trips
+ * 2. Managing place metadata within trips
+ * 3. Retrieving places for specific trips
+ * 4. Place ordering and categorization in trips
+ * 5. Access control for trip places
+ *
+ * @covers \App\Http\Controllers\Trip\TripPlaceController
+ * @covers \App\Models\TripPlace
+ * @covers \App\Policies\TripPlacePolicy
+ */
+#[Group('trip')]
+#[Group('place')]
+#[Group('api')]
+#[Group('feature')]
 class TripPlaceControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @var User The authenticated test user */
     protected User $user;
+
+    /** @var Trip The test trip instance */
     protected Trip $trip;
+
+    /** @var Place The test place instance */
     protected Place $place;
 
+    /**
+     * Set up the test environment.
+     * Creates a test user, trip, and place for testing.
+     */
     protected function setUp(): void
     {
         parent::setUp();
@@ -31,16 +59,17 @@ class TripPlaceControllerTest extends TestCase
 
         $this->trip = Trip::create([
             'name' => 'Test Trip',
+            'description' => 'A test trip for automated testing',
             'start_date' => now(),
             'end_date' => now()->addDays(7),
             'owner_id' => $this->user->id,
-            'start_latitude' => 52.2297,
+            'start_latitude' => 52.2297,  // Warsaw coordinates
             'start_longitude' => 21.0122,
         ]);
 
         $this->place = Place::create([
             'name' => 'Test Place',
-            'google_place_id' => 'test_place_123',
+            'google_place_id' => 'test_place_' . uniqid(),
             'category_slug' => 'test-category',
             'rating' => 4.5,
             'meta' => ['address' => '123 Test St'],

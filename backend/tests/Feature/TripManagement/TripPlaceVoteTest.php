@@ -8,12 +8,38 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase\AuthenticatedTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+/**
+ * Test suite for trip place voting functionality.
+ *
+ * This test verifies the complete voting workflow for trip places, including:
+ * 1. Casting votes (upvote/downvote) on places in a trip
+ * 2. Vote aggregation and counting
+ * 3. Vote updates and removals
+ * 4. Access control and validation
+ * 5. Concurrent voting scenarios
+ *
+ * @covers \App\Http\Controllers\Trip\TripPlaceVoteController
+ * @covers \App\Models\TripPlaceVote
+ * @covers \App\Policies\TripPlaceVotePolicy
+ */
+#[Group('trip')]
+#[Group('vote')]
+#[Group('collaboration')]
+#[Group('feature')]
 class TripPlaceVoteTest extends AuthenticatedTestCase
 {
+    /** @var Trip The test trip instance */
     protected Trip $trip;
+
+    /** @var Place The test place instance */
     protected Place $place;
 
+    /**
+     * Set up the test environment.
+     * Creates a test user, trip, and place for testing voting functionality.
+     */
     protected function setUp(): void
     {
         parent::setUp();
@@ -122,7 +148,7 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
     public function vote_requires_authentication()
     {
         $this->refreshApplication();
-        
+
         $response = $this->postJson("/api/v1/trips/{$this->trip->id}/places/{$this->place->id}/vote", [
             'score' => 3
         ]);
@@ -201,7 +227,7 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
     public function list_votes_requires_authentication()
     {
         $this->refreshApplication();
-        
+
         $response = $this->getJson("/api/v1/trips/{$this->trip->id}/places/votes");
         $response->assertStatus(401);
     }

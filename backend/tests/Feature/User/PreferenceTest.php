@@ -10,14 +10,38 @@ use App\Models\UserPreference;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\Group;
 
+/**
+ * Test suite for User Preferences functionality.
+ *
+ * This test verifies the user preference management features including:
+ * 1. Retrieving user preferences
+ * 2. Updating preference values
+ * 3. Validating preference data
+ * 4. Category-based preference handling
+ *
+ * @covers \App\Http\Controllers\User\PreferenceController
+ * @covers \App\Models\UserPreference
+ * @covers \App\Policies\PreferencePolicy
+ */
+#[Group('user')]
+#[Group('preferences')]
+#[Group('feature')]
 class PreferenceTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @var User The authenticated test user */
     private User $user;
+
+    /** @var string Base API URL for preference endpoints */
     protected string $baseUrl = '/api/v1';
 
+    /**
+     * Set up the test environment.
+     * Creates and authenticates a test user.
+     */
     protected function setUp(): void
     {
         parent::setUp();
@@ -25,6 +49,12 @@ class PreferenceTest extends TestCase
         Sanctum::actingAs($this->user);
     }
 
+    /**
+     * Create a test category with the given attributes.
+     *
+     * @param array $attributes Custom attributes to override defaults
+     * @return Category
+     */
     private function createCategory(array $attributes = []): Category
     {
         $defaults = [
@@ -40,6 +70,11 @@ class PreferenceTest extends TestCase
         return $category;
     }
 
+    /**
+     * Test retrieving user preferences.
+     *
+     * @return void
+     */
     public function test_it_gets_user_preferences()
     {
         $category1 = $this->createCategory(['slug' => 'restaurants']);

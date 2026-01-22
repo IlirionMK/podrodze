@@ -29,7 +29,6 @@ use Tests\TestCase\ApiTestCase;
  * @covers \App\Http\Controllers\Trip\TripController
  */
 #[Group('auth')]
-#[Group('onboarding')]
 #[Group('e2e')]
 class UserOnboardingE2ETest extends ApiTestCase
 {

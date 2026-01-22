@@ -9,17 +9,43 @@ use App\Models\UserPreference;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+/**
+ * Test suite for User Panel functionality.
+ *
+ * This test verifies the core user profile and dashboard features including:
+ * 1. User profile viewing and management
+ * 2. Trip listing and management
+ * 3. User settings and preferences
+ * 4. Authentication and authorization
+ *
+ * @covers \App\Http\Controllers\User\UserController
+ * @covers \App\Http\Controllers\Trip\TripController
+ * @covers \App\Policies\UserPolicy
+ */
+#[Group('user')]
+#[Group('profile')]
+#[Group('feature')]
 class UserPanelTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Set up the test environment.
+     * Disables exception handling to get full error messages.
+     */
     protected function setUp(): void
     {
         parent::setUp();
         $this->withoutExceptionHandling();
     }
 
+    /**
+     * Test that an authenticated user can retrieve their own profile.
+     *
+     * @return void
+     */
     #[Test]
     public function user_can_get_own_profile()
     {
@@ -36,6 +62,11 @@ class UserPanelTest extends TestCase
             ]);
     }
 
+    /**
+     * Test that a user can view their own trips.
+     *
+     * @return void
+     */
     #[Test]
     public function user_can_view_their_trips()
     {

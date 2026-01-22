@@ -10,34 +10,54 @@ use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase\TripTestCase;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests for AI-powered trip suggestions.
  *
- * This class verifies that:
- * - AI suggestions are generated based on trip context
- * - Suggestions are relevant and personalized
- * - Suggestion quality meets expectations
- * - User feedback on suggestions is processed correctly
+ * This test suite verifies the AI-powered trip suggestion functionality, including:
+ * 1. Generation of personalized trip suggestions based on user preferences and trip context
+ * 2. Integration with external AI/ML services for suggestion generation
+ * 3. Processing and formatting of AI responses
+ * 4. User interaction with suggestions (acceptance/rejection)
+ * 5. Suggestion relevance and quality metrics
+ *
+ * @covers \App\Http\Controllers\Trip\AISuggestionController
+ * @covers \App\Services\AISuggestionService
+ * @covers \App\Models\AISuggestion
  */
+#[Group('trip')]
+#[Group('ai')]
+#[Group('suggestions')]
+#[Group('feature')]
 class TripAiSuggestionsTest extends TripTestCase
 {
+    /** @var \App\Models\User The authenticated test user */
+    protected User $user;
+
+    /** @var \App\Models\Trip The test trip instance */
+    protected \App\Models\Trip $trip;
+
+    /**
+     * Set up the test environment.
+     * Creates a test user, authenticates them, and sets up a test trip.
+     */
     protected function setUp(): void
     {
         parent::setUp();
 
-        $user = User::create([
+        $this->user = User::create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
         ]);
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($this->user);
 
         $this->trip = \App\Models\Trip::create([
             'name' => 'Test Trip',
             'description' => 'Test Description',
-            'owner_id' => $user->id,
+            'owner_id' => $this->user->id,
             'start_date' => now(),
             'end_date' => now()->addDays(7),
         ]);
@@ -45,7 +65,21 @@ class TripAiSuggestionsTest extends TripTestCase
         config(['ai.suggestions.enabled' => true]);
 
         Http::fake([
-            'api.openai.com/*' => Http::response(['choices' => [['message' => ['content' => 'AI recommendation reason']]]]),
+            'api.openai.com/*' => Http::response([
+                'choices' => [
+                    ['message' => [
+                        'content' => json_encode([
+                            'suggestions' => [
+                                [
+                                    'place_id' => 'test_place_1',
+                                    'name' => 'AI Suggested Place',
+                                    'reasons' => ['Popular with similar travelers', 'Matches your interests']
+                                ]
+                            ]
+                        ])
+                    ]]
+                ]
+            ]),
             'maps.googleapis.com/*' => Http::response([
                 'results' => [
                     [
@@ -106,16 +140,16 @@ class TripAiSuggestionsTest extends TripTestCase
 
         $response = $this->postJson("/api/v1/trips/{$this->trip->id}/places", [
             'place_id' => $place->id,
-            'status' => 'selected',  // Changed from 'accepted' to 'selected' to match API validation
+            'status' => 'selected',
             'day' => 1,
-            'order_index' => 1  // Changed from 'order' to 'order_index' to match the expected field name
+            'order_index' => 1
         ]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('trip_place', [
             'trip_id' => $this->trip->id,
             'place_id' => $place->id,
-            'status' => 'selected'  // Changed from 'accepted' to 'selected'
+            'status' => 'selected'
         ]);
     }
 
@@ -138,7 +172,7 @@ class TripAiSuggestionsTest extends TripTestCase
 
         $response = $this->postJson("/api/v1/trips/{$this->trip->id}/places", [
             'place_id' => $place->id,
-            'status' => 'rejected'  // 'rejected' is a valid status in the API
+            'status' => 'rejected'
         ]);
 
         $response->assertStatus(201);
@@ -168,12 +202,12 @@ class TripAiSuggestionsTest extends TripTestCase
 
         $this->postJson("/api/v1/trips/{$this->trip->id}/places", [
             'place_id' => $place->id,
-            'status' => 'selected',  // Changed from 'accepted' to 'selected' to match API validation
+            'status' => 'selected',
             'day' => 1,
-            'order_index' => 1  // Changed from 'order' to 'order_index' to match the expected field name
+            'order_index' => 1
         ]);
 
-        $response = $this->getJson("/api/v1/trips/{$this->trip->id}/places");  // Changed endpoint to get trip places
+        $response = $this->getJson("/api/v1/trips/{$this->trip->id}/places");
 
         $response->assertStatus(200)
             ->assertJsonFragment([

@@ -9,14 +9,42 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
+use PHPUnit\Framework\Attributes\Group;
 
+/**
+ * End-to-end test for trip collaboration features.
+ *
+ * This test verifies the complete collaboration flow for trips, including:
+ * 1. Trip creation and basic CRUD operations
+ * 2. Inviting members to trips
+ * 3. Managing trip members (adding/removing)
+ * 4. Member permissions and access control
+ * 5. Real-time collaboration features
+ *
+ * @covers \App\Http\Controllers\Trip\TripController
+ * @covers \App\Http\Controllers\Trip\TripMemberController
+ * @covers \App\Http\Controllers\Trip\TripInvitationController
+ * @covers \App\Models\Trip
+ * @covers \App\Models\TripMember
+ * @covers \App\Models\Invitation
+ */
+#[Group('trip')]
+#[Group('collaboration')]
+#[Group('e2e')]
 class TripCollaborationE2ETest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @var User Trip owner user instance */
     private User $owner;
+
+    /** @var User First trip member user instance */
     private User $member1;
+
+    /** @var User Second trip member user instance */
     private User $member2;
+
+    /** @var User User invited to the trip */
     private User $invitee;
 
     protected function setUp(): void
