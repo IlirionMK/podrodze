@@ -97,26 +97,6 @@ const router = createRouter({
                     name: "admin.dashboard",
                     component: () => import("../pages/admin/Dashboard.vue"),
                 },
-                {
-                    path: "users",
-                    name: "admin.users",
-                    component: () => import("../pages/admin/Users.vue"),
-                },
-                {
-                    path: "trips",
-                    name: "admin.trips",
-                    component: () => import("../pages/admin/Trips.vue"),
-                },
-                {
-                    path: "places",
-                    name: "admin.places",
-                    component: () => import("../pages/admin/Places.vue"),
-                },
-                {
-                    path: "settings",
-                    name: "admin.settings",
-                    component: () => import("../pages/admin/Settings.vue"),
-                },
             ],
         },
 

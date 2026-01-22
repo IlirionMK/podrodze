@@ -34,9 +34,9 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
 
     <!-- Logo -->
     <router-link
-      to="/app/home"
-      class="flex items-center gap-3 font-semibold text-xl hover:opacity-90 transition"
-    >
+  :to="user?.role === 'admin' ? { name: 'admin.dashboard' } : '/app/home'"
+  class="flex items-center gap-3 font-semibold text-xl hover:opacity-90 transition"
+>
       <LogoIcon class="w-9 h-9 text-blue-600" />
       <span class="tracking-wide">PoDrodze</span>
     </router-link>
@@ -68,6 +68,7 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
       <template v-else>
         <div class="relative" ref="menuRef">
 
+          <!-- user menu -->
           <button
             @click="showMenu = !showMenu"
             class="flex items-center gap-3 px-3 py-1 rounded-lg hover:bg-gray-100 transition group"
@@ -96,39 +97,39 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
                    rounded-lg shadow-xl py-2 z-50"
             >
 
-              <router-link
-                to="/app/profile"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
-              >
-                {{ t("header.profile") }}
-              </router-link>
+              <!-- ADMIN -->
+              <template v-if="user?.role === 'admin'">
+                <button
+                  @click="handleLogout"
+                  class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                >
+                  {{ t("auth.logout") }}
+                </button>
+              </template>
 
-              <router-link
-                to="/app/trips"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
-              >
-                Trips
-              </router-link>
+              <!-- USER -->
+              <template v-else>
+                <router-link
+                  to="/app/profile"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                >
+                  {{ t("header.profile") }}
+                </router-link>
 
-               <!-- TYLKO DLA ADMINA -->
-<router-link
-  v-if="user?.role === 'admin'"
-  to="/admin"
-  class="block px-4 py-2 mb-1 text-sm text-white
-         bg-gradient-to-r from-blue-600 to-purple-600
-         rounded-lg shadow-md hover:shadow-lg
-         hover:brightness-105 transition-all"
->
-  Panel administratora
-</router-link>
+                <router-link
+                  to="/app/trips"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                >
+                  Trips
+                </router-link>
 
-
-              <button
-                @click="handleLogout"
-                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
-              >
-                {{ t("auth.logout") }}
-              </button>
+                <button
+                  @click="handleLogout"
+                  class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                >
+                  {{ t("auth.logout") }}
+                </button>
+              </template>
 
             </div>
           </transition>
