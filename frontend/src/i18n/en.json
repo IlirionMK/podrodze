@@ -324,5 +324,48 @@
     },
 
     "student_project": "Student project"
+  },
+  "legal": {
+    "data_deletion": {
+      "badge": "Your privacy and data control",
+      "title": "User Data Deletion Instructions",
+      "subtitle": "Learn how to request deletion of your personal data associated with the PoDrodze application.",
+      "pill_1": "Delete request",
+      "pill_2": "Email verification",
+      "pill_3": "Up to 30 days",
+      "student_note": "This is a student project developed for an academic course. The service is provided for educational purposes.",
+      "quick_title": "Quick steps",
+      "step_1_title": "Send an email request",
+      "step_1_desc": "Email us with the subject line provided below.",
+      "step_2_title": "Include account details",
+      "step_2_desc": "Provide your PoDrodze email or other identifier so we can locate your account.",
+      "step_3_title": "We confirm deletion",
+      "step_3_desc": "We will confirm completion via email once the request is processed.",
+      "footer_note": "If you used Facebook Login, your request can reference the same email used for Facebook.",
+      "section_what_title": "What data can be deleted",
+      "section_what_desc": "We can delete data associated with your PoDrodze account, including provider identifiers (e.g., Facebook Login) and app content linked to your account.",
+      "what_1": "Account details (name, email, linked provider identifiers).",
+      "what_2": "Content created in the app that is linked to your account (e.g., trips, places, votes).",
+      "what_3": "Technical identifiers needed to handle authentication records, where applicable.",
+      "section_how_title": "How to request deletion",
+      "email_label": "Email",
+      "subject_label": "Subject",
+      "subject_value": "PoDrodze – Data Deletion Request",
+      "include_label": "Include in your message",
+      "include_1": "Your email used in PoDrodze (or your Facebook email if you used Facebook Login).",
+      "include_2": "Your name or username used in the app (if available).",
+      "include_3": "Any additional details that help us identify the account (optional).",
+      "manual_note": "Requests are verified to prevent unauthorized deletions. We may ask for additional confirmation if needed.",
+      "section_time_title": "Processing time",
+      "section_time_desc": "We process deletion requests as soon as possible, typically within 30 days, and confirm completion by email.",
+      "last_updated": "Last updated",
+      "aside_title": "Notes",
+      "aside_1": "If you signed in via Facebook, you can reference the same email used for Facebook Login.",
+      "aside_2": "This page exists to meet platform requirements and to inform users how to request data deletion.",
+      "aside_3": "You may also request deletion of the entire account and related app data."
+    }
   }
 }
+
+
+

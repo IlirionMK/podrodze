@@ -46,6 +46,28 @@ const router = createRouter({
                     component: () => import("../pages/auth/VerifyEmail.vue"),
                     meta: { guest: true },
                 },
+
+                // Legal / Meta compliance pages (public)
+                {
+                    path: "data-deletion",
+                    name: "legal.data_deletion",
+                    component: () => import("../pages/terms/Data_Deletion.vue"),
+                    meta: { guest: true },
+                },
+
+                // Optional (recommended for Meta)
+                // {
+                //   path: "privacy",
+                //   name: "legal.privacy",
+                //   component: () => import("../pages/terms/Privacy.vue"),
+                //   meta: { guest: true },
+                // },
+                // {
+                //   path: "terms",
+                //   name: "legal.terms",
+                //   component: () => import("../pages/terms/Terms.vue"),
+                //   meta: { guest: true },
+                // },
             ],
         },
 
@@ -137,12 +159,18 @@ router.beforeEach((to, from, next) => {
     const token = localStorage.getItem("token")
     const isAuthenticated = !!token
 
-    // Prefer user.role from stored user (more reliable than separate "role" key)
     const user = JSON.parse(localStorage.getItem("user") || "null")
     const isAdmin = user?.role === "admin"
 
     // Guest restrictions
-    const allowWhenAuth = ["auth.verify", "auth.google", "auth.facebook"]
+    const allowWhenAuth = [
+        "auth.verify",
+        "auth.google",
+        "auth.facebook",
+        "legal.data_deletion",
+        // "legal.privacy",
+        // "legal.terms",
+    ]
 
     if (to.meta.guest && isAuthenticated && !allowWhenAuth.includes(to.name)) {
         if (isAdmin) return next({ name: "admin.dashboard" })

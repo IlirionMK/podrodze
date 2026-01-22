@@ -19,6 +19,10 @@ use App\Http\Controllers\Api\V1\TripPlaceController;
 use App\Http\Controllers\Api\V1\PlaceController;
 use App\Http\Controllers\Api\V1\TripPlaceSuggestionsController;
 
+use App\Http\Controllers\Api\V1\MeController;
+
+use App\Http\Controllers\Api\V1\FacebookDataDeletionController;
+
 use App\Http\Controllers\Api\V1\Admin\AdminUserController;
 use App\Http\Controllers\Api\V1\Admin\AdminActivityLogController;
 
@@ -38,6 +42,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/auth/facebook/url', [FacebookAuthController::class, 'getAuthUrl']);
     Route::post('/auth/facebook/callback', [FacebookAuthController::class, 'handleCallback']);
 
+    Route::post('/facebook/data-deletion', [FacebookDataDeletionController::class, 'handle']);
+    Route::get('/facebook/data-deletion/status/{code}', [FacebookDataDeletionController::class, 'status']);
+
     Route::get('/google/maps-key', function () {
         return response()->json([
             'key' => env('GOOGLE_MAPS_KEY'),
@@ -45,6 +52,11 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware(['auth:sanctum', 'not_banned'])->scopeBindings()->group(function () {
+
+        Route::get('/users/me', [MeController::class, 'show']);
+        Route::patch('/users/me', [MeController::class, 'update']);
+        Route::put('/users/me/password', [MeController::class, 'updatePassword']);
+        Route::delete('/users/me', [MeController::class, 'destroy']);
 
         Route::get('/trips', [TripController::class, 'index']);
         Route::post('/trips', [TripController::class, 'store']);
@@ -73,19 +85,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/trips/{trip}/itinerary/generate', [ItineraryController::class, 'generate']);
         Route::post('/trips/{trip}/itinerary/generate-full', [ItineraryController::class, 'generateFullRoute']);
 
-        // --- Trip Places & Suggestions ---
-
-        // 1. AI Suggestions (Existing)
-        // URL: /api/v1/trips/{trip}/places/suggestions
         Route::get('/trips/{trip}/places/suggestions', TripPlaceSuggestionsController::class)
             ->middleware('throttle:30,1');
 
-        // 2. Google Nearby Search (New)
-        // URL: /api/v1/trips/{trip}/places/nearby
         Route::get('/trips/{trip}/places/nearby', [TripPlaceController::class, 'nearbyGoogle'])
             ->middleware('throttle:30,1');
 
-        // CRUD for Trip Places
         Route::get('/trips/{trip}/places', [TripPlaceController::class, 'index']);
         Route::post('/trips/{trip}/places', [TripPlaceController::class, 'store']);
         Route::patch('/trips/{trip}/places/{place}', [TripPlaceController::class, 'update']);
@@ -94,7 +99,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/trips/{trip}/places/votes', [TripPlaceController::class, 'votes']);
         Route::post('/trips/{trip}/places/{place}/vote', [TripPlaceController::class, 'vote']);
 
-        // --- General Places ---
         Route::get('/places/nearby', [PlaceController::class, 'nearby']);
 
         Route::get('/places/autocomplete', [PlaceController::class, 'autocomplete'])

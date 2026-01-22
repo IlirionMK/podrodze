@@ -324,5 +324,47 @@
     },
 
     "student_project": "Projekt studencki"
+  },
+
+  "legal": {
+    "data_deletion": {
+      "badge": "Prywatność i kontrola danych",
+      "title": "Instrukcja usunięcia danych użytkownika",
+      "subtitle": "Dowiedz się, jak poprosić o usunięcie danych osobowych powiązanych z aplikacją PoDrodze.",
+      "pill_1": "Wniosek o usunięcie",
+      "pill_2": "Weryfikacja e-mail",
+      "pill_3": "Do 30 dni",
+      "student_note": "To jest projekt studencki realizowany w ramach przedmiotu akademickiego. Usługa jest udostępniana w celach edukacyjnych.",
+      "quick_title": "Szybkie kroki",
+      "step_1_title": "Wyślij prośbę e-mail",
+      "step_1_desc": "Napisz do nas, używając tematu podanego poniżej.",
+      "step_2_title": "Podaj dane konta",
+      "step_2_desc": "Podaj e-mail w PoDrodze lub inny identyfikator, abyśmy mogli znaleźć konto.",
+      "step_3_title": "Potwierdzimy usunięcie",
+      "step_3_desc": "Po realizacji prośby wyślemy potwierdzenie e-mailem.",
+      "footer_note": "Jeśli użyto logowania przez Facebook, w prośbie można podać ten sam e-mail co na Facebooku.",
+      "section_what_title": "Jakie dane mogą zostać usunięte",
+      "section_what_desc": "Możemy usunąć dane powiązane z kontem PoDrodze, w tym identyfikatory dostawcy (np. Facebook Login) oraz treści przypisane do konta.",
+      "what_1": "Dane konta (imię, e-mail, identyfikatory logowania).",
+      "what_2": "Treści utworzone w aplikacji powiązane z kontem (np. podróże, miejsca, głosy).",
+      "what_3": "Identyfikatory techniczne niezbędne do obsługi zapisów uwierzytelniania, jeśli dotyczy.",
+      "section_how_title": "Jak złożyć prośbę o usunięcie",
+      "email_label": "E-mail",
+      "subject_label": "Temat",
+      "subject_value": "PoDrodze – Prośba o usunięcie danych",
+      "include_label": "Podaj w wiadomości",
+      "include_1": "E-mail użyty w PoDrodze (lub e-mail z Facebooka, jeśli logowano przez Facebook).",
+      "include_2": "Imię lub nazwę użytkownika w aplikacji (jeśli dostępne).",
+      "include_3": "Dodatkowe informacje ułatwiające identyfikację konta (opcjonalnie).",
+      "manual_note": "Prośby są weryfikowane, aby zapobiec nieautoryzowanemu usuwaniu. W razie potrzeby poprosimy o dodatkowe potwierdzenie.",
+      "section_time_title": "Czas realizacji",
+      "section_time_desc": "Realizujemy prośby możliwie szybko, zazwyczaj w ciągu 30 dni, i potwierdzamy wykonanie e-mailem.",
+      "last_updated": "Ostatnia aktualizacja",
+      "aside_title": "Uwagi",
+      "aside_1": "Jeśli logowano przez Facebook, można podać ten sam e-mail użyty w Facebook Login.",
+      "aside_2": "Ta strona spełnia wymagania platformy i informuje użytkowników, jak poprosić o usunięcie danych.",
+      "aside_3": "Możesz również poprosić o usunięcie całego konta i powiązanych danych aplikacji."
+    }
   }
 }
+

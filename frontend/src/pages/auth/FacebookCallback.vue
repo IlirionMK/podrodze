@@ -4,12 +4,13 @@ import { useRoute, useRouter } from "vue-router"
 import { useAuth } from "@/composables/useAuth"
 import { useI18n } from "vue-i18n"
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: "global" })
 const router = useRouter()
 const route = useRoute()
-const { setUser, setToken } = useAuth()
 
-const message = ref(t("auth.facebook.connecting"))
+const { setAuth } = useAuth()
+
+const message = ref(t("auth.facebook.connecting", "Connecting with Facebook..."))
 
 onMounted(async () => {
   const code = route.query.code
@@ -18,39 +19,56 @@ onMounted(async () => {
     return router.push({ name: "auth.login" })
   }
 
-  message.value = t("auth.facebook.authenticating")
+  message.value = t("auth.facebook.authenticating", "Authenticating...")
 
   try {
-    const res = await fetch(import.meta.env.VITE_API_URL + "/auth/facebook/callback", {
+    const res = await fetch("/api/v1/auth/facebook/callback", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ code }),
     })
 
-    const data = await res.json()
+    let data = null
+    try {
+      data = await res.json()
+    } catch {
+      data = null
+    }
 
     if (!res.ok) {
       if (data?.error === "facebook_email_missing") {
-        message.value = t("auth.facebook.email_missing")
+        message.value = t(
+            "auth.facebook.email_missing",
+            "Facebook did not provide an email address."
+        )
         setTimeout(() => router.push({ name: "auth.login" }), 1200)
         return
       }
 
-      message.value = t("auth.facebook.error")
+      message.value = t("auth.facebook.error", "Facebook OAuth failed.")
       return router.push({ name: "auth.login" })
     }
 
-    if (data?.token) {
-      message.value = t("auth.facebook.loading")
-      setToken(data.token)
-      setUser(data.user)
-      return router.push({ name: "app.home" })
+    if (!data?.token || !data?.user) {
+      message.value = t("auth.facebook.error", "Facebook OAuth failed.")
+      return router.push({ name: "auth.login" })
     }
-  } catch (e) {
-    message.value = t("auth.facebook.error")
-  }
 
-  return router.push({ name: "auth.login" })
+    message.value = t("auth.facebook.loading", "Signing you in...")
+
+    setAuth(data.user, data.token)
+
+    const intended = localStorage.getItem("intended")
+    if (intended) {
+      localStorage.removeItem("intended")
+      return router.push(intended)
+    }
+
+    return router.push({ name: "app.home" })
+  } catch {
+    message.value = t("auth.facebook.error", "Facebook OAuth failed.")
+    return router.push({ name: "auth.login" })
+  }
 })
 </script>
 
@@ -58,7 +76,9 @@ onMounted(async () => {
   <div class="min-h-screen flex flex-col items-center justify-center bg-[#0d1117] relative overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 blur-3xl opacity-40"></div>
 
-    <div class="w-16 h-16 border-4 border-white/20 border-t-blue-400 rounded-full animate-spin drop-shadow-xl transition-all duration-500"></div>
+    <div
+        class="w-16 h-16 border-4 border-white/20 border-t-blue-400 rounded-full animate-spin drop-shadow-xl transition-all duration-500"
+    ></div>
 
     <p class="mt-6 text-white text-lg font-medium animate-pulse">
       {{ message }}
