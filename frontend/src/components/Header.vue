@@ -31,33 +31,35 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
 
 <template>
   <header class="w-full border-b bg-white shadow-sm">
-    <div class="max-w-7xl mx-auto flex justify-between items-center px-4 py-3">
-
+    <div class="max-w-7xl mx-auto flex justify-between items-center px-4 py-3 min-w-0">
       <!-- Logo -->
       <router-link
           to="/"
-          class="flex items-center gap-3 font-semibold text-xl hover:opacity-90 transition"
+          class="flex items-center gap-3 font-semibold text-xl hover:opacity-90 transition shrink-0"
       >
-        <LogoIcon class="w-9 h-9 text-blue-600" />
-        <span class="tracking-wide">PoDrodze</span>
+        <LogoIcon class="w-9 h-9 text-blue-600 shrink-0" />
+        <span class="tracking-wide whitespace-nowrap">PoDrodze</span>
       </router-link>
 
-      <div class="flex items-center gap-4">
-
-        <LanguageSwitcher />
+      <div class="flex items-center gap-2 sm:gap-4 min-w-0">
+        <!-- Language -->
+        <div class="shrink-0">
+          <LanguageSwitcher />
+        </div>
 
         <!-- Guest -->
         <template v-if="!isAuthenticated">
           <router-link
               to="/login"
-              class="text-sm text-gray-700 hover:text-blue-600 transition"
+              class="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition whitespace-nowrap"
           >
             {{ t("auth.login.title") }}
           </router-link>
 
           <router-link
               to="/register"
-              class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600
+              class="px-3 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap
+                   bg-gradient-to-r from-blue-600 to-purple-600
                    text-white rounded-lg shadow-md hover:shadow-lg
                    hover:brightness-105 transition-all active:scale-[0.98]"
           >
@@ -67,17 +69,20 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
 
         <!-- Authenticated -->
         <template v-else>
-          <div class="relative" ref="menuRef">
-
+          <div class="relative min-w-0" ref="menuRef">
             <button
                 @click="showMenu = !showMenu"
-                class="flex items-center gap-3 px-3 py-1 rounded-lg hover:bg-gray-100 transition group"
+                class="flex items-center gap-3 px-3 py-1 rounded-lg hover:bg-gray-100 transition group min-w-0"
+                type="button"
             >
               <img
                   :src="`https://api.dicebear.com/7.x/thumbs/svg?seed=${user?.name}`"
-                  class="w-9 h-9 rounded-full ring-1 ring-gray-200 shadow-sm group-hover:ring-blue-300 transition"
+                  class="w-9 h-9 rounded-full ring-1 ring-gray-200 shadow-sm group-hover:ring-blue-300 transition shrink-0"
+                  alt=""
               />
-              <span class="text-sm text-gray-700 hidden sm:inline">
+
+              <!-- hide on xs; on sm+ truncate so long names/translations won't stretch -->
+              <span class="text-sm text-gray-700 hidden sm:inline min-w-0 truncate max-w-[14rem]">
                 {{ t("header.hello") }},
                 <strong>{{ user?.name }}</strong>
               </span>
@@ -96,34 +101,31 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
                   class="absolute right-0 mt-2 w-48 bg-white border border-gray-200
                        rounded-lg shadow-xl py-2 z-50"
               >
-
                 <router-link
                     to="/app/profile"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition whitespace-nowrap"
                 >
                   {{ t("header.profile") }}
                 </router-link>
 
                 <router-link
                     to="/app/trips"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition whitespace-nowrap"
                 >
                   Trips
                 </router-link>
 
                 <button
                     @click="handleLogout"
-                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition whitespace-nowrap"
+                    type="button"
                 >
                   {{ t("auth.logout") }}
                 </button>
-
               </div>
             </transition>
-
           </div>
         </template>
-
       </div>
     </div>
   </header>

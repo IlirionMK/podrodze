@@ -99,7 +99,8 @@
   "statuses": {
     "accepted": "Zaakceptowany",
     "pending": "Oczekuje",
-    "rejected": "Odrzucony"
+    "rejected": "Odrzucony",
+    "declined": "Odrzucony"
   },
 
   "auth": {
@@ -168,7 +169,52 @@
       "invite_desc": "Planuj podróże razem z grupą.",
       "vote": "Głosuj na miejsca",
       "vote_desc": "Wspólnie wybierajcie najlepsze punkty."
-    }
+    },
+
+    "badge": "Planuj wyjazd zespołowo — bez chaosu",
+    "hero_title": "PoDrodze — zaplanuj podróż razem",
+    "hero_subtitle": "Twórz podróże, dodawaj miejsca, zapraszaj znajomych i układaj czytelny plan dnia — w jednym miejscu.",
+
+    "cta_my_trips": "Moje podróże",
+    "cta_login": "Zaloguj się",
+    "cta_register": "Utwórz konto",
+
+    "pill_trips": "Podróże",
+    "pill_places": "Miejsca",
+    "pill_team": "Zespół",
+    "pill_preferences": "Preferencje",
+    "pill_plan": "Plan dnia",
+
+    "preview_title": "Co możesz zrobić",
+    "preview_1_title": "Utwórz podróż",
+    "preview_1_desc": "Nazwa, daty i gotowa przestrzeń do planowania.",
+    "preview_2_title": "Dodawaj miejsca i głosuj",
+    "preview_2_desc": "Zbieraj propozycje i ustalaj priorytety razem.",
+    "preview_3_title": "Zaproś uczestników",
+    "preview_3_desc": "Role, zaproszenia i wygodna współpraca w zespole.",
+    "preview_4_title": "Ustaw preferencje",
+    "preview_4_desc": "Dopasuj plan do stylu podróżowania Twojej grupy.",
+    "preview_5_title": "Zbuduj plan dnia",
+    "preview_5_desc": "Porządek w aktywnościach i czytelny harmonogram.",
+    "preview_footer": "Wszystko w jednym miejscu: miejsca, zespół, preferencje i plan.",
+
+    "how_title": "Jak to działa",
+    "how_subtitle": "Krótka instrukcja: utwórz podróż i zacznij planować w kilka minut.",
+    "how_cta": "Przejdź do podróży",
+    "how_step": "Krok",
+    "how_1_title": "Utwórz podróż",
+    "how_1_desc": "Ustaw nazwę i daty — przestrzeń do planowania jest gotowa.",
+    "how_2_title": "Dodaj miejsca",
+    "how_2_desc": "Wyszukaj lub dodaj własne punkty i buduj wspólną listę.",
+    "how_3_title": "Głosuj i planuj",
+    "how_3_desc": "Głosujcie, ustalcie priorytety i ułóżcie plan dnia.",
+
+    "feature_places_title": "Miejsca",
+    "feature_places_desc": "Dodawaj miejsca, zarządzaj listą i trzymaj porządek.",
+    "feature_team_title": "Zespół",
+    "feature_team_desc": "Zaproszenia, role i współpraca bez chaosu w czacie.",
+    "feature_decisions_title": "Decyzje",
+    "feature_decisions_desc": "Głosujcie na miejsca i szybko ustalajcie priorytety."
   },
 
   "dashboard": {
@@ -287,9 +333,22 @@
       "remove_title": "Usuń uczestnika",
       "remove_hint": "Ta osoba straci dostęp do wycieczki.",
 
+      "no_invites": "Brak oczekujących zaproszeń.",
+      "no_declined": "Brak odrzuconych zaproszeń.",
+      "resend_no_email": "Nie można ponowić zaproszenia: brak adresu e-mail.",
+
+      "sections": {
+        "members": "Uczestnicy",
+        "invites": "Zaproszenia",
+        "declined": "Odrzucone"
+      },
+
       "actions": {
         "change_role": "Zmień rolę",
-        "remove": "Usuń z wycieczki"
+        "remove": "Usuń z wycieczki",
+        "resend": "Wyślij ponownie",
+        "show_declined": "Pokaż odrzucone",
+        "hide_declined": "Ukryj odrzucone"
       }
     },
 
@@ -335,6 +394,7 @@
       "pill_2": "Weryfikacja e-mail",
       "pill_3": "Do 30 dni",
       "student_note": "To jest projekt studencki realizowany w ramach przedmiotu akademickiego. Usługa jest udostępniana w celach edukacyjnych.",
+
       "quick_title": "Szybkie kroki",
       "step_1_title": "Wyślij prośbę e-mail",
       "step_1_desc": "Napisz do nas, używając tematu podanego poniżej.",
@@ -343,12 +403,19 @@
       "step_3_title": "Potwierdzimy usunięcie",
       "step_3_desc": "Po realizacji prośby wyślemy potwierdzenie e-mailem.",
       "footer_note": "Jeśli użyto logowania przez Facebook, w prośbie można podać ten sam e-mail co na Facebooku.",
+
+      "details_title": "Szczegóły",
+      "details_subtitle": "Wybierz sekcję, aby zobaczyć więcej informacji.",
+
       "section_what_title": "Jakie dane mogą zostać usunięte",
       "section_what_desc": "Możemy usunąć dane powiązane z kontem PoDrodze, w tym identyfikatory dostawcy (np. Facebook Login) oraz treści przypisane do konta.",
       "what_1": "Dane konta (imię, e-mail, identyfikatory logowania).",
       "what_2": "Treści utworzone w aplikacji powiązane z kontem (np. podróże, miejsca, głosy).",
       "what_3": "Identyfikatory techniczne niezbędne do obsługi zapisów uwierzytelniania, jeśli dotyczy.",
+
       "section_how_title": "Jak złożyć prośbę o usunięcie",
+      "how_lead": "Wyślij prośbę e-mailem, korzystając z poniższych danych.",
+
       "email_label": "E-mail",
       "subject_label": "Temat",
       "subject_value": "PoDrodze – Prośba o usunięcie danych",
@@ -357,14 +424,116 @@
       "include_2": "Imię lub nazwę użytkownika w aplikacji (jeśli dostępne).",
       "include_3": "Dodatkowe informacje ułatwiające identyfikację konta (opcjonalnie).",
       "manual_note": "Prośby są weryfikowane, aby zapobiec nieautoryzowanemu usuwaniu. W razie potrzeby poprosimy o dodatkowe potwierdzenie.",
+
       "section_time_title": "Czas realizacji",
       "section_time_desc": "Realizujemy prośby możliwie szybko, zazwyczaj w ciągu 30 dni, i potwierdzamy wykonanie e-mailem.",
       "last_updated": "Ostatnia aktualizacja",
+
       "aside_title": "Uwagi",
       "aside_1": "Jeśli logowano przez Facebook, można podać ten sam e-mail użyty w Facebook Login.",
       "aside_2": "Ta strona spełnia wymagania platformy i informuje użytkowników, jak poprosić o usunięcie danych.",
       "aside_3": "Możesz również poprosić o usunięcie całego konta i powiązanych danych aplikacji."
+    },
+
+    "privacy": {
+      "badge": "Prywatność i przejrzystość",
+      "title": "Polityka prywatności",
+      "subtitle": "Ten dokument wyjaśnia, jakie dane zbieramy, dlaczego je zbieramy i jak możesz nimi zarządzać w PoDrodze.",
+      "pill_1": "Ochrona danych",
+      "pill_2": "Minimalne dane",
+      "pill_3": "Aplikacja webowa",
+      "student_note": "To jest projekt studencki realizowany w ramach zajęć akademickich. Usługa jest udostępniana w celach edukacyjnych.",
+
+      "quick_title": "Szybkie podsumowanie",
+      "quick_1_title": "Co zbieramy",
+      "quick_1_desc": "Dane konta i treści powiązane z kontem (np. podróże).",
+      "quick_2_title": "Jak wykorzystujemy",
+      "quick_2_desc": "Do uwierzytelniania i kluczowych funkcji, takich jak planowanie podróży.",
+      "quick_3_title": "Twoja kontrola",
+      "quick_3_desc": "Możesz zaktualizować dane profilu, zmienić hasło i złożyć prośbę o usunięcie danych.",
+      "footer_note": "W razie pytań skontaktuj się z nami, korzystając z poniższego adresu e-mail.",
+
+      "section_data_title": "Jakie dane zbieramy",
+      "section_data_desc": "Zbieramy wyłącznie dane niezbędne do działania aplikacji.",
+      "data_1": "Dane konta: imię, e-mail oraz identyfikatory dostawców (np. Facebook ID).",
+      "data_2": "Treści w aplikacji: podróże, miejsca, głosy i inne elementy powiązane z kontem.",
+      "data_3": "Dane techniczne: tokeny uwierzytelniania oraz podstawowe logi potrzebne do bezpieczeństwa i diagnostyki.",
+
+      "section_use_title": "W jaki sposób wykorzystujemy dane",
+      "section_use_desc": "Wykorzystujemy dane do uwierzytelniania i podstawowych funkcji aplikacji.",
+      "use_1": "Do uwierzytelniania użytkowników i ochrony dostępu do kont.",
+      "use_2": "Do umożliwienia planowania podróży oraz zapisywania Twoich treści.",
+      "use_3": "Do poprawy niezawodności i bezpieczeństwa aplikacji.",
+      "no_sell": "Nie sprzedajemy danych osobowych.",
+
+      "section_cookies_title": "Pliki cookie i pamięć przeglądarki",
+      "section_cookies_desc": "Możemy używać plików cookie lub pamięci przeglądarki, aby utrzymać sesję logowania i wspierać niezbędne funkcje.",
+      "cookies_1": "Tokeny uwierzytelniania przechowywane w pamięci przeglądarki do obsługi sesji.",
+      "cookies_2": "Opcjonalne ustawienia, np. wybór języka (jeśli dostępne).",
+
+      "section_rights_title": "Twoje prawa i wybory",
+      "section_rights_desc": "Możesz uzyskać dostęp do danych, aktualizować je oraz je usunąć.",
+      "rights_1": "Dostęp do danych profilu oraz ich aktualizacja w aplikacji.",
+      "rights_2": "Zmiana hasła i zarządzanie aktywnymi sesjami.",
+      "rights_3": "Złożenie prośby o usunięcie danych lub usunięcie konta.",
+      "deletion_note": "Instrukcję usunięcia danych znajdziesz na stronie „Instrukcja usunięcia danych użytkownika”.",
+
+      "section_contact_title": "Kontakt",
+      "contact_email_label": "E-mail",
+      "last_updated": "Ostatnia aktualizacja",
+
+      "aside_title": "Uwagi",
+      "aside_1": "Ta polityka została przygotowana, aby spełnić wymagania platform oraz poinformować użytkowników.",
+      "aside_2": "Aplikacja jest przeznaczona do celów edukacyjnych jako projekt studencki.",
+      "aside_3": "Staramy się minimalizować zakres zbieranych danych i ograniczać go do funkcji niezbędnych.",
+
+      "details_title": "Szczegóły",
+      "details_subtitle": "Wybierz sekcję, aby zobaczyć więcej informacji."
+    },
+
+    "terms": {
+      "badge": "Warunki korzystania",
+      "title": "Regulamin",
+      "subtitle": "Niniejsze warunki określają zasady korzystania z aplikacji webowej PoDrodze.",
+      "pill_1": "Zasady użycia",
+      "pill_2": "Bezpieczeństwo konta",
+      "pill_3": "Projekt edukacyjny",
+      "student_note": "To jest projekt studencki realizowany w ramach zajęć akademickich. Usługa jest udostępniana w celach edukacyjnych i może ulegać zmianom lub zostać wyłączona.",
+
+      "quick_title": "Szybki przegląd",
+      "quick_1_title": "Korzystaj odpowiedzialnie",
+      "quick_1_desc": "Nie nadużywaj aplikacji ani nie próbuj uzyskać nieautoryzowanego dostępu.",
+      "quick_2_title": "Bezpieczeństwo konta",
+      "quick_2_desc": "Chroń swoje dane logowania i zgłaszaj problemy, jeśli to konieczne.",
+      "quick_3_title": "Projekt studencki",
+      "quick_3_desc": "Usługa jest udostępniana „tak jak jest”, bez gwarancji dostępności lub poprawności.",
+      "footer_note": "Jeśli nie akceptujesz regulaminu, zaprzestań korzystania z aplikacji.",
+
+      "section_scope_title": "Zakres",
+      "section_scope_desc": "Regulamin dotyczy korzystania z aplikacji PoDrodze, w tym uwierzytelniania i funkcji planowania podróży.",
+
+      "section_accounts_title": "Konta i uwierzytelnianie",
+      "accounts_1": "Odpowiadasz za zachowanie poufności danych logowania do konta.",
+      "accounts_2": "Do uwierzytelniania mogą być używane zewnętrzne usługi OAuth (np. Facebook, Google).",
+      "accounts_3": "Możemy ograniczyć dostęp w przypadku nadużyć lub zagrożeń bezpieczeństwa.",
+
+      "section_content_title": "Treści użytkownika",
+      "content_1": "Ponosisz odpowiedzialność za treści tworzone w aplikacji (np. podróże, miejsca, notatki).",
+      "content_2": "Nie dodawaj treści niezgodnych z prawem lub obraźliwych.",
+      "content_3": "Możemy usuwać treści naruszające regulamin lub obowiązujące zasady.",
+
+      "section_disclaimer_title": "Wyłączenie odpowiedzialności",
+      "section_disclaimer_desc": "PoDrodze jest udostępniane „tak jak jest” w celach edukacyjnych, bez jakichkolwiek gwarancji.",
+      "section_disclaimer_desc_2": "Nie gwarantujemy nieprzerwanej dostępności, poprawności generowanych tras ani działania usług zewnętrznych (np. map, dostawców OAuth).",
+
+      "section_contact_title": "Kontakt",
+      "contact_email_label": "E-mail",
+      "last_updated": "Ostatnia aktualizacja",
+
+      "aside_title": "Uwagi",
+      "aside_1": "Regulamin został przygotowany, aby spełnić wymagania platform oraz poinformować użytkowników o zasadach korzystania.",
+      "aside_2": "Możesz poprosić o usunięcie konta zgodnie z instrukcją na stronie usuwania danych.",
+      "aside_3": "Projekt może się zmieniać w czasie w ramach realizacji zajęć."
     }
   }
 }
-

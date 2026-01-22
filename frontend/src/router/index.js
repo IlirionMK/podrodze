@@ -13,17 +13,16 @@ import AuthRegisterPage from "../pages/auth/Register.vue"
 const router = createRouter({
     history: createWebHistory(),
     routes: [
-        // Guest routes
         {
             path: "/",
             component: GuestLayout,
             meta: { guest: true },
             children: [
                 { path: "", name: "guest.home", component: HomePage },
+
                 { path: "login", name: "auth.login", component: AuthLoginPage },
                 { path: "register", name: "auth.register", component: AuthRegisterPage },
 
-                // Google OAuth callback route
                 {
                     path: "auth/google",
                     name: "auth.google",
@@ -31,7 +30,6 @@ const router = createRouter({
                     meta: { guest: true },
                 },
 
-                // Facebook OAuth callback route (redirect_uri = http://localhost:5173/auth/facebook/callback)
                 {
                     path: "auth/facebook/callback",
                     name: "auth.facebook",
@@ -39,7 +37,6 @@ const router = createRouter({
                     meta: { guest: true },
                 },
 
-                // Email verification (SPA)
                 {
                     path: "auth/verify-email",
                     name: "auth.verify",
@@ -47,31 +44,27 @@ const router = createRouter({
                     meta: { guest: true },
                 },
 
-                // Legal / Meta compliance pages (public)
                 {
                     path: "data-deletion",
                     name: "legal.data_deletion",
                     component: () => import("../pages/terms/Data_Deletion.vue"),
-                    meta: { guest: true },
+                    meta: { public: true },
                 },
-
-                // Optional (recommended for Meta)
-                // {
-                //   path: "privacy",
-                //   name: "legal.privacy",
-                //   component: () => import("../pages/terms/Privacy.vue"),
-                //   meta: { guest: true },
-                // },
-                // {
-                //   path: "terms",
-                //   name: "legal.terms",
-                //   component: () => import("../pages/terms/Terms.vue"),
-                //   meta: { guest: true },
-                // },
+                {
+                    path: "privacy",
+                    name: "legal.privacy",
+                    component: () => import("../pages/terms/Privacy.vue"),
+                    meta: { public: true },
+                },
+                {
+                    path: "terms",
+                    name: "legal.terms",
+                    component: () => import("../pages/terms/Terms.vue"),
+                    meta: { public: true },
+                },
             ],
         },
 
-        // Authenticated user routes
         {
             path: "/app",
             component: UserLayout,
@@ -80,7 +73,6 @@ const router = createRouter({
                 { path: "", redirect: { name: "app.home" } },
                 { path: "home", name: "app.home", component: HomePage },
 
-                // Trips module
                 {
                     path: "trips",
                     name: "app.trips",
@@ -97,7 +89,6 @@ const router = createRouter({
                     component: () => import("../pages/app/trips/TripDetail.vue"),
                     props: true,
                 },
-
                 {
                     path: "profile",
                     name: "app.profile",
@@ -106,7 +97,6 @@ const router = createRouter({
             ],
         },
 
-        // Admin routes
         {
             path: "/admin",
             component: AdminLayout,
@@ -140,7 +130,6 @@ const router = createRouter({
             ],
         },
 
-        // Error pages
         {
             path: "/403",
             name: "error.403",
@@ -154,7 +143,6 @@ const router = createRouter({
     ],
 })
 
-// Global navigation guard
 router.beforeEach((to, from, next) => {
     const token = localStorage.getItem("token")
     const isAuthenticated = !!token
@@ -162,28 +150,18 @@ router.beforeEach((to, from, next) => {
     const user = JSON.parse(localStorage.getItem("user") || "null")
     const isAdmin = user?.role === "admin"
 
-    // Guest restrictions
-    const allowWhenAuth = [
-        "auth.verify",
-        "auth.google",
-        "auth.facebook",
-        "legal.data_deletion",
-        // "legal.privacy",
-        // "legal.terms",
-    ]
+    if (to.meta.public) return next()
 
-    if (to.meta.guest && isAuthenticated && !allowWhenAuth.includes(to.name)) {
+    if (to.meta.guest && isAuthenticated) {
         if (isAdmin) return next({ name: "admin.dashboard" })
         return next({ name: "app.home" })
     }
 
-    // Auth protection
     if (to.meta.auth && !isAuthenticated) {
         localStorage.setItem("intended", to.fullPath)
         return next({ name: "auth.login" })
     }
 
-    // Admin protection
     if (to.meta.admin) {
         if (!isAuthenticated) return next({ name: "auth.login" })
         if (!isAdmin) return next({ name: "error.403" })

@@ -99,7 +99,8 @@
   "statuses": {
     "accepted": "Accepted",
     "pending": "Pending",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "declined": "Declined"
   },
 
   "auth": {
@@ -168,7 +169,52 @@
       "invite_desc": "Plan trips together with your group.",
       "vote": "Vote on places",
       "vote_desc": "Choose the best spots together."
-    }
+    },
+
+    "badge": "Plan your trip together — without chaos",
+    "hero_title": "PoDrodze — plan a trip together",
+    "hero_subtitle": "Create trips, add places, invite friends and build a clear daily plan — in one place.",
+
+    "cta_my_trips": "My trips",
+    "cta_login": "Sign in",
+    "cta_register": "Create account",
+
+    "pill_trips": "Trips",
+    "pill_places": "Places",
+    "pill_team": "Team",
+    "pill_preferences": "Preferences",
+    "pill_plan": "Day plan",
+
+    "preview_title": "What you can do",
+    "preview_1_title": "Create a trip",
+    "preview_1_desc": "Name, dates, and a ready workspace to plan.",
+    "preview_2_title": "Add places and vote",
+    "preview_2_desc": "Collect proposals and set priorities together.",
+    "preview_3_title": "Invite your team",
+    "preview_3_desc": "Roles, invitations and simple collaboration.",
+    "preview_4_title": "Set preferences",
+    "preview_4_desc": "Adjust the plan to your group’s style.",
+    "preview_5_title": "Build a day plan",
+    "preview_5_desc": "A clear schedule and an ordered itinerary.",
+    "preview_footer": "Everything in one place: places, team, preferences and plan.",
+
+    "how_title": "How it works",
+    "how_subtitle": "A short guide to create a trip and start planning in minutes.",
+    "how_cta": "Go to trips",
+    "how_step": "Step",
+    "how_1_title": "Create a trip",
+    "how_1_desc": "Set a name and dates — your planning space is ready.",
+    "how_2_title": "Add places",
+    "how_2_desc": "Search or add custom points and build a shared list.",
+    "how_3_title": "Vote and plan",
+    "how_3_desc": "Vote to pick priorities and turn them into a day plan.",
+
+    "feature_places_title": "Places",
+    "feature_places_desc": "Add places, manage the list and keep everything organized.",
+    "feature_team_title": "Team",
+    "feature_team_desc": "Invites, roles and collaboration without endless chat messages.",
+    "feature_decisions_title": "Decisions",
+    "feature_decisions_desc": "Vote on places and decide priorities quickly."
   },
 
   "dashboard": {
@@ -287,9 +333,22 @@
       "remove_title": "Remove member",
       "remove_hint": "This user will lose access to the trip.",
 
+      "no_invites": "No pending invites.",
+      "no_declined": "No declined invites.",
+      "resend_no_email": "Cannot resend invite: missing email.",
+
+      "sections": {
+        "members": "Members",
+        "invites": "Invites",
+        "declined": "Declined"
+      },
+
       "actions": {
         "change_role": "Change role",
-        "remove": "Remove from trip"
+        "remove": "Remove from trip",
+        "resend": "Resend invite",
+        "show_declined": "Show declined",
+        "hide_declined": "Hide declined"
       }
     },
 
@@ -325,6 +384,7 @@
 
     "student_project": "Student project"
   },
+
   "legal": {
     "data_deletion": {
       "badge": "Your privacy and data control",
@@ -334,6 +394,7 @@
       "pill_2": "Email verification",
       "pill_3": "Up to 30 days",
       "student_note": "This is a student project developed for an academic course. The service is provided for educational purposes.",
+
       "quick_title": "Quick steps",
       "step_1_title": "Send an email request",
       "step_1_desc": "Email us with the subject line provided below.",
@@ -342,12 +403,18 @@
       "step_3_title": "We confirm deletion",
       "step_3_desc": "We will confirm completion via email once the request is processed.",
       "footer_note": "If you used Facebook Login, your request can reference the same email used for Facebook.",
+
+      "details_title": "Details",
+      "details_subtitle": "Select a section to view more information.",
+
       "section_what_title": "What data can be deleted",
       "section_what_desc": "We can delete data associated with your PoDrodze account, including provider identifiers (e.g., Facebook Login) and app content linked to your account.",
       "what_1": "Account details (name, email, linked provider identifiers).",
       "what_2": "Content created in the app that is linked to your account (e.g., trips, places, votes).",
       "what_3": "Technical identifiers needed to handle authentication records, where applicable.",
+
       "section_how_title": "How to request deletion",
+      "how_lead": "Send a request by email using the details below.",
       "email_label": "Email",
       "subject_label": "Subject",
       "subject_value": "PoDrodze – Data Deletion Request",
@@ -356,16 +423,121 @@
       "include_2": "Your name or username used in the app (if available).",
       "include_3": "Any additional details that help us identify the account (optional).",
       "manual_note": "Requests are verified to prevent unauthorized deletions. We may ask for additional confirmation if needed.",
+
       "section_time_title": "Processing time",
       "section_time_desc": "We process deletion requests as soon as possible, typically within 30 days, and confirm completion by email.",
+
       "last_updated": "Last updated",
+
       "aside_title": "Notes",
       "aside_1": "If you signed in via Facebook, you can reference the same email used for Facebook Login.",
       "aside_2": "This page exists to meet platform requirements and to inform users how to request data deletion.",
       "aside_3": "You may also request deletion of the entire account and related app data."
+    },
+
+    "privacy": {
+      "badge": "Privacy & transparency",
+      "title": "Privacy Policy",
+      "subtitle": "This document explains what data we collect, why we collect it, and how you can control it in PoDrodze.",
+
+      "pill_1": "Data protection",
+      "pill_2": "Minimal collection",
+      "pill_3": "Web application",
+
+      "student_note": "This is a student project developed for an academic course. The service is provided for educational purposes.",
+
+      "quick_title": "Quick summary",
+      "quick_1_title": "What we collect",
+      "quick_1_desc": "Account data and app content linked to your account (e.g., trips).",
+      "quick_2_title": "How it is used",
+      "quick_2_desc": "To provide authentication and core features like trip planning.",
+      "quick_3_title": "Your control",
+      "quick_3_desc": "You can update profile data, change password, and request deletion.",
+      "footer_note": "For questions, contact us by email using the address below.",
+
+      "details_title": "Details",
+      "details_subtitle": "Select a section to view more information.",
+
+      "section_data_title": "Data we collect",
+      "section_data_desc": "We collect only the data necessary to provide app functionality.",
+      "data_1": "Account information: name, email, and provider identifiers (e.g., Facebook ID).",
+      "data_2": "App content: trips, places, votes, and other items linked to your account.",
+      "data_3": "Technical data: authentication tokens and basic logs needed for security and debugging.",
+
+      "section_use_title": "How we use data",
+      "section_use_desc": "We use data to provide authentication and core features.",
+      "use_1": "To authenticate users and protect access to accounts.",
+      "use_2": "To enable trip planning features and store your content.",
+      "use_3": "To improve reliability and security of the application.",
+      "no_sell": "We do not sell personal data.",
+
+      "section_cookies_title": "Cookies and local storage",
+      "section_cookies_desc": "We may use cookies or browser storage to keep you signed in and to support essential functionality.",
+      "cookies_1": "Authentication tokens stored in browser storage for session handling.",
+      "cookies_2": "Optional preferences such as language selection, where available.",
+
+      "section_rights_title": "Your rights and choices",
+      "section_rights_desc": "You can access, update, and delete your data.",
+      "rights_1": "Access and update your profile data in the app.",
+      "rights_2": "Change your password and manage active sessions.",
+      "rights_3": "Request data deletion or delete the account.",
+      "deletion_note": "For data deletion, please see the Data Deletion Instructions page.",
+
+      "section_contact_title": "Contact",
+      "contact_email_label": "Email",
+      "last_updated": "Last updated",
+
+      "aside_title": "Notes",
+      "aside_1": "This policy is provided to meet platform requirements and to inform users.",
+      "aside_2": "The application is intended for educational use as a student project.",
+      "aside_3": "We aim to minimize data collection and keep it limited to essential functionality."
+    },
+
+    "terms": {
+      "badge": "Terms of Service",
+      "title": "Terms and Conditions",
+      "subtitle": "These terms govern your use of the PoDrodze web application.",
+
+      "pill_1": "Use rules",
+      "pill_2": "Account security",
+      "pill_3": "Educational project",
+
+      "student_note": "This is a student project developed for an academic course. The service is provided for educational purposes and may be changed or discontinued.",
+
+      "quick_title": "Quick overview",
+      "quick_1_title": "Use responsibly",
+      "quick_1_desc": "Do not misuse the app or attempt unauthorized access.",
+      "quick_2_title": "Account security",
+      "quick_2_desc": "Keep your credentials secure and report issues if needed.",
+      "quick_3_title": "Student project",
+      "quick_3_desc": "Provided as-is, without guarantees of availability or accuracy.",
+      "footer_note": "If you disagree with these terms, please discontinue use of the application.",
+
+      "section_scope_title": "Scope",
+      "section_scope_desc": "These terms apply to your use of the PoDrodze web application, including authentication and trip planning features.",
+
+      "section_accounts_title": "Accounts and authentication",
+      "accounts_1": "You are responsible for maintaining the confidentiality of your account credentials.",
+      "accounts_2": "OAuth providers (e.g., Facebook, Google) may be used to authenticate you.",
+      "accounts_3": "We may suspend access in cases of abuse or security concerns.",
+
+      "section_content_title": "User content",
+      "content_1": "You retain responsibility for the content you create in the app (e.g., trips, places, notes).",
+      "content_2": "Do not submit unlawful or abusive content.",
+      "content_3": "We may remove content that violates these terms or applicable rules.",
+
+      "section_disclaimer_title": "Disclaimer",
+      "section_disclaimer_desc": "PoDrodze is provided on an 'as-is' basis for educational purposes, without warranties of any kind.",
+      "section_disclaimer_desc_2": "We do not guarantee uninterrupted availability, correctness of generated routes, or external service availability (e.g., maps, OAuth providers).",
+
+      "section_contact_title": "Contact",
+      "contact_email_label": "Email",
+      "last_updated": "Last updated",
+
+      "aside_title": "Notes",
+      "aside_1": "These terms are provided to meet platform requirements and inform users about acceptable use.",
+      "aside_2": "You can request account deletion as described on the Data Deletion Instructions page.",
+      "aside_3": "The project may change over time as part of coursework."
     }
   }
 }
-
-
-
