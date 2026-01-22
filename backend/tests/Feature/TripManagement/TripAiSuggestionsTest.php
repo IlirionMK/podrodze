@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature;
+namespace Tests\Feature\TripManagement;
 
 use App\Models\Place;
 use App\Models\User;
@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase\TripTestCase;
+
 /**
  * Tests for AI-powered trip suggestions.
  *
