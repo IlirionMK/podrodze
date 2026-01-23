@@ -9,11 +9,19 @@
     "refresh": "Odśwież",
     "close": "Zamknij",
     "remove": "Usuń",
-    "back": "Wróć"
+    "back": "Wróć",
+
+    "edit": "Edytuj",
+    "accept": "Zaakceptuj",
+    "decline": "Odrzuć",
+    "leave": "Opuść podróż",
+    "delete_confirm": "Tak, usuń konto",
+    "view_details": "Zobacz szczegóły"
   },
 
   "errors": {
-    "default": "Coś poszło nie tak. Spróbuj ponownie."
+    "default": "Coś poszło nie tak. Spróbuj ponownie.",
+    "suggestions_failed": "Nie udało się wczytać sugestii."
   },
 
   "app": {
@@ -104,6 +112,11 @@
     "declined": "Odrzucony"
   },
 
+  "tabs": {
+    "invitations": "Zaproszenia",
+    "my_trips": "Moje podróże"
+  },
+
   "auth": {
     "email": "Email",
     "password": "Hasło",
@@ -111,13 +124,14 @@
     "loading": "Proszę czekać...",
     "logout": "Wyloguj",
 
+    "no_token": "Brak tokenu — zaloguj się ponownie.",
+
     "login": {
       "title": "Logowanie",
       "submit": "Zaloguj się",
       "google": "Zaloguj się przez Google",
       "facebook": "Zaloguj się przez Facebook",
       "or": "lub"
-
     },
 
     "register": {
@@ -229,6 +243,61 @@
     }
   },
 
+  "user": {
+    "title": "Panel użytkownika",
+    "subtitle": "Zarządzaj swoim profilem i podróżami",
+
+    "profile": "Profil",
+    "trips": "Podróże",
+
+    "fields": {
+      "email": "Email"
+    },
+
+    "joined": "Dołączono",
+
+    "saved": "Profil został zaktualizowany.",
+    "pass_changed": "Hasło zostało zmienione.",
+    "pass_mismatch": "Nowe hasła nie są zgodne.",
+    "pass_too_short": "Hasło musi mieć minimum 8 znaków.",
+    "change_password": "Zmień hasło",
+
+    "invitesaccepted": "Zaproszenie zostało zaakceptowane.",
+    "invitesdeclined": "Zaproszenie zostało odrzucone.",
+
+    "leave_title": "Opuścić podróż?",
+    "leave_confirm": "Czy na pewno chcesz opuścić podróż „{name}”?",
+
+    "delete_account": "Usuń konto",
+    "delete_hint": "Po usunięciu konta wszystkie Twoje dane zostaną trwale usunięte."
+  },
+
+  "profile": {
+    "edit_title": "Edytuj profil",
+    "edit_hint": "Zaktualizuj swoje imię i email.",
+
+    "password_title": "Zmiana hasła",
+    "password_hint": "Wprowadź obecne hasło i wybierz nowe.",
+
+    "current_password": "Obecne hasło",
+    "new_password": "Nowe hasło",
+    "new_password2": "Potwierdź nowe hasło",
+
+    "delete_confirm_title": "Usunąć konto?",
+    "delete_confirm_hint": "Ta operacja jest nieodwracalna.",
+    "delete_warning": "Wszystkie Twoje dane, w tym podróże i ustawienia, zostaną trwale usunięte. Tej operacji nie można cofnąć.",
+
+    "danger_zone": "Strefa niebezpieczna",
+
+    "invites": {
+      "empty_title": "Brak zaproszeń",
+      "empty_hint": "Gdy ktoś zaprosi Cię do podróży, pojawi się to tutaj.",
+      "new": "Nowe zaproszenie",
+      "from": "Zaproszony przez",
+      "trip": "Podróż"
+    }
+  },
+
   "trip": {
     "stats": {
       "places": "Miejsca",
@@ -249,6 +318,10 @@
     "no_description": "Brak opisu",
     "start": "Data rozpoczęcia",
     "end": "Data zakończenia",
+
+    "start_location": "Miejsce startowe",
+    "start_date": "Data rozpoczęcia",
+    "members": "Liczba uczestników",
 
     "view": {
       "places": "Miejsca",
@@ -324,7 +397,9 @@
         "search": "Wyszukaj"
       },
       "search_placeholder": "Szukaj po nazwie lub adresie",
-      "no_results": "Brak wyników"
+      "no_results": "Brak wyników",
+      "ai_loading": "AI wybiera najlepsze miejsca...",
+      "no_suggestions": "Nie znaleziono sugestii dla tej podróży."
     },
 
     "team": {
@@ -412,10 +487,12 @@
     "new": "Dodaj podróż",
     "empty_title": "Brak podróży",
     "empty": "Nie masz jeszcze żadnych podróży. Utwórz pierwszą, aby zacząć planować.",
+    "empty_hint": "Nie masz jeszcze żadnych podróży. Utwórz pierwszą, aby zacząć planować.",
     "unnamed": "Podróż",
     "days_short": "dni",
     "activities": "aktywności",
-    "details": "Zobacz szczegóły"
+    "details": "Zobacz szczegóły",
+    "left": "Opuściłeś podróż."
   },
 
   "legal": {

@@ -1,9 +1,18 @@
 <script setup>
 import { ref, computed, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { RefreshCw, Sparkles, GripVertical, RotateCcw } from "lucide-vue-next"
+import {
+  RefreshCw,
+  Sparkles,
+  GripVertical,
+  RotateCcw,
+  Plus,
+  RefreshCcw as RefreshIcon,
+  MapPin
+} from "lucide-vue-next"
 
 import { fetchTripItinerary, fetchTripItineraryFull } from "@/composables/api/itinerary.js"
+import { getAiSuggestions } from "@/composables/api/tripPlaces.js"
 
 const props = defineProps({
   tripId: { type: [String, Number], required: true },
@@ -12,9 +21,9 @@ const props = defineProps({
   placesLoading: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(["error"])
+const emit = defineEmits(["error", "picked"])
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 
 function tr(key, fallback) {
   return te(key) ? t(key) : fallback
@@ -105,9 +114,6 @@ function formatScore(v) {
   return n.toFixed(2)
 }
 
-/**
- * Drag & drop (HTML5) — reorder inside a day
- */
 const drag = ref({
   dayIndex: null,
   fromIndex: null,
@@ -151,12 +157,89 @@ function onDragEnd() {
   drag.value = { dayIndex: null, fromIndex: null, overIndex: null }
 }
 
+const aiLoading = ref(false)
+const aiError = ref("")
+const aiItems = ref([])
+const aiLimit = ref(6)
+
+const canSuggest = computed(() => !props.placesLoading && props.places.length > 0)
+
+function mapAiItem(item) {
+  let gId = item.external_id || null
+  if (gId && gId.startsWith("google:")) gId = gId.replace("google:", "")
+
+  const uniqueKey = item.internal_place_id
+      ? `db_${item.internal_place_id}`
+      : `ext_${gId || Math.random()}`
+
+  return {
+    unique_key: uniqueKey,
+    place_id: item.internal_place_id || null,
+    google_place_id: gId || null,
+    name: item.name,
+    address: item.address || "",
+    category_slug: item.category,
+    ai_reason: item.reason,
+    image: item.image_url,
+    rating: item.rating,
+    distance_m: item.distance_m,
+    reviews_count: item.reviews_count,
+    source: "suggestion",
+  }
+}
+
+async function loadAiSuggestions() {
+  if (!canSuggest.value) {
+    aiItems.value = []
+    return
+  }
+
+  aiLoading.value = true
+  aiError.value = ""
+
+  try {
+    const res = await getAiSuggestions(props.tripId, {
+      limit: Number(aiLimit.value || 6),
+      locale: locale.value,
+    })
+
+    const rawItems = res.data.data || []
+    aiItems.value = rawItems.map(mapAiItem)
+  } catch (e) {
+    aiError.value = tr("errors.suggestions_failed", "Failed to load suggestions")
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+function buildPickedPayload(it) {
+  const payload = { _source: it.source }
+  if (it.place_id) payload.place_id = it.place_id
+  else if (it.google_place_id) payload.google_place_id = it.google_place_id
+  if (!payload.place_id && !payload.google_place_id) payload.name = it.name
+  return payload
+}
+
+function addAiItem(it) {
+  emit("picked", buildPickedPayload(it))
+}
+
 watch(
     () => props.tripId,
     () => {
       itinerary.value = null
       originalSchedule.value = []
+      aiItems.value = []
+      aiError.value = ""
     }
+)
+
+watch(
+    () => [props.tripId, props.placesLoading, props.places.length],
+    () => {
+      loadAiSuggestions()
+    },
+    { immediate: true }
 )
 </script>
 
@@ -190,6 +273,116 @@ watch(
           <Sparkles class="h-4 w-4" />
           {{ generating ? tr("trip.plan.generating", "Generating...") : tr("trip.plan.generate", "Generate plan") }}
         </button>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-2xl border border-gray-200 p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-semibold mb-1">{{ tr("trip.plan.ai_title", "AI recommendations") }}</div>
+          <div class="text-sm text-gray-600">
+            {{ tr("trip.plan.ai_hint", "Suggested places based on your trip context and preferences.") }}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input
+              v-model.number="aiLimit"
+              type="number"
+              min="1"
+              max="20"
+              class="w-20 h-10 px-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-black/10 text-sm"
+          />
+          <button
+              type="button"
+              class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium border border-gray-200 bg-white text-gray-900 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="aiLoading || !canSuggest"
+              @click="loadAiSuggestions"
+          >
+            <RefreshIcon class="h-4 w-4" />
+            {{ tr("actions.refresh", "Refresh") }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="!canSuggest" class="mt-4 p-4 rounded-xl border bg-gray-50 text-gray-700">
+        <div class="font-semibold mb-1">{{ tr("trip.plan.ai_empty_title", "Add places to get suggestions") }}</div>
+        <div class="text-sm text-gray-600">
+          {{ tr("trip.plan.ai_empty_hint", "AI needs at least one place in the trip to suggest more.") }}
+        </div>
+      </div>
+
+      <div v-else class="mt-4">
+        <div v-if="aiLoading" class="p-4 rounded-xl border bg-gray-50 text-gray-700">
+          {{ tr("loading", "Loading...") }}
+        </div>
+
+        <div v-else-if="aiError" class="p-4 rounded-xl bg-red-100 text-red-700 border border-red-200 text-sm">
+          {{ aiError }}
+        </div>
+
+        <div v-else-if="aiItems.length === 0" class="p-4 rounded-xl border bg-gray-50 text-gray-700">
+          {{ tr("trip.add_place.no_suggestions", "No suggestions found for this trip.") }}
+        </div>
+
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div
+              v-for="it in aiItems"
+              :key="it.unique_key"
+              class="rounded-2xl border border-gray-200 p-4 bg-white hover:bg-gray-50 transition"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-semibold text-gray-900 truncate">{{ it.name }}</div>
+                <div class="text-sm text-gray-600 mt-0.5 truncate">{{ it.address || "—" }}</div>
+
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                  <span
+                      v-if="it.category_slug"
+                      class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-700"
+                  >
+                    {{ categoryLabel(it.category_slug) }}
+                  </span>
+
+                  <span v-if="it.rating" class="inline-flex items-center gap-1">
+                    <MapPin class="h-3.5 w-3.5 text-gray-500" />
+                    <span class="font-semibold text-gray-900">{{ it.rating }}★</span>
+                  </span>
+
+                  <span v-if="it.distance_m" class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">•</span>
+                    <span>{{ formatDistance(it.distance_m) }}</span>
+                  </span>
+
+                  <span v-if="it.reviews_count" class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">•</span>
+                    <span>{{ it.reviews_count }} reviews</span>
+                  </span>
+                </div>
+              </div>
+
+              <button
+                  type="button"
+                  class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 active:opacity-80 shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                  @click="addAiItem(it)"
+                  :disabled="props.placesLoading"
+              >
+                <Plus class="h-4 w-4" />
+                {{ tr("actions.add", "Add") }}
+              </button>
+            </div>
+
+            <div
+                v-if="it.ai_reason"
+                class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800"
+            >
+              <div class="flex items-start gap-2">
+                <Sparkles class="h-4 w-4 mt-0.5 text-gray-600" />
+                <span class="leading-relaxed">{{ it.ai_reason }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

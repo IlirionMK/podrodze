@@ -6,11 +6,7 @@ import {
   CalendarDays,
   Pencil,
   Save,
-  X,
   RefreshCw,
-  KeyRound,
-  Eye,
-  EyeOff,
   Check,
   Ban,
   MailOpen,
@@ -19,10 +15,14 @@ import {
   UserX,
   User,
   Calendar,
+  KeyRound,
 } from "lucide-vue-next"
 
 import api from "@/composables/api/api.js"
 import { useAuth } from "@/composables/useAuth"
+import BaseModal from "@/components/ui/BaseModal.vue"
+import ConfirmModal from "@/components/ui/ConfirmModal.vue"
+import BaseInput from "@/components/forms/BaseInput.vue"
 
 const { t, te } = useI18n()
 function tr(key, fallback) {
@@ -34,7 +34,6 @@ const { token, user } = useAuth()
 const loading = ref(false)
 const errorMessage = ref("")
 const successMessage = ref("")
-
 const activeTab = ref("profile")
 
 const editOpen = ref(false)
@@ -47,9 +46,6 @@ const passError = ref("")
 const currentPassword = ref("")
 const newPassword = ref("")
 const newPassword2 = ref("")
-const showCurrent = ref(false)
-const showNew = ref(false)
-const showNew2 = ref(false)
 
 const invitesLoading = ref(false)
 const invitesError = ref("")
@@ -64,6 +60,9 @@ const deleteAccountOpen = ref(false)
 const deleteAccountBusy = ref(false)
 const deleteAccountError = ref("")
 
+const leaveTripOpen = ref(false)
+const leaveTripTarget = ref(null)
+
 const ME_SHOW = `/users/me`
 const ME_UPDATE = `/users/me`
 const ME_PASSWORD = `/users/me/password`
@@ -76,15 +75,7 @@ const INVITES_DECLINE = (tripId) => `/trips/${tripId}/decline`
 const MY_TRIPS = `/trips`
 const LEAVE_TRIP = (tripId, userId) => `/trips/${tripId}/members/${userId}`
 
-const btnBase =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-const btnPrimary =
-    btnBase + " bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:opacity-90 active:opacity-80 shadow"
-const btnSecondary = btnBase + " border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
-const btnDanger = btnBase + " border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-
 const iconSm = "h-4 w-4 shrink-0 flex-none"
-const iconMd = "h-5 w-5 shrink-0 flex-none"
 const iconLg = "w-12 h-12 shrink-0 flex-none"
 
 function getErrMessage(err) {
@@ -195,7 +186,6 @@ function openEdit() {
   successMessage.value = ""
   errorMessage.value = ""
 }
-
 function closeEdit() {
   editOpen.value = false
 }
@@ -227,11 +217,7 @@ function openPassword() {
   currentPassword.value = ""
   newPassword.value = ""
   newPassword2.value = ""
-  showCurrent.value = false
-  showNew.value = false
-  showNew2.value = false
 }
-
 function closePassword() {
   passOpen.value = false
 }
@@ -239,10 +225,12 @@ function closePassword() {
 async function changePassword() {
   passError.value = ""
   if (!currentPassword.value || !newPassword.value || !newPassword2.value) return
+
   if (newPassword.value !== newPassword2.value) {
     passError.value = tr("user.pass_mismatch", "Nowe hasła nie są zgodne.")
     return
   }
+
   if (newPassword.value.length < 8) {
     passError.value = tr("user.pass_too_short", "Hasło musi mieć minimum 8 znaków.")
     return
@@ -302,18 +290,31 @@ async function declineInvite(inv) {
   }
 }
 
-async function leaveTrip(trip) {
+function openLeaveTrip(trip) {
+  leaveTripTarget.value = trip
+  leaveTripOpen.value = true
+}
+
+const leaveTripDescription = computed(() => {
+  const name = leaveTripTarget.value?.name || ""
+  return tr("user.leave_confirm", `Czy na pewno chcesz opuścić podróż "${name}"?`)
+})
+const leaveTripBusy = computed(() => tripBusyId.value === leaveTripTarget.value?.id)
+
+async function confirmLeaveTrip() {
+  const trip = leaveTripTarget.value
   const tripId = trip?.id
   const userId = user.value?.id
   if (!tripId || !userId) return
 
-  if (!confirm(tr("user.leave_confirm", `Czy na pewno chcesz opuścić podróż "${trip?.name || ""}"?`))) return
-
   tripBusyId.value = tripId
   errorMessage.value = ""
+
   try {
     await api.delete(LEAVE_TRIP(tripId, userId))
     successMessage.value = tr("trips.left", "Opuściłeś podróż.")
+    leaveTripOpen.value = false
+    leaveTripTarget.value = null
     await refreshAll()
   } catch (e) {
     errorMessage.value = getErrMessage(e)
@@ -326,7 +327,6 @@ function openDeleteAccount() {
   deleteAccountOpen.value = true
   deleteAccountError.value = ""
 }
-
 function closeDeleteAccount() {
   deleteAccountOpen.value = false
 }
@@ -377,7 +377,7 @@ onMounted(() => {
         <div class="flex items-center justify-end gap-2">
           <button
               type="button"
-              :class="btnSecondary + ' w-full sm:w-auto'"
+              class="btn-back w-full sm:w-auto"
               @click="refreshAll"
               :disabled="loading || invitesLoading || tripsLoading"
           >
@@ -404,10 +404,10 @@ onMounted(() => {
                 'px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap',
                 activeTab === 'profile'
                   ? 'border-emerald-600 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
               ]"
             >
-              {{ tr("user.profile", "Profil") }}
+              {{ tr('user.profile', 'Profil') }}
             </button>
 
             <button
@@ -416,10 +416,10 @@ onMounted(() => {
                 'px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap relative',
                 activeTab === 'invitations'
                   ? 'border-emerald-600 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
               ]"
             >
-              {{ tr("tabs.invitations", "Zaproszenia") }}
+              {{ tr('tabs.invitations', 'Zaproszenia') }}
               <span
                   v-if="pendingInvites.length > 0"
                   class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-500 text-white"
@@ -434,18 +434,19 @@ onMounted(() => {
                 'px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap',
                 activeTab === 'trips'
                   ? 'border-emerald-600 text-emerald-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
               ]"
             >
-              {{ tr("tabs.my_trips", "Moje podróże") }}
+              {{ tr('tabs.my_trips', 'Moje podróże') }}
             </button>
           </nav>
         </div>
       </div>
 
-      <div v-show="activeTab === 'profile'" class="space-y-6">
-        <section class="bg-white rounded-2xl border shadow-sm overflow-hidden">
-          <div class="p-6 border-b">
+      <!-- PROFILE -->
+      <div v-show="activeTab === 'profile'" class="space-y-4">
+        <section class="card-surface overflow-hidden">
+          <div class="card-pad border-b">
             <div class="flex items-start justify-between gap-4">
               <div class="flex items-center gap-4 min-w-0">
                 <div
@@ -478,15 +479,22 @@ onMounted(() => {
                 </div>
               </div>
 
-              <button type="button" :class="btnSecondary + ' shrink-0'" @click="openEdit" :disabled="loading || !user">
-                <Pencil :class="iconSm" />
-                <span class="hidden sm:inline">{{ tr("admin", "Edytuj") }}</span>
-                <span class="sm:hidden">{{ tr("admin", "Edytuj") }}</span>
-              </button>
+              <!-- aligned buttons -->
+              <div class="flex flex-col sm:flex-row gap-2 shrink-0">
+                <button type="button" class="btn-secondary w-full sm:w-auto" @click="openPassword" :disabled="loading || !user">
+                  <KeyRound :class="iconSm" />
+                  {{ tr("user.change_password", "Zmień hasło") }}
+                </button>
+
+                <button type="button" class="btn-back w-full sm:w-auto" @click="openEdit" :disabled="loading || !user">
+                  <Pencil :class="iconSm" />
+                  {{ tr("actions.edit", "Edytuj") }}
+                </button>
+              </div>
             </div>
           </div>
 
-          <div class="p-6">
+          <div class="card-pad">
             <div class="grid grid-cols-1 gap-4">
               <div class="p-4 rounded-2xl border bg-gray-50">
                 <div class="text-xs text-gray-500">{{ tr("user.fields.email", "Email") }}</div>
@@ -495,45 +503,36 @@ onMounted(() => {
                 </div>
               </div>
             </div>
-
-            <div class="mt-6 flex flex-col sm:flex-row gap-2 sm:justify-end">
-              <button type="button" :class="btnSecondary + ' w-full sm:w-auto'" @click="openPassword" :disabled="loading">
-                <KeyRound :class="iconSm" />
-                {{ tr("user.change_password", "Zmień hasło") }}
-              </button>
-            </div>
           </div>
         </section>
 
-        <section class="bg-white rounded-2xl border border-red-200 shadow-sm p-6">
-          <h2 class="text-lg font-semibold text-red-700 mb-4">
-            {{ tr("profile.danger_zone", "Strefa niebezpieczna") }}
-          </h2>
-
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border border-red-200 rounded-lg bg-red-50">
+        <!-- compact delete row (no "danger zone") -->
+        <section class="card-surface">
+          <div class="card-pad flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div class="min-w-0">
-              <h3 class="font-medium text-gray-900">
+              <div class="text-sm font-semibold text-gray-900">
                 {{ tr("user.delete_account", "Usuń konto") }}
-              </h3>
-              <p class="text-sm text-gray-600 mt-1">
+              </div>
+              <div class="mt-1 text-sm text-gray-500">
                 {{ tr("user.delete_hint", "Po usunięciu konta wszystkie Twoje dane zostaną trwale usunięte.") }}
-              </p>
+              </div>
             </div>
 
-            <button type="button" :class="btnDanger + ' w-full sm:w-auto shrink-0'" @click="openDeleteAccount">
+            <button type="button" class="btn-danger w-full sm:w-auto shrink-0" @click="openDeleteAccount">
               <Trash2 :class="iconSm" />
-              {{ tr("actions.remove", "Usuń") }}
+              {{ tr("user.delete_account", "Usuń konto") }}
             </button>
           </div>
         </section>
       </div>
 
+      <!-- INVITES -->
       <div v-show="activeTab === 'invitations'">
         <div v-if="invitesLoading" class="text-center py-12">
           <div class="text-gray-500">{{ tr("loading", "Ładowanie...") }}</div>
         </div>
 
-        <div v-else-if="pendingInvites.length === 0" class="bg-white rounded-2xl border shadow-sm p-8 sm:p-12">
+        <div v-else-if="pendingInvites.length === 0" class="card-surface card-pad">
           <div class="text-center">
             <MailOpen :class="iconLg" class="text-gray-300 mx-auto mb-4" />
             <h3 class="text-lg font-medium text-gray-900 mb-2">
@@ -549,7 +548,7 @@ onMounted(() => {
           <div
               v-for="inv in pendingInvites"
               :key="getInviteTripId(inv) || inv.id || inv.invitation_id"
-              class="bg-white rounded-2xl border shadow-sm p-5 sm:p-6 hover:shadow-md transition"
+              class="card-surface card-pad hover:shadow-md transition"
           >
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div class="flex-1 min-w-0">
@@ -584,7 +583,7 @@ onMounted(() => {
                     <span
                         :class="[
                         'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border shrink-0',
-                        getRoleBadgeColor(inv.role)
+                        getRoleBadgeColor(inv.role),
                       ]"
                     >
                       {{ getRoleLabel(inv.role) }}
@@ -594,22 +593,12 @@ onMounted(() => {
               </div>
 
               <div class="flex flex-col sm:flex-row gap-2 shrink-0">
-                <button
-                    type="button"
-                    :class="btnPrimary + ' w-full sm:w-auto px-3 py-2'"
-                    :disabled="inviteBusyId === getInviteTripId(inv)"
-                    @click="acceptInvite(inv)"
-                >
+                <button type="button" class="btn-primary w-full sm:w-auto" :disabled="inviteBusyId === getInviteTripId(inv)" @click="acceptInvite(inv)">
                   <Check :class="iconSm" />
                   {{ tr("actions.accept", "Zaakceptuj") }}
                 </button>
 
-                <button
-                    type="button"
-                    :class="btnSecondary + ' w-full sm:w-auto px-3 py-2'"
-                    :disabled="inviteBusyId === getInviteTripId(inv)"
-                    @click="declineInvite(inv)"
-                >
+                <button type="button" class="btn-back w-full sm:w-auto" :disabled="inviteBusyId === getInviteTripId(inv)" @click="declineInvite(inv)">
                   <Ban :class="iconSm" />
                   {{ tr("actions.decline", "Odrzuć") }}
                 </button>
@@ -623,12 +612,13 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- TRIPS -->
       <div v-show="activeTab === 'trips'">
         <div v-if="tripsLoading" class="text-center py-12">
           <div class="text-gray-500">{{ tr("loading", "Ładowanie...") }}</div>
         </div>
 
-        <div v-else-if="myTrips.length === 0" class="bg-white rounded-2xl border shadow-sm p-8 sm:p-12">
+        <div v-else-if="myTrips.length === 0" class="card-surface card-pad">
           <div class="text-center">
             <MapPin :class="iconLg" class="text-gray-300 mx-auto mb-4" />
             <h3 class="text-lg font-medium text-gray-900 mb-2">
@@ -641,11 +631,7 @@ onMounted(() => {
         </div>
 
         <div v-else class="space-y-4">
-          <div
-              v-for="trip in myTrips"
-              :key="trip.id"
-              class="bg-white rounded-2xl border shadow-sm p-5 sm:p-6 hover:shadow-md transition"
-          >
+          <div v-for="trip in myTrips" :key="trip.id" class="card-surface card-pad hover:shadow-md transition">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-3 mb-2 min-w-0">
@@ -653,7 +639,7 @@ onMounted(() => {
                   <span
                       :class="[
                       'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border shrink-0',
-                      getRoleBadgeColor(trip.user_role || trip.role)
+                      getRoleBadgeColor(trip.user_role || trip.role),
                     ]"
                   >
                     {{ getRoleLabel(trip.user_role || trip.role) }}
@@ -680,10 +666,7 @@ onMounted(() => {
               </div>
 
               <div class="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
-                <router-link
-                    :to="{ name: 'app.trips.show', params: { id: trip.id } }"
-                    :class="btnSecondary + ' w-full sm:w-auto'"
-                >
+                <router-link :to="{ name: 'app.trips.show', params: { id: trip.id } }" class="btn-secondary w-full sm:w-auto">
                   <MapPin :class="iconSm" />
                   {{ tr("actions.view_details", "Zobacz szczegóły") }}
                 </router-link>
@@ -691,8 +674,8 @@ onMounted(() => {
                 <button
                     v-if="(trip.user_role || trip.role) !== 'owner'"
                     type="button"
-                    :class="btnDanger + ' w-full sm:w-auto'"
-                    @click="leaveTrip(trip)"
+                    class="btn-danger w-full sm:w-auto"
+                    @click="openLeaveTrip(trip)"
                     :disabled="tripBusyId === trip.id"
                 >
                   <UserX :class="iconSm" />
@@ -704,299 +687,95 @@ onMounted(() => {
         </div>
       </div>
 
-      <Teleport to="body">
-        <Transition
-            appear
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="opacity-0 scale-95"
-            enter-to-class="opacity-100 scale-100"
-            leave-active-class="transition duration-150 ease-in"
-            leave-from-class="opacity-100 scale-100"
-            leave-to-class="opacity-0 scale-95"
-        >
-          <div v-if="editOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
-            <button class="absolute inset-0 bg-black/60" @click="closeEdit" aria-label="Close" />
+      <!-- EDIT MODAL -->
+      <BaseModal v-model="editOpen" :title="tr('profile.edit_title', 'Edytuj profil')" :description="tr('profile.edit_hint', 'Zaktualizuj swoje imię i email.')" :busy="loading">
+        <div class="space-y-4">
+          <BaseInput v-model="editName" :label="tr('profile.fields.name', 'Imię i nazwisko')" name="name" autocomplete="name" />
+          <BaseInput v-model="editEmail" :label="tr('profile.fields.email', 'Email')" type="email" name="email" autocomplete="email" />
+        </div>
 
-            <div class="relative w-full max-w-lg rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden">
-              <div class="p-6">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <h3 class="text-xl font-semibold drop-shadow">
-                      {{ tr("profile.edit_title", "Edytuj profil") }}
-                    </h3>
-                    <div class="mt-1 text-sm text-white/70">
-                      {{ tr("profile.edit_hint", "Zaktualizuj swoje imię i email.") }}
-                    </div>
-                  </div>
+        <template #footer>
+          <button type="button" class="btn-secondary w-full sm:w-auto" @click="closeEdit" :disabled="loading">
+            {{ tr("actions.cancel", "Anuluj") }}
+          </button>
 
-                  <button
-                      type="button"
-                      class="h-10 w-10 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 transition flex items-center justify-center disabled:opacity-50"
-                      @click="closeEdit"
-                      :disabled="loading"
-                      aria-label="Close"
-                  >
-                    <X :class="iconSm" />
-                  </button>
-                </div>
+          <button type="button" class="btn-primary w-full sm:w-auto" @click="saveProfile" :disabled="loading || !editName.trim() || !editEmail.trim()">
+            <Save :class="iconSm" />
+            {{ tr("actions.save", "Zapisz") }}
+          </button>
+        </template>
+      </BaseModal>
 
-                <div class="mt-5 space-y-4">
-                  <div>
-                    <label class="block text-sm font-medium mb-1">
-                      {{ tr("profile.fields.name", "Imię i nazwisko") }}
-                    </label>
-                    <input
-                        v-model="editName"
-                        type="text"
-                        class="w-full h-11 px-4 rounded-xl border border-white/15 bg-white/10 text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/20"
-                        :disabled="loading"
-                    />
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium mb-1">
-                      {{ tr("profile.fields.email", "Email") }}
-                    </label>
-                    <input
-                        v-model="editEmail"
-                        type="email"
-                        class="w-full h-11 px-4 rounded-xl border border-white/15 bg-white/10 text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/20"
-                        :disabled="loading"
-                    />
-                  </div>
-
-                  <div class="pt-2 flex flex-col sm:flex-row gap-2 sm:justify-end">
-                    <button
-                        type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-white/10 border border-white/15 hover:bg-white/15 transition disabled:opacity-50"
-                        @click="closeEdit"
-                        :disabled="loading"
-                    >
-                      {{ tr("actions.cancel", "Anuluj") }}
-                    </button>
-
-                    <button
-                        type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 active:opacity-80 transition shadow-lg disabled:opacity-50"
-                        @click="saveProfile"
-                        :disabled="loading || !editName.trim() || !editEmail.trim()"
-                    >
-                      <Save :class="iconSm" />
-                      {{ tr("actions.save", "Zapisz") }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <!-- PASSWORD MODAL -->
+      <BaseModal v-model="passOpen" :title="tr('profile.password_title', 'Zmiana hasła')" :description="tr('profile.password_hint', 'Wprowadź obecne hasło i wybierz nowe.')" :busy="passBusy">
+        <div class="space-y-4">
+          <div v-if="passError" class="p-4 rounded-xl bg-red-500/10 text-red-200 border border-red-400/20 text-sm">
+            {{ passError }}
           </div>
-        </Transition>
-      </Teleport>
 
-      <Teleport to="body">
-        <Transition
-            appear
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="opacity-0 scale-95"
-            enter-to-class="opacity-100 scale-100"
-            leave-active-class="transition duration-150 ease-in"
-            leave-from-class="opacity-100 scale-100"
-            leave-to-class="opacity-0 scale-95"
-        >
-          <div v-if="passOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
-            <button class="absolute inset-0 bg-black/60" @click="closePassword" aria-label="Close" />
+          <BaseInput v-model="currentPassword" type="password" :label="tr('profile.current_password', 'Obecne hasło')" autocomplete="current-password" />
+          <BaseInput v-model="newPassword" type="password" :label="tr('profile.new_password', 'Nowe hasło')" autocomplete="new-password" />
+          <BaseInput v-model="newPassword2" type="password" :label="tr('profile.new_password2', 'Potwierdź nowe hasło')" autocomplete="new-password" />
+        </div>
 
-            <div class="relative w-full max-w-lg rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden">
-              <div class="p-6">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <h3 class="text-xl font-semibold drop-shadow">
-                      {{ tr("profile.password_title", "Zmiana hasła") }}
-                    </h3>
-                    <div class="mt-1 text-sm text-white/70">
-                      {{ tr("profile.password_hint", "Wprowadź obecne hasło i wybierz nowe.") }}
-                    </div>
-                  </div>
+        <template #footer>
+          <button type="button" class="btn-secondary w-full sm:w-auto" @click="closePassword" :disabled="passBusy">
+            {{ tr("actions.cancel", "Anuluj") }}
+          </button>
 
-                  <button
-                      type="button"
-                      class="h-10 w-10 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 transition flex items-center justify-center disabled:opacity-50"
-                      @click="closePassword"
-                      :disabled="passBusy"
-                      aria-label="Close"
-                  >
-                    <X :class="iconSm" />
-                  </button>
-                </div>
+          <button type="button" class="btn-primary w-full sm:w-auto" @click="changePassword" :disabled="passBusy || !currentPassword || !newPassword || !newPassword2">
+            <Save :class="iconSm" />
+            {{ tr("actions.save", "Zapisz") }}
+          </button>
+        </template>
+      </BaseModal>
 
-                <div class="mt-5 space-y-4">
-                  <div v-if="passError" class="p-3 rounded-xl border border-red-400/25 bg-red-500/10 text-red-200 text-sm">
-                    {{ passError }}
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium mb-1">
-                      {{ tr("profile.current_password", "Obecne hasło") }}
-                    </label>
-                    <div class="relative">
-                      <input
-                          v-model="currentPassword"
-                          :type="showCurrent ? 'text' : 'password'"
-                          class="w-full h-11 px-4 pr-11 rounded-xl border border-white/15 bg-white/10 text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/20"
-                          :disabled="passBusy"
-                      />
-                      <button
-                          type="button"
-                          class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10"
-                          @click="showCurrent = !showCurrent"
-                          :disabled="passBusy"
-                      >
-                        <component :is="showCurrent ? EyeOff : Eye" :class="iconSm + ' text-white/70'" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium mb-1">
-                      {{ tr("profile.new_password", "Nowe hasło") }}
-                    </label>
-                    <div class="relative">
-                      <input
-                          v-model="newPassword"
-                          :type="showNew ? 'text' : 'password'"
-                          class="w-full h-11 px-4 pr-11 rounded-xl border border-white/15 bg-white/10 text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/20"
-                          :disabled="passBusy"
-                      />
-                      <button
-                          type="button"
-                          class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10"
-                          @click="showNew = !showNew"
-                          :disabled="passBusy"
-                      >
-                        <component :is="showNew ? EyeOff : Eye" :class="iconSm + ' text-white/70'" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium mb-1">
-                      {{ tr("profile.new_password2", "Potwierdź nowe hasło") }}
-                    </label>
-                    <div class="relative">
-                      <input
-                          v-model="newPassword2"
-                          :type="showNew2 ? 'text' : 'password'"
-                          class="w-full h-11 px-4 pr-11 rounded-xl border border-white/15 bg-white/10 text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/20"
-                          :disabled="passBusy"
-                      />
-                      <button
-                          type="button"
-                          class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10"
-                          @click="showNew2 = !showNew2"
-                          :disabled="passBusy"
-                      >
-                        <component :is="showNew2 ? EyeOff : Eye" :class="iconSm + ' text-white/70'" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="pt-2 flex flex-col sm:flex-row gap-2 sm:justify-end">
-                    <button
-                        type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-white/10 border border-white/15 hover:bg-white/15 transition disabled:opacity-50"
-                        @click="closePassword"
-                        :disabled="passBusy"
-                    >
-                      {{ tr("actions.cancel", "Anuluj") }}
-                    </button>
-
-                    <button
-                        type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 active:opacity-80 transition shadow-lg disabled:opacity-50"
-                        @click="changePassword"
-                        :disabled="passBusy || !currentPassword || !newPassword || !newPassword2"
-                    >
-                      <Save :class="iconSm" />
-                      {{ tr("actions.save", "Zapisz") }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <!-- DELETE ACCOUNT MODAL -->
+      <BaseModal
+          v-model="deleteAccountOpen"
+          :title="tr('profile.delete_confirm_title', 'Usunąć konto?')"
+          :description="tr('profile.delete_confirm_hint', 'Ta operacja jest nieodwracalna.')"
+          :busy="deleteAccountBusy"
+          max-width-class="max-w-md"
+      >
+        <div class="space-y-4">
+          <div v-if="deleteAccountError" class="p-4 rounded-xl bg-red-500/10 text-red-200 border border-red-400/20 text-sm">
+            {{ deleteAccountError }}
           </div>
-        </Transition>
-      </Teleport>
 
-      <Teleport to="body">
-        <Transition
-            appear
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="opacity-0 scale-95"
-            enter-to-class="opacity-100 scale-100"
-            leave-active-class="transition duration-150 ease-in"
-            leave-from-class="opacity-100 scale-100"
-            leave-to-class="opacity-0 scale-95"
-        >
-          <div v-if="deleteAccountOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
-            <button class="absolute inset-0 bg-black/60" @click="closeDeleteAccount" aria-label="Close" />
+          <p class="text-sm text-white/80">
+            {{
+              tr(
+                  "profile.delete_warning",
+                  "Wszystkie Twoje dane, w tym podróże i ustawienia, zostaną trwale usunięte. Tej operacji nie można cofnąć."
+              )
+            }}
+          </p>
+        </div>
 
-            <div class="relative w-full max-w-lg rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden">
-              <div class="p-6">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <h3 class="text-xl font-semibold drop-shadow">
-                      {{ tr("profile.delete_confirm_title", "Usunąć konto?") }}
-                    </h3>
-                    <div class="mt-1 text-sm text-white/70">
-                      {{ tr("profile.delete_confirm_hint", "Ta operacja jest nieodwracalna.") }}
-                    </div>
-                  </div>
+        <template #footer>
+          <button type="button" class="btn-secondary w-full sm:w-auto" @click="closeDeleteAccount" :disabled="deleteAccountBusy">
+            {{ tr("actions.cancel", "Anuluj") }}
+          </button>
 
-                  <button
-                      type="button"
-                      class="h-10 w-10 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 transition flex items-center justify-center disabled:opacity-50"
-                      @click="closeDeleteAccount"
-                      :disabled="deleteAccountBusy"
-                      aria-label="Close"
-                  >
-                    <X :class="iconSm" />
-                  </button>
-                </div>
+          <button type="button" class="btn-danger w-full sm:w-auto" @click="deleteAccount" :disabled="deleteAccountBusy">
+            <Trash2 :class="iconSm" />
+            {{ tr("user.delete_account", "Usuń konto") }}
+          </button>
+        </template>
+      </BaseModal>
 
-                <div class="mt-5 space-y-4">
-                  <div v-if="deleteAccountError" class="p-3 rounded-xl border border-red-400/25 bg-red-500/10 text-red-200 text-sm">
-                    {{ deleteAccountError }}
-                  </div>
-
-                  <p class="text-white/80 text-sm">
-                    {{ tr("profile.delete_warning", "Wszystkie Twoje dane, w tym podróże i ustawienia, zostaną trwale usunięte. Tej operacji nie można cofnąć.") }}
-                  </p>
-
-                  <div class="pt-2 flex flex-col sm:flex-row gap-2 sm:justify-end">
-                    <button
-                        type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-white/10 border border-white/15 hover:bg-white/15 transition disabled:opacity-50"
-                        @click="closeDeleteAccount"
-                        :disabled="deleteAccountBusy"
-                    >
-                      {{ tr("actions.cancel", "Anuluj") }}
-                    </button>
-
-                    <button
-                        type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-red-600 to-red-700 hover:opacity-90 active:opacity-80 transition shadow-lg disabled:opacity-50"
-                        @click="deleteAccount"
-                        :disabled="deleteAccountBusy"
-                    >
-                      <Trash2 :class="iconSm" />
-                      {{ tr("actions.delete_confirm", "Tak, usuń konto") }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </Teleport>
+      <!-- LEAVE TRIP -->
+      <ConfirmModal
+          v-model="leaveTripOpen"
+          :title="tr('user.leave_title', 'Opuścić podróż?')"
+          :description="leaveTripDescription"
+          :confirm-text="tr('actions.leave', 'Opuść podróż')"
+          :cancel-text="tr('actions.cancel', 'Anuluj')"
+          :busy="leaveTripBusy"
+          tone="danger"
+          @confirm="confirmLeaveTrip"
+      />
     </div>
   </div>
 </template>

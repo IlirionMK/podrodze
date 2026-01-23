@@ -9,11 +9,19 @@
     "refresh": "Refresh",
     "close": "Close",
     "remove": "Remove",
-    "back": "Back"
+    "back": "Back",
+
+    "edit": "Edit",
+    "accept": "Accept",
+    "decline": "Decline",
+    "leave": "Leave",
+    "delete_confirm": "Yes, delete",
+    "view_details": "View details"
   },
 
   "errors": {
-    "default": "Something went wrong. Please try again."
+    "default": "Something went wrong. Please try again.",
+    "suggestions_failed": "Failed to load suggestions."
   },
 
   "app": {
@@ -110,6 +118,8 @@
     "password_confirm": "Confirm password",
     "loading": "Please wait...",
     "logout": "Logout",
+
+    "no_token": "No token — please sign in again.",
 
     "login": {
       "title": "Login",
@@ -228,6 +238,66 @@
     }
   },
 
+  "tabs": {
+    "invitations": "Invitations",
+    "my_trips": "My trips"
+  },
+
+  "user": {
+    "title": "User Panel",
+    "subtitle": "Manage your profile and trips",
+
+    "profile": "Profile",
+    "trips": "Trips",
+
+    "fields": {
+      "email": "Email"
+    },
+
+    "joined": "Joined",
+
+    "saved": "Profile has been updated.",
+    "pass_changed": "Password has been changed.",
+    "pass_mismatch": "New passwords do not match.",
+    "pass_too_short": "Password must be at least 8 characters long.",
+    "change_password": "Change password",
+
+    "invitesaccepted": "Invitation has been accepted.",
+    "invitesdeclined": "Invitation has been declined.",
+
+    "leave_title": "Leave the trip?",
+    "leave_confirm": "Are you sure you want to leave the trip \"{name}\"?",
+
+    "delete_account": "Delete account",
+    "delete_hint": "After deleting your account, all your data will be permanently removed."
+  },
+
+  "profile": {
+    "edit_title": "Edit profile",
+    "edit_hint": "Update your name and email.",
+
+    "password_title": "Change password",
+    "password_hint": "Enter your current password and choose a new one.",
+
+    "current_password": "Current password",
+    "new_password": "New password",
+    "new_password2": "Confirm new password",
+
+    "delete_confirm_title": "Delete account?",
+    "delete_confirm_hint": "This action cannot be undone.",
+    "delete_warning": "All your data, including trips and settings, will be permanently deleted. This cannot be undone.",
+
+    "danger_zone": "Danger zone",
+
+    "invites": {
+      "empty_title": "No invitations",
+      "empty_hint": "When someone invites you to a trip, it will appear here.",
+      "new": "New invitation",
+      "from": "Invited by",
+      "trip": "Trip"
+    }
+  },
+
   "trip": {
     "stats": {
       "places": "Places",
@@ -248,6 +318,11 @@
     "no_description": "No description provided",
     "start": "Start date",
     "end": "End date",
+
+    "start_location": "Start location",
+
+    "members": "Members",
+    "start_date": "Start date",
 
     "view": {
       "places": "Places",
@@ -323,7 +398,9 @@
         "search": "Search"
       },
       "search_placeholder": "Search by name or address",
-      "no_results": "No results"
+      "no_results": "No results",
+      "ai_loading": "AI is picking the best places...",
+      "no_suggestions": "No suggestions found for this trip."
     },
 
     "team": {
@@ -394,11 +471,12 @@
     "subtitle": "Choose a trip to view details and plan activities",
     "new": "Add trip",
     "empty_title": "No trips",
-    "empty": "You don’t have any trips yet. Create your first one to start planning.",
+    "empty_hint": "You don’t have any trips yet. Create your first one to start planning.",
     "unnamed": "Trip",
     "days_short": "days",
     "activities": "activities",
-    "details": "View details"
+    "details": "View details",
+    "left": "You have left the trip."
   },
 
   "footer": {
