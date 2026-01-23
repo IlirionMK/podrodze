@@ -273,22 +273,42 @@ class TripService implements TripInterface
 
     public function removeMember(Trip $trip, User $user, User $actor): void
     {
-        if (! $actor->can('manageMembers', $trip)) {
-            throw new AuthorizationException('Forbidden.');
-        }
+        $isSelf = (int) $actor->id === (int) $user->id;
 
         if ((int) $user->id === (int) $trip->owner_id) {
             throw new AuthorizationException('Forbidden.');
         }
 
-        if ((int) $actor->id === (int) $user->id) {
+        if ($isSelf) {
+            $role = $this->roleInTrip($trip, $actor);
+
+            if (! $role) {
+                throw new AuthorizationException('Forbidden.');
+            }
+
+            $trip->members()->detach($actor->id);
+
+            $this->activityLogger->add(
+                actor: $actor,
+                action: 'trip.member_left',
+                target: $trip,
+                details: [
+                    'trip_id' => $trip->getKey(),
+                    'user_id' => $actor->getKey(),
+                ]
+            );
+
+            return;
+        }
+
+        if (! $actor->can('manageMembers', $trip)) {
             throw new AuthorizationException('Forbidden.');
         }
 
         $actorRole  = $this->roleInTrip($trip, $actor);
         $targetRole = $this->roleInTrip($trip, $user);
 
-        if (! $actorRole) {
+        if (! $actorRole || ! $targetRole) {
             throw new AuthorizationException('Forbidden.');
         }
 

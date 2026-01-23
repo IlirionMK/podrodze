@@ -12,21 +12,50 @@ class AdminUserService
         private readonly ActivityLogger $logger
     ) {}
 
-    public function paginateUsers(string $search = '', int $perPage = 15): LengthAwarePaginator
-    {
+    /**
+     * Filters:
+     * - search: name/email LIKE
+     * - userId: exact user id
+     * - role: exact role
+     * - banned: '1' => only banned, '0' => only not banned, null => ignore
+     */
+    public function paginateUsers(
+        string $search = '',
+        int $perPage = 15,
+        ?int $userId = null,
+        ?string $role = null,
+        ?string $banned = null
+    ): LengthAwarePaginator {
         $query = User::query()->orderByDesc('id');
 
         $search = trim($search);
         if ($search !== '') {
-            $like = "%$search%";
-
+            $like = "%{$search}%";
             $query->where(function ($q) use ($like) {
                 $q->where('name', 'like', $like)
                     ->orWhere('email', 'like', $like);
             });
         }
 
-        return $query->paginate($perPage);
+        if ($userId !== null) {
+            $query->whereKey($userId);
+        }
+
+        $role = $role !== null ? trim($role) : null;
+        if ($role !== null && $role !== '') {
+            $query->where('role', $role);
+        }
+
+        if ($banned !== null) {
+            $banned = trim($banned);
+            if ($banned === '1') {
+                $query->whereNotNull('banned_at');
+            } elseif ($banned === '0') {
+                $query->whereNull('banned_at');
+            }
+        }
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function setRole(User $target, string $role, ?User $actor): array

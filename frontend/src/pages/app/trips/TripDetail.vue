@@ -45,7 +45,7 @@ const membersLoading = ref(false)
 const placesLoading = ref(false)
 
 const errorMsg = ref("")
-const activeTab = ref("overview")
+const activeTab = ref("places")
 
 const placeQuery = ref("")
 const categoryFilter = ref("all")
@@ -62,11 +62,11 @@ const votesByPlaceId = ref({})
 const bannerImage =
     "https://images.unsplash.com/photo-1528909514045-2fa4ac7a08ba?auto=format&fit=crop&w=1600&q=80"
 
-const allowedTabs = new Set(["overview", "places", "plan", "team", "preferences"])
+const allowedTabs = new Set(["places", "plan", "team", "preferences"])
 
 function initTabFromRoute() {
   const qTab = String(route.query.tab || "")
-  activeTab.value = allowedTabs.has(qTab) ? qTab : "overview"
+  activeTab.value = allowedTabs.has(qTab) ? qTab : "places"
 }
 
 function setTab(tab) {
@@ -450,29 +450,12 @@ async function doSetStart() {
 
       <div class="max-w-6xl mx-auto px-4 mt-6 pb-14">
         <TripTabs :modelValue="activeTab" class="mb-5" @update:modelValue="setTab">
-          <template #overview>{{ t("trip.tabs.overview") }}</template>
           <template #places>{{ t("trip.tabs.places") }}</template>
           <template #plan>{{ t("trip.tabs.plan") }}</template>
           <template #team>{{ t("trip.tabs.team") }}</template>
           <template #preferences>{{ t("trip.tabs.preferences") }}</template>
         </TripTabs>
 
-        <section v-if="activeTab === 'overview'" class="bg-white p-6 rounded-2xl border shadow-sm">
-          <div class="flex items-center justify-between gap-4">
-            <h2 class="text-xl font-semibold">{{ t("trip.about") }}</h2>
-            <button
-                type="button"
-                class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 active:opacity-80 shadow"
-                @click="setTab('places'); openPlaceSearch()"
-            >
-              {{ t("trip.view.add_place") }}
-            </button>
-          </div>
-
-          <p class="text-gray-700 leading-relaxed mt-4">
-            {{ trip.description || t("trip.no_description") }}
-          </p>
-        </section>
 
         <KeepAlive>
           <PlacesWorkspace

@@ -40,11 +40,10 @@ const btnBase =
     "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
 const btnPrimary =
     btnBase + " bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 active:opacity-80 shadow"
-const btnSecondary = btnBase + " border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
 const btnDanger = btnBase + " border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
 
 const iconBtnBase =
-    "h-10 w-10 rounded-xl border transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+    "shrink-0 h-9 w-9 sm:h-10 sm:w-10 rounded-xl border transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
 
 const inviteOpen = ref(false)
 const inviteEmail = ref("")
@@ -83,16 +82,16 @@ function roleIcon(role) {
 }
 
 function roleLabel(role) {
-  if (role === "owner") return tr("roles.owner", "owner")
-  if (role === "editor") return tr("roles.editor", "editor")
-  return tr("roles.member", "member")
+  if (role === "owner") return tr("roles.owner", "Owner")
+  if (role === "editor") return tr("roles.editor", "Editor")
+  return tr("roles.member", "Member")
 }
 
 function statusLabel(statusRaw) {
   const status = normalizeStatus(statusRaw)
-  if (status === "accepted") return tr("statuses.accepted", "accepted")
-  if (status === "pending") return tr("statuses.pending", "pending")
-  if (status === "declined") return tr("statuses.declined", "declined")
+  if (status === "accepted") return tr("statuses.accepted", "Accepted")
+  if (status === "pending") return tr("statuses.pending", "Pending")
+  if (status === "declined") return tr("statuses.declined", "Declined")
   return String(status || "")
 }
 
@@ -215,7 +214,7 @@ async function confirmRemove() {
   }
 }
 
-async function resendInvite(target) {
+async function inviteAgain(target) {
   if (!canManage.value) return
   if (!target?.id) return
 
@@ -223,7 +222,7 @@ async function resendInvite(target) {
   const role = getRole(target) || "member"
 
   if (!email) {
-    emit("error", tr("trip.team.resend_no_email", "Cannot resend invite: missing email."))
+    emit("error", tr("trip.team.resend_no_email", "Cannot invite again: missing email."))
     return
   }
 
@@ -254,14 +253,19 @@ function sectionTitle(key, fallback) {
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
       <h2 class="text-xl font-semibold">{{ t("trip.view.members") }}</h2>
 
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <div v-if="loading" class="text-sm text-gray-500">
           {{ t("loading") }}…
         </div>
 
-        <button v-if="canManage" type="button" :class="btnPrimary" @click="openInvite">
-          <UserPlus class="h-4 w-4" />
-          {{ t("trip.view.add_member") }}
+        <button
+            v-if="canManage"
+            type="button"
+            :class="btnPrimary + ' h-11 px-3 sm:px-4'"
+            @click="openInvite"
+        >
+          <UserPlus class="h-4 w-4 shrink-0" />
+          <span class="hidden sm:inline">{{ t("trip.view.add_member") }}</span>
         </button>
       </div>
     </div>
@@ -281,61 +285,61 @@ function sectionTitle(key, fallback) {
         </div>
 
         <div class="rounded-2xl border border-gray-200 overflow-hidden">
-          <div
-              v-for="m in acceptedMembers"
-              :key="m.id"
-              class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition"
-          >
-            <div class="flex items-center gap-3 min-w-0">
-              <div
-                  class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center shadow"
-                  :title="m.name"
-              >
-                <UserRound class="h-5 w-5" />
-              </div>
+          <div v-for="m in acceptedMembers" :key="m.id" class="px-4 py-3 hover:bg-gray-50 transition">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <div
+                    class="h-10 w-10 shrink-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center shadow"
+                    :title="m.name"
+                >
+                  <UserRound class="h-5 w-5 shrink-0" />
+                </div>
 
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2 min-w-0">
-                  <div class="font-medium text-gray-900 truncate">{{ m.name }}</div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2 min-w-0">
+                    <div class="font-medium text-gray-900 truncate max-w-[14rem] sm:max-w-none">
+                      {{ m.name }}
+                    </div>
 
-                  <span
-                      class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border"
-                      :class="rowRoleClass(getRole(m))"
-                  >
-                    <component :is="roleIcon(getRole(m))" class="h-3.5 w-3.5" />
-                    {{ roleLabel(getRole(m)) }}
-                  </span>
+                    <span
+                        class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border"
+                        :class="rowRoleClass(getRole(m))"
+                    >
+                      <component :is="roleIcon(getRole(m))" class="h-3.5 w-3.5 shrink-0" />
+                      {{ roleLabel(getRole(m)) }}
+                    </span>
 
-                  <span
-                      class="inline-flex items-center text-xs px-2 py-1 rounded-full border"
-                      :class="statusPillClass(getStatus(m))"
-                  >
-                    {{ statusLabel(getStatus(m)) }}
-                  </span>
+                    <span
+                        class="inline-flex items-center text-xs px-2 py-1 rounded-full border"
+                        :class="statusPillClass(getStatus(m))"
+                    >
+                      {{ statusLabel(getStatus(m)) }}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div v-if="canManage" class="flex items-center gap-2">
-              <button
-                  type="button"
-                  :class="iconBtnBase + ' border-gray-200 bg-white hover:bg-gray-50'"
-                  :title="tr('trip.team.actions.change_role', 'Change role')"
-                  :disabled="!canChangeRole(m)"
-                  @click="toggleRole(m)"
-              >
-                <ShieldCheck class="h-4 w-4 text-gray-800" />
-              </button>
+              <div v-if="canManage" class="flex items-center gap-2 justify-end sm:justify-start">
+                <button
+                    type="button"
+                    :class="iconBtnBase + ' border-gray-200 bg-white hover:bg-gray-50'"
+                    :title="tr('trip.team.actions.change_role', 'Change role')"
+                    :disabled="!canChangeRole(m)"
+                    @click="toggleRole(m)"
+                >
+                  <ShieldCheck class="h-4 w-4 text-gray-800 shrink-0" />
+                </button>
 
-              <button
-                  type="button"
-                  :class="iconBtnBase + ' border-red-200 bg-red-50 hover:bg-red-100'"
-                  :title="tr('trip.team.actions.remove', 'Remove from trip')"
-                  :disabled="!canRemove(m)"
-                  @click="openRemoveConfirm(m)"
-              >
-                <Trash2 class="h-4 w-4 text-red-700" />
-              </button>
+                <button
+                    type="button"
+                    :class="iconBtnBase + ' border-red-200 bg-red-50 hover:bg-red-100'"
+                    :title="tr('trip.team.actions.remove', 'Remove from trip')"
+                    :disabled="!canRemove(m)"
+                    @click="openRemoveConfirm(m)"
+                >
+                  <Trash2 class="h-4 w-4 text-red-700 shrink-0" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -354,12 +358,15 @@ function sectionTitle(key, fallback) {
               class="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
               @click="showDeclined = !showDeclined"
           >
-            <component :is="showDeclined ? EyeOff : Eye" class="h-4 w-4" />
-            {{
-              showDeclined
-                  ? tr("trip.team.actions.hide_declined", "Hide declined")
-                  : tr("trip.team.actions.show_declined", "Show declined")
-            }}
+            <component :is="showDeclined ? EyeOff : Eye" class="h-4 w-4 shrink-0" />
+            <span class="hidden sm:inline">
+              {{
+                showDeclined
+                    ? tr("trip.team.actions.hide_declined", "Hide declined")
+                    : tr("trip.team.actions.show_declined", "Show declined")
+              }}
+            </span>
+            <span class="sm:hidden">{{ tr("trip.team.actions.declined_short", "Declined") }}</span>
             <span class="text-gray-500">({{ declinedInvites.length }})</span>
           </button>
         </div>
@@ -369,92 +376,27 @@ function sectionTitle(key, fallback) {
         </div>
 
         <div v-else class="rounded-2xl border border-gray-200 overflow-hidden">
-          <div
-              v-for="m in pendingInvites"
-              :key="m.id"
-              class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition"
-          >
-            <div class="flex items-center gap-3 min-w-0">
-              <div
-                  class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center shadow"
-                  :title="m.name"
-              >
-                <UserRound class="h-5 w-5" />
-              </div>
-
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2 min-w-0">
-                  <div class="font-medium text-gray-900 truncate">{{ m.name }}</div>
-
-                  <span
-                      class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border"
-                      :class="rowRoleClass(getRole(m))"
-                  >
-                    <component :is="roleIcon(getRole(m))" class="h-3.5 w-3.5" />
-                    {{ roleLabel(getRole(m)) }}
-                  </span>
-
-                  <span
-                      class="inline-flex items-center text-xs px-2 py-1 rounded-full border"
-                      :class="statusPillClass(getStatus(m))"
-                  >
-                    {{ statusLabel(getStatus(m)) }}
-                  </span>
-                </div>
-
-                <div v-if="getEmail(m)" class="text-xs text-gray-500 mt-0.5 truncate">
-                  {{ getEmail(m) }}
-                </div>
-              </div>
-            </div>
-
-            <div v-if="canManage" class="flex items-center gap-2">
-              <button
-                  type="button"
-                  :class="iconBtnBase + ' border-red-200 bg-red-50 hover:bg-red-100'"
-                  :title="tr('trip.team.actions.remove', 'Remove from trip')"
-                  :disabled="!canRemove(m)"
-                  @click="openRemoveConfirm(m)"
-              >
-                <Trash2 class="h-4 w-4 text-red-700" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="canManage && showDeclined" class="mt-4">
-          <div class="text-sm font-semibold text-gray-900 mb-2">
-            {{ sectionTitle("trip.team.sections.declined", "Declined") }}
-            <span class="text-gray-500 font-normal">({{ declinedInvites.length }})</span>
-          </div>
-
-          <div v-if="declinedInvites.length === 0" class="text-sm text-gray-500">
-            {{ tr("trip.team.no_declined", "No declined invites.") }}
-          </div>
-
-          <div v-else class="rounded-2xl border border-gray-200 overflow-hidden">
-            <div
-                v-for="m in declinedInvites"
-                :key="m.id"
-                class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition"
-            >
+          <div v-for="m in pendingInvites" :key="m.id" class="px-4 py-3 hover:bg-gray-50 transition">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div class="flex items-center gap-3 min-w-0">
                 <div
-                    class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center shadow"
+                    class="h-10 w-10 shrink-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center shadow"
                     :title="m.name"
                 >
-                  <UserRound class="h-5 w-5" />
+                  <UserRound class="h-5 w-5 shrink-0" />
                 </div>
 
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                   <div class="flex flex-wrap items-center gap-2 min-w-0">
-                    <div class="font-medium text-gray-900 truncate">{{ m.name }}</div>
+                    <div class="font-medium text-gray-900 truncate max-w-[14rem] sm:max-w-none">
+                      {{ m.name }}
+                    </div>
 
                     <span
                         class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border"
                         :class="rowRoleClass(getRole(m))"
                     >
-                      <component :is="roleIcon(getRole(m))" class="h-3.5 w-3.5" />
+                      <component :is="roleIcon(getRole(m))" class="h-3.5 w-3.5 shrink-0" />
                       {{ roleLabel(getRole(m)) }}
                     </span>
 
@@ -472,27 +414,92 @@ function sectionTitle(key, fallback) {
                 </div>
               </div>
 
-              <div class="flex items-center gap-2">
+              <div v-if="canManage" class="flex items-center gap-2 justify-end sm:justify-start">
                 <button
-                    type="button"
-                    :class="iconBtnBase + ' border-gray-200 bg-white hover:bg-gray-50'"
-                    :title="tr('trip.team.actions.resend', 'Resend invite')"
-                    :disabled="resendBusyId === m.id || !getEmail(m)"
-                    @click="resendInvite(m)"
-                >
-                  <RefreshCw class="h-4 w-4 text-gray-800" />
-                </button>
-
-                <button
-                    v-if="canManage"
                     type="button"
                     :class="iconBtnBase + ' border-red-200 bg-red-50 hover:bg-red-100'"
                     :title="tr('trip.team.actions.remove', 'Remove from trip')"
                     :disabled="!canRemove(m)"
                     @click="openRemoveConfirm(m)"
                 >
-                  <Trash2 class="h-4 w-4 text-red-700" />
+                  <Trash2 class="h-4 w-4 text-red-700 shrink-0" />
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="canManage && showDeclined" class="mt-4">
+          <div class="text-sm font-semibold text-gray-900 mb-2">
+            {{ sectionTitle("trip.team.sections.declined", "Declined") }}
+            <span class="text-gray-500 font-normal">({{ declinedInvites.length }})</span>
+          </div>
+
+          <div v-if="declinedInvites.length === 0" class="text-sm text-gray-500">
+            {{ tr("trip.team.no_declined", "No declined invites.") }}
+          </div>
+
+          <div v-else class="rounded-2xl border border-gray-200 overflow-hidden">
+            <div v-for="m in declinedInvites" :key="m.id" class="px-4 py-3 hover:bg-gray-50 transition">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div
+                      class="h-10 w-10 shrink-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center shadow"
+                      :title="m.name"
+                  >
+                    <UserRound class="h-5 w-5 shrink-0" />
+                  </div>
+
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2 min-w-0">
+                      <div class="font-medium text-gray-900 truncate max-w-[14rem] sm:max-w-none">
+                        {{ m.name }}
+                      </div>
+
+                      <span
+                          class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border"
+                          :class="rowRoleClass(getRole(m))"
+                      >
+                        <component :is="roleIcon(getRole(m))" class="h-3.5 w-3.5 shrink-0" />
+                        {{ roleLabel(getRole(m)) }}
+                      </span>
+
+                      <span
+                          class="inline-flex items-center text-xs px-2 py-1 rounded-full border"
+                          :class="statusPillClass(getStatus(m))"
+                      >
+                        {{ statusLabel(getStatus(m)) }}
+                      </span>
+                    </div>
+
+                    <div v-if="getEmail(m)" class="text-xs text-gray-500 mt-0.5 truncate">
+                      {{ getEmail(m) }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 justify-end sm:justify-start">
+                  <button
+                      type="button"
+                      :class="iconBtnBase + ' border-gray-200 bg-white hover:bg-gray-50'"
+                      :title="tr('trip.team.actions.invite_again', 'Invite again')"
+                      :disabled="resendBusyId === m.id || !getEmail(m)"
+                      @click="inviteAgain(m)"
+                  >
+                    <RefreshCw class="h-4 w-4 text-gray-800 shrink-0" />
+                  </button>
+
+                  <button
+                      v-if="canManage"
+                      type="button"
+                      :class="iconBtnBase + ' border-red-200 bg-red-50 hover:bg-red-100'"
+                      :title="tr('trip.team.actions.remove', 'Remove from trip')"
+                      :disabled="!canRemove(m)"
+                      @click="openRemoveConfirm(m)"
+                  >
+                    <Trash2 class="h-4 w-4 text-red-700 shrink-0" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -514,10 +521,17 @@ function sectionTitle(key, fallback) {
           leave-from-class="opacity-100 scale-100"
           leave-to-class="opacity-0 scale-95"
       >
-        <div v-if="inviteOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
+        <div
+            v-if="inviteOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center px-4"
+            role="dialog"
+            aria-modal="true"
+        >
           <button class="absolute inset-0 bg-black/60" @click="closeInvite" aria-label="Close" />
 
-          <div class="relative w-full max-w-lg rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden">
+          <div
+              class="relative w-full max-w-lg rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden"
+          >
             <div class="p-6">
               <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
@@ -525,7 +539,7 @@ function sectionTitle(key, fallback) {
                     {{ tr("trip.view.add_member", "Invite member") }}
                   </h3>
                   <div class="mt-1 text-sm text-white/70">
-                    {{ tr("trip.team.invite_hint", "Send an invitation by email.") }}
+                    {{ tr("trip.team.invite_hint", "Send an invitation.") }}
                   </div>
                 </div>
 
@@ -536,7 +550,7 @@ function sectionTitle(key, fallback) {
                     :disabled="inviteBusy"
                     aria-label="Close"
                 >
-                  <X class="h-4 w-4" />
+                  <X class="h-4 w-4 shrink-0" />
                 </button>
               </div>
 
@@ -566,11 +580,13 @@ function sectionTitle(key, fallback) {
                         class="w-full h-11 px-4 pr-11 rounded-xl border border-white/15 bg-white/10 text-white outline-none focus:ring-2 focus:ring-white/20 appearance-none"
                         :disabled="inviteBusy"
                     >
-                      <option class="bg-[#0d1117]" value="member">{{ tr("roles.member", "member") }}</option>
-                      <option class="bg-[#0d1117]" value="editor">{{ tr("roles.editor", "editor") }}</option>
+                      <option class="bg-[#0d1117]" value="member">{{ tr("roles.member", "Member") }}</option>
+                      <option class="bg-[#0d1117]" value="editor">{{ tr("roles.editor", "Editor") }}</option>
                     </select>
 
-                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/70" />
+                    <ChevronDown
+                        class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/70"
+                    />
                   </div>
                 </div>
 
@@ -590,7 +606,7 @@ function sectionTitle(key, fallback) {
                       @click="submitInvite"
                       :disabled="inviteBusy || !inviteEmail.trim()"
                   >
-                    <UserPlus class="h-4 w-4" />
+                    <UserPlus class="h-4 w-4 shrink-0" />
                     {{ inviteBusy ? t("loading") : tr("actions.add", "Add") }}
                   </button>
                 </div>
@@ -611,10 +627,17 @@ function sectionTitle(key, fallback) {
           leave-from-class="opacity-100 scale-100"
           leave-to-class="opacity-0 scale-95"
       >
-        <div v-if="confirmOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
+        <div
+            v-if="confirmOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center px-4"
+            role="dialog"
+            aria-modal="true"
+        >
           <button class="absolute inset-0 bg-black/60" @click="closeRemoveConfirm" aria-label="Close" />
 
-          <div class="relative w-full max-w-md rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden">
+          <div
+              class="relative w-full max-w-md rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl text-white overflow-hidden"
+          >
             <div class="p-6">
               <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
@@ -633,7 +656,7 @@ function sectionTitle(key, fallback) {
                     :disabled="confirmBusy"
                     aria-label="Close"
                 >
-                  <X class="h-4 w-4" />
+                  <X class="h-4 w-4 shrink-0" />
                 </button>
               </div>
 
@@ -660,7 +683,7 @@ function sectionTitle(key, fallback) {
                     @click="confirmRemove"
                     :disabled="confirmBusy"
                 >
-                  <Trash2 class="h-4 w-4" />
+                  <Trash2 class="h-4 w-4 shrink-0" />
                   {{ confirmBusy ? t("loading") : tr("actions.remove", "Remove") }}
                 </button>
               </div>

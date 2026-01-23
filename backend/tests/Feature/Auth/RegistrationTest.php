@@ -16,7 +16,7 @@ use Tests\TestCase\ApiTestCase;
  * - Required fields are properly enforced
  * - User data is correctly stored in the database
  *
- * @covers \App\Http\Controllers\Auth\RegisteredUserController
+ * @covers \App\Http\Controllers\Auth\Auth\RegisteredUserController
  */
 #[Group('auth')]
 #[Group('registration')]

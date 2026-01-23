@@ -2,7 +2,7 @@
 
 namespace Http\Controllers\Auth;
 
-use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\Auth\RegisteredUserController;
 use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Events\Registered;
@@ -118,7 +118,7 @@ class RegisteredUserControllerTest extends TestCase
         $request->server->set('REMOTE_ADDR', '192.168.1.100'); // Different IP
 
         $response = $this->controller->store($request);
-        
+
         // First check if the request was successful
         $this->assertEquals(201, $response->getStatusCode());
 

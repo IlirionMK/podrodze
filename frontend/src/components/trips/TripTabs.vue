@@ -1,5 +1,5 @@
 <script setup>
-const props = defineProps({
+defineProps({
   modelValue: { type: String, required: true },
 })
 
@@ -9,12 +9,9 @@ function setTab(tab) {
   emit("update:modelValue", tab)
 }
 
-const tabBase =
-    "px-4 py-2 rounded-xl font-medium transition whitespace-nowrap"
-const tabActive =
-    "text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow"
-const tabInactive =
-    "text-gray-700 hover:bg-gray-100"
+const tabBase = "px-4 py-2 rounded-xl font-medium transition whitespace-nowrap"
+const tabActive = "text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow"
+const tabInactive = "text-gray-700 hover:bg-gray-100"
 </script>
 
 <template>
@@ -22,16 +19,6 @@ const tabInactive =
     <div class="flex gap-2 overflow-x-auto whitespace-nowrap justify-start sm:justify-center">
       <button
           type="button"
-          class="px-4 py-2 rounded-xl font-medium transition"
-          :class="[tabBase, modelValue === 'overview' ? tabActive : tabInactive]"
-          @click="setTab('overview')"
-      >
-        <slot name="overview">Overview</slot>
-      </button>
-
-      <button
-          type="button"
-          class="px-4 py-2 rounded-xl font-medium transition"
           :class="[tabBase, modelValue === 'places' ? tabActive : tabInactive]"
           @click="setTab('places')"
       >
@@ -40,7 +27,6 @@ const tabInactive =
 
       <button
           type="button"
-          class="px-4 py-2 rounded-xl font-medium transition"
           :class="[tabBase, modelValue === 'plan' ? tabActive : tabInactive]"
           @click="setTab('plan')"
       >
@@ -49,7 +35,6 @@ const tabInactive =
 
       <button
           type="button"
-          class="px-4 py-2 rounded-xl font-medium transition"
           :class="[tabBase, modelValue === 'team' ? tabActive : tabInactive]"
           @click="setTab('team')"
       >
@@ -58,7 +43,6 @@ const tabInactive =
 
       <button
           type="button"
-          class="px-4 py-2 rounded-xl font-medium transition"
           :class="[tabBase, modelValue === 'preferences' ? tabActive : tabInactive]"
           @click="setTab('preferences')"
       >

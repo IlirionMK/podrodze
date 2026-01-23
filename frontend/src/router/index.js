@@ -82,10 +82,7 @@ const router = createRouter({
             meta: { admin: true },
             children: [
                 { path: "", name: "admin.dashboard", component: () => import("../pages/admin/Dashboard.vue") },
-                { path: "users", name: "admin.users", component: () => import("../pages/admin/Users.vue") },
-                { path: "trips", name: "admin.trips", component: () => import("../pages/admin/Trips.vue") },
-                { path: "places", name: "admin.places", component: () => import("../pages/admin/Places.vue") },
-                { path: "settings", name: "admin.settings", component: () => import("../pages/admin/Settings.vue") },
+                { path: ":pathMatch(.*)*", redirect: { name: "admin.dashboard" } },
             ],
         },
 
@@ -104,6 +101,7 @@ router.beforeEach((to, from, next) => {
     } catch {
         user = null
     }
+
     const isAdmin = user?.role === "admin"
 
     if (to.meta.public) return next()

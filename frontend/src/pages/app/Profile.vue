@@ -29,7 +29,7 @@ function tr(key, fallback) {
   return te(key) ? t(key) : fallback
 }
 
-const { token, user } = useAuth()
+const { token, user, clearAuth } = useAuth()
 
 const loading = ref(false)
 const errorMessage = ref("")
@@ -38,7 +38,6 @@ const activeTab = ref("profile")
 
 const editOpen = ref(false)
 const editName = ref("")
-const editEmail = ref("")
 
 const passOpen = ref(false)
 const passBusy = ref(false)
@@ -59,6 +58,7 @@ const tripBusyId = ref(null)
 const deleteAccountOpen = ref(false)
 const deleteAccountBusy = ref(false)
 const deleteAccountError = ref("")
+const deleteAccountPassword = ref("")
 
 const leaveTripOpen = ref(false)
 const leaveTripTarget = ref(null)
@@ -181,7 +181,6 @@ async function loadMyTrips() {
 
 function openEdit() {
   editName.value = user.value?.name || ""
-  editEmail.value = user.value?.email || ""
   editOpen.value = true
   successMessage.value = ""
   errorMessage.value = ""
@@ -192,15 +191,14 @@ function closeEdit() {
 
 async function saveProfile() {
   const name = editName.value.trim()
-  const email = editEmail.value.trim()
-  if (!name || !email) return
+  if (!name) return
 
   loading.value = true
   errorMessage.value = ""
   successMessage.value = ""
 
   try {
-    const res = await api.patch(ME_UPDATE, { name, email })
+    const res = await api.patch(ME_UPDATE, { name })
     user.value = res.data?.data ?? res.data ?? user.value
     successMessage.value = tr("user.saved", "Profil został zaktualizowany.")
     closeEdit()
@@ -240,8 +238,8 @@ async function changePassword() {
   try {
     await api.put(ME_PASSWORD, {
       current_password: currentPassword.value,
-      password: newPassword.value,
-      password_confirmation: newPassword2.value,
+      new_password: newPassword.value,
+      new_password_confirmation: newPassword2.value,
     })
     closePassword()
     successMessage.value = tr("user.pass_changed", "Hasło zostało zmienione.")
@@ -315,6 +313,7 @@ async function confirmLeaveTrip() {
     successMessage.value = tr("trips.left", "Opuściłeś podróż.")
     leaveTripOpen.value = false
     leaveTripTarget.value = null
+    myTrips.value = (myTrips.value || []).filter((t) => t?.id !== tripId)
     await refreshAll()
   } catch (e) {
     errorMessage.value = getErrMessage(e)
@@ -326,6 +325,7 @@ async function confirmLeaveTrip() {
 function openDeleteAccount() {
   deleteAccountOpen.value = true
   deleteAccountError.value = ""
+  deleteAccountPassword.value = ""
 }
 function closeDeleteAccount() {
   deleteAccountOpen.value = false
@@ -333,9 +333,17 @@ function closeDeleteAccount() {
 
 async function deleteAccount() {
   deleteAccountError.value = ""
+
+  const pwd = deleteAccountPassword.value.trim()
+  if (!pwd) {
+    deleteAccountError.value = tr("profile.delete_password_required", "Wymagane jest obecne hasło.")
+    return
+  }
+
   deleteAccountBusy.value = true
   try {
-    await api.delete(ME_DELETE)
+    await api.delete(ME_DELETE, { data: { current_password: pwd } })
+    clearAuth()
     window.location.href = "/login"
   } catch (e) {
     deleteAccountError.value = getErrMessage(e)
@@ -407,7 +415,7 @@ onMounted(() => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
               ]"
             >
-              {{ tr('user.profile', 'Profil') }}
+              {{ tr("user.profile", "Profil") }}
             </button>
 
             <button
@@ -419,7 +427,7 @@ onMounted(() => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
               ]"
             >
-              {{ tr('tabs.invitations', 'Zaproszenia') }}
+              {{ tr("tabs.invitations", "Zaproszenia") }}
               <span
                   v-if="pendingInvites.length > 0"
                   class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-500 text-white"
@@ -437,13 +445,12 @@ onMounted(() => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
               ]"
             >
-              {{ tr('tabs.my_trips', 'Moje podróże') }}
+              {{ tr("tabs.my_trips", "Moje podróże") }}
             </button>
           </nav>
         </div>
       </div>
 
-      <!-- PROFILE -->
       <div v-show="activeTab === 'profile'" class="space-y-4">
         <section class="card-surface overflow-hidden">
           <div class="card-pad border-b">
@@ -479,7 +486,6 @@ onMounted(() => {
                 </div>
               </div>
 
-              <!-- aligned buttons -->
               <div class="flex flex-col sm:flex-row gap-2 shrink-0">
                 <button type="button" class="btn-secondary w-full sm:w-auto" @click="openPassword" :disabled="loading || !user">
                   <KeyRound :class="iconSm" />
@@ -506,7 +512,6 @@ onMounted(() => {
           </div>
         </section>
 
-        <!-- compact delete row (no "danger zone") -->
         <section class="card-surface">
           <div class="card-pad flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div class="min-w-0">
@@ -526,7 +531,6 @@ onMounted(() => {
         </section>
       </div>
 
-      <!-- INVITES -->
       <div v-show="activeTab === 'invitations'">
         <div v-if="invitesLoading" class="text-center py-12">
           <div class="text-gray-500">{{ tr("loading", "Ładowanie...") }}</div>
@@ -612,7 +616,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- TRIPS -->
       <div v-show="activeTab === 'trips'">
         <div v-if="tripsLoading" class="text-center py-12">
           <div class="text-gray-500">{{ tr("loading", "Ładowanie...") }}</div>
@@ -687,11 +690,14 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- EDIT MODAL -->
-      <BaseModal v-model="editOpen" :title="tr('profile.edit_title', 'Edytuj profil')" :description="tr('profile.edit_hint', 'Zaktualizuj swoje imię i email.')" :busy="loading">
+      <BaseModal
+          v-model="editOpen"
+          :title="tr('profile.edit_title', 'Edytuj profil')"
+          :description="tr('profile.edit_hint', 'Zaktualizuj swoje imię i nazwisko.')"
+          :busy="loading"
+      >
         <div class="space-y-4">
           <BaseInput v-model="editName" :label="tr('profile.fields.name', 'Imię i nazwisko')" name="name" autocomplete="name" />
-          <BaseInput v-model="editEmail" :label="tr('profile.fields.email', 'Email')" type="email" name="email" autocomplete="email" />
         </div>
 
         <template #footer>
@@ -699,17 +705,21 @@ onMounted(() => {
             {{ tr("actions.cancel", "Anuluj") }}
           </button>
 
-          <button type="button" class="btn-primary w-full sm:w-auto" @click="saveProfile" :disabled="loading || !editName.trim() || !editEmail.trim()">
+          <button type="button" class="btn-primary w-full sm:w-auto" @click="saveProfile" :disabled="loading || !editName.trim()">
             <Save :class="iconSm" />
             {{ tr("actions.save", "Zapisz") }}
           </button>
         </template>
       </BaseModal>
 
-      <!-- PASSWORD MODAL -->
-      <BaseModal v-model="passOpen" :title="tr('profile.password_title', 'Zmiana hasła')" :description="tr('profile.password_hint', 'Wprowadź obecne hasło i wybierz nowe.')" :busy="passBusy">
+      <BaseModal
+          v-model="passOpen"
+          :title="tr('profile.password_title', 'Zmiana hasła')"
+          :description="tr('profile.password_hint', 'Wprowadź obecne hasło i wybierz nowe.')"
+          :busy="passBusy"
+      >
         <div class="space-y-4">
-          <div v-if="passError" class="p-4 rounded-xl bg-red-500/10 text-red-200 border border-red-400/20 text-sm">
+          <div v-if="passError" class="p-4 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm">
             {{ passError }}
           </div>
 
@@ -723,14 +733,18 @@ onMounted(() => {
             {{ tr("actions.cancel", "Anuluj") }}
           </button>
 
-          <button type="button" class="btn-primary w-full sm:w-auto" @click="changePassword" :disabled="passBusy || !currentPassword || !newPassword || !newPassword2">
+          <button
+              type="button"
+              class="btn-primary w-full sm:w-auto"
+              @click="changePassword"
+              :disabled="passBusy || !currentPassword || !newPassword || !newPassword2"
+          >
             <Save :class="iconSm" />
             {{ tr("actions.save", "Zapisz") }}
           </button>
         </template>
       </BaseModal>
 
-      <!-- DELETE ACCOUNT MODAL -->
       <BaseModal
           v-model="deleteAccountOpen"
           :title="tr('profile.delete_confirm_title', 'Usunąć konto?')"
@@ -739,11 +753,11 @@ onMounted(() => {
           max-width-class="max-w-md"
       >
         <div class="space-y-4">
-          <div v-if="deleteAccountError" class="p-4 rounded-xl bg-red-500/10 text-red-200 border border-red-400/20 text-sm">
+          <div v-if="deleteAccountError" class="p-4 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm">
             {{ deleteAccountError }}
           </div>
 
-          <p class="text-sm text-white/80">
+          <p class="text-sm text-gray-600">
             {{
               tr(
                   "profile.delete_warning",
@@ -751,6 +765,13 @@ onMounted(() => {
               )
             }}
           </p>
+
+          <BaseInput
+              v-model="deleteAccountPassword"
+              type="password"
+              :label="tr('profile.current_password', 'Obecne hasło')"
+              autocomplete="current-password"
+          />
         </div>
 
         <template #footer>
@@ -758,14 +779,18 @@ onMounted(() => {
             {{ tr("actions.cancel", "Anuluj") }}
           </button>
 
-          <button type="button" class="btn-danger w-full sm:w-auto" @click="deleteAccount" :disabled="deleteAccountBusy">
+          <button
+              type="button"
+              class="btn-danger w-full sm:w-auto"
+              @click="deleteAccount"
+              :disabled="deleteAccountBusy || !deleteAccountPassword.trim()"
+          >
             <Trash2 :class="iconSm" />
             {{ tr("user.delete_account", "Usuń konto") }}
           </button>
         </template>
       </BaseModal>
 
-      <!-- LEAVE TRIP -->
       <ConfirmModal
           v-model="leaveTripOpen"
           :title="tr('user.leave_title', 'Opuścić podróż?')"

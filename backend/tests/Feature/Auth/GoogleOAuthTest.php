@@ -18,7 +18,7 @@ use Tests\TestCase\ApiTestCase;
  * - Error cases are properly handled (invalid codes, missing emails)
  * - User data is properly synchronized with Google
  *
- * @covers \App\Http\Controllers\Auth\GoogleAuthController
+ * @covers \App\Http\Controllers\Auth\Auth\GoogleAuthController
  */
 
 #[Group('authentication')]

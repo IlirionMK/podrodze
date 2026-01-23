@@ -24,7 +24,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
  * 4. Initial preference selection
  * 5. First trip creation tutorial
  *
- * @covers \App\Http\Controllers\Auth\RegisteredUserController
+ * @covers \App\Http\Controllers\Auth\Auth\RegisteredUserController
  * @covers \App\Http\Controllers\User\ProfileController
  * @covers \App\Http\Controllers\User\PreferenceController
  * @covers \App\Http\Controllers\Trip\TripController
@@ -34,7 +34,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
 class UserOnboardingE2ETest extends ApiTestCase
 {
     use DatabaseMigrations;
-    
+
     private const TEST_EMAIL = 'newuser@example.com';
     private const TEST_PASSWORD = 'SecurePass123!';
     private const TEST_NAME = 'New Test User';

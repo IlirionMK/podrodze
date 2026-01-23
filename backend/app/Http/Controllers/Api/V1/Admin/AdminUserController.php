@@ -23,9 +23,24 @@ class AdminUserController extends Controller
         $perPage = (int) $request->query('per_page', 15);
         $perPage = max(1, min(100, $perPage));
 
+        $search = trim((string) $request->query('search', ''));
+
+        $userIdRaw = $request->query('user_id', null);
+        $userId = ($userIdRaw !== null && $userIdRaw !== '') ? (int) $userIdRaw : null;
+
+        $role = trim((string) $request->query('role', ''));
+        $role = $role !== '' ? $role : null;
+
+        // banned: expected values '1' | '0' (or null/empty)
+        $bannedRaw = $request->query('banned', null);
+        $banned = ($bannedRaw !== null && $bannedRaw !== '') ? trim((string) $bannedRaw) : null;
+
         $users = $this->service->paginateUsers(
-            search: (string) $request->query('search', ''),
-            perPage: $perPage
+            search: $search,
+            perPage: $perPage,
+            userId: $userId,
+            role: $role,
+            banned: $banned
         );
 
         return UserMiniResource::collection($users);

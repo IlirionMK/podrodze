@@ -2,7 +2,7 @@
 
 namespace Http\Controllers\Auth;
 
-use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\Auth\Auth\GoogleAuthController;
 use App\Http\Requests\Auth\GoogleCallbackRequest;
 use App\Models\User;
 use App\Services\Auth\GoogleOAuthService;

@@ -2,7 +2,7 @@
 
 namespace Http\Controllers\Auth;
 
-use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\Auth\NewPasswordController;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -25,16 +25,7 @@ class TripPolicy
             return true;
         }
 
-        if ($trip->relationLoaded('members')) {
-            return $trip->members->contains(fn ($m) =>
-                $m->id === $user->id && in_array($m->pivot->status, ['accepted', 'pending'], true)
-            );
-        }
-
-        return $trip->members()
-            ->where('users.id', $user->id)
-            ->wherePivotIn('status', ['accepted', 'pending'])
-            ->exists();
+        return $this->hasMembership($user, $trip, ['accepted', 'pending']);
     }
 
     public function update(User $user, Trip $trip): bool
@@ -43,19 +34,7 @@ class TripPolicy
             return true;
         }
 
-        if ($trip->relationLoaded('members')) {
-            return $trip->members->contains(fn ($m) =>
-                $m->id === $user->id
-                && $m->pivot->role === 'editor'
-                && $m->pivot->status === 'accepted'
-            );
-        }
-
-        return $trip->members()
-            ->where('users.id', $user->id)
-            ->wherePivot('role', 'editor')
-            ->wherePivot('status', 'accepted')
-            ->exists();
+        return $this->hasRole($user, $trip, 'editor', 'accepted');
     }
 
     public function delete(User $user, Trip $trip): bool
@@ -74,16 +53,7 @@ class TripPolicy
             return true;
         }
 
-        if ($trip->relationLoaded('members')) {
-            return $trip->members->contains(fn ($m) =>
-                $m->id === $user->id && $m->pivot->status === 'accepted'
-            );
-        }
-
-        return $trip->members()
-            ->where('users.id', $user->id)
-            ->wherePivot('status', 'accepted')
-            ->exists();
+        return $this->hasMembership($user, $trip, ['accepted']);
     }
 
     public function vote(User $user, Trip $trip): bool
@@ -91,28 +61,14 @@ class TripPolicy
         return $this->addPlace($user, $trip);
     }
 
-    protected function canRespond(User $user, Trip $trip): bool
-    {
-        if ($trip->relationLoaded('members')) {
-            return $trip->members->contains(fn ($m) =>
-                $m->id === $user->id && $m->pivot->status === 'pending'
-            );
-        }
-
-        return $trip->members()
-            ->where('users.id', $user->id)
-            ->wherePivot('status', 'pending')
-            ->exists();
-    }
-
     public function accept(User $user, Trip $trip): bool
     {
-        return $this->canRespond($user, $trip);
+        return $this->hasMembership($user, $trip, ['pending']);
     }
 
     public function decline(User $user, Trip $trip): bool
     {
-        return $this->canRespond($user, $trip);
+        return $this->hasMembership($user, $trip, ['pending']);
     }
 
     public function manageMembers(User $user, Trip $trip): bool
@@ -121,18 +77,44 @@ class TripPolicy
             return true;
         }
 
+        return $this->hasRole($user, $trip, 'editor', 'accepted');
+    }
+
+    public function leave(User $user, Trip $trip): bool
+    {
+        if ($trip->owner_id === $user->id) {
+            return false;
+        }
+
+        return $this->hasMembership($user, $trip, ['accepted']);
+    }
+
+    private function hasMembership(User $user, Trip $trip, array $statuses): bool
+    {
         if ($trip->relationLoaded('members')) {
             return $trip->members->contains(fn ($m) =>
-                $m->id === $user->id
-                && $m->pivot->role === 'editor'
-                && $m->pivot->status === 'accepted'
+                $m->id === $user->id && in_array($m->pivot->status, $statuses, true)
             );
         }
 
         return $trip->members()
             ->where('users.id', $user->id)
-            ->wherePivot('role', 'editor')
-            ->wherePivot('status', 'accepted')
+            ->wherePivotIn('status', $statuses)
+            ->exists();
+    }
+
+    private function hasRole(User $user, Trip $trip, string $role, string $status): bool
+    {
+        if ($trip->relationLoaded('members')) {
+            return $trip->members->contains(fn ($m) =>
+                $m->id === $user->id && $m->pivot->role === $role && $m->pivot->status === $status
+            );
+        }
+
+        return $trip->members()
+            ->where('users.id', $user->id)
+            ->wherePivot('role', $role)
+            ->wherePivot('status', $status)
             ->exists();
     }
 }

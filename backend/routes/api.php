@@ -1,30 +1,25 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-
-use App\Http\Controllers\Auth\RegisteredUserController;
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\NewPasswordController;
-use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Controllers\Auth\GoogleAuthController;
-use App\Http\Controllers\Auth\FacebookAuthController;
-
-use App\Http\Controllers\Api\V1\TripController;
-use App\Http\Controllers\Api\V1\TripUserController;
-use App\Http\Controllers\Api\V1\PreferenceController;
-use App\Http\Controllers\Api\V1\ItineraryController;
-use App\Http\Controllers\Api\V1\TripPlaceController;
-use App\Http\Controllers\Api\V1\PlaceController;
-use App\Http\Controllers\Api\V1\TripPlaceSuggestionsController;
-
-use App\Http\Controllers\Api\V1\MeController;
-
-use App\Http\Controllers\Api\V1\FacebookDataDeletionController;
-
-use App\Http\Controllers\Api\V1\Admin\AdminUserController;
 use App\Http\Controllers\Api\V1\Admin\AdminActivityLogController;
+use App\Http\Controllers\Api\V1\Admin\AdminUserController;
+use App\Http\Controllers\Api\V1\FacebookDataDeletionController;
+use App\Http\Controllers\Api\V1\ItineraryController;
+use App\Http\Controllers\Api\V1\MeController;
+use App\Http\Controllers\Api\V1\PlaceController;
+use App\Http\Controllers\Api\V1\PreferenceController;
+use App\Http\Controllers\Api\V1\TripController;
+use App\Http\Controllers\Api\V1\TripPlaceController;
+use App\Http\Controllers\Api\V1\TripPlaceSuggestionsController;
+use App\Http\Controllers\Api\V1\TripUserController;
+use App\Http\Controllers\Auth\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\Auth\GoogleAuthController;
+use App\Http\Controllers\Auth\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\FacebookAuthController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\VerifyEmailController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
