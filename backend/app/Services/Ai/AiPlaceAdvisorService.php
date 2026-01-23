@@ -37,13 +37,11 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
 
         $context = $this->buildContext($trip, $query);
 
-        // ✅ NEW: include origins hash in cache key so cache changes when trip places change
         $originsHash = hash('sha256', json_encode($context['origins'] ?? []));
         $originsShort = Str::substr($originsHash, 0, 8);
 
-        // ✅ bump cache version v22 -> v23
         $cacheKey = sprintf(
-            'ai:sug:v23:trip:%d:%s:%s:l:%s:r:%d:n:%d',
+            'ai:sug:v24:trip:%d:%s:%s:l:%s:r:%d:n:%d',
             (int) $trip->id,
             Str::substr($prefsHash, 0, 8),
             $originsShort,
@@ -78,11 +76,22 @@ final class AiPlaceAdvisorService implements AiPlaceAdvisorInterface
 
             $aiRows = $this->reasoner->rankAndExplain($candidates, $prefs, $context, $query->locale);
 
+            $hasPreferredNonOther = !empty(array_filter(
+                $prefs,
+                static fn ($v, $k) => $k !== 'other' && (float) $v > 0,
+                ARRAY_FILTER_USE_BOTH
+            ));
+
             $items = [];
             foreach ($candidates as $idx => $c) {
                 $aiRow = $aiRows[$idx] ?? ['score' => 0.0, 'reason' => 'Match.'];
 
-                $canonical = (string) ($c['category'] ?? 'other');
+                $canonical = $this->categories->normalize((string) ($c['category'] ?? 'other'));
+
+                if ($hasPreferredNonOther && $canonical === 'other') {
+                    continue;
+                }
+
                 if (!$this->categories->isRecommendable($canonical)) {
                     continue;
                 }

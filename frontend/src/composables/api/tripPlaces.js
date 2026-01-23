@@ -9,11 +9,11 @@ export function createTripPlace(tripId, payload) {
 }
 
 export function updateTripPlace(tripId, placeId, payload) {
-    return api.put(`/trips/${tripId}/places/${placeId}`, payload)
+    return api.patch(`/trips/${tripId}/places/${placeId}`, payload)
 }
 
-export function voteTripPlace(tripId, placeId) {
-    return api.post(`/trips/${tripId}/places/${placeId}/vote`)
+export function voteTripPlace(tripId, placeId, score) {
+    return api.post(`/trips/${tripId}/places/${placeId}/vote`, { score: Number(score) })
 }
 
 export function deleteTripPlace(tripId, placeId) {
@@ -21,8 +21,8 @@ export function deleteTripPlace(tripId, placeId) {
 }
 
 export function searchExternalPlaces(query) {
-    return api.get('/places/autocomplete', {
-        params: { q: query }
+    return api.get("/places/autocomplete", {
+        params: { q: query },
     })
 }
 

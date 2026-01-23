@@ -9,9 +9,12 @@ final class CategoryNormalizer
     public function normalize(?string $raw): string
     {
         $raw = strtolower(trim($raw ?? 'other'));
-        $map = (array) config('place_categories', []);
+        $map = (array) config('google_category_map', []);
 
-        return $map[$raw] ?? ($map['other'] ?? 'other');
+        $normalized = $map[$raw] ?? ($map['other'] ?? 'other');
+        $normalized = strtolower(trim((string) $normalized));
+
+        return $normalized !== '' ? $normalized : 'other';
     }
 
     public function isRecommendable(string $canonical): bool

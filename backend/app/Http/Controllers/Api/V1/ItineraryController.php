@@ -6,18 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ItineraryResource;
 use App\Interfaces\ItineraryServiceInterface;
 use App\Models\Trip;
+use DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use DomainException;
 use OpenApi\Attributes as OA;
 
-/**
- * @OA\Tag(
- * name="Itinerary",
- * description="Operations related to itinerary generation and viewing."
- * )
- */
 class ItineraryController extends Controller
 {
     use AuthorizesRequests;
@@ -26,34 +20,6 @@ class ItineraryController extends Controller
         protected ItineraryServiceInterface $itineraryService
     ) {}
 
-    /**
-     * @OA\Get(
-     * path="/trips/{trip}/itinerary/generate",
-     * summary="Generate a simple one-day recommended itinerary (cached).",
-     * tags={"Itinerary"},
-     * security={{"bearerAuth":{}}},
-     * @OA\Parameter(
-     * name="trip",
-     * in="path",
-     * required=true,
-     * description="The ID of the trip.",
-     * @OA\Schema(type="integer", example=12)
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Successful operation. Returns generated itinerary data.",
-     * @OA\JsonContent(
-     * @OA\Property(
-     * property="data",
-     * ref="#/components/schemas/ItineraryResource"
-     * )
-     * )
-     * ),
-     * @OA\Response(response=400, description="Bad Request (e.g., generation failed)."),
-     * @OA\Response(response=401, description="Unauthenticated"),
-     * @OA\Response(response=403, description="Forbidden (Access denied).")
-     * )
-     */
     public function generate(Trip $trip): JsonResponse
     {
         $this->authorize('view', $trip);
@@ -67,56 +33,6 @@ class ItineraryController extends Controller
         return (new ItineraryResource($dto))->response();
     }
 
-    /**
-     * @OA\Post(
-     * path="/trips/{trip}/itinerary/generate-full",
-     * summary="Generate a complete multi-day itinerary based on preferences.",
-     * tags={"Itinerary"},
-     * security={{"bearerAuth":{}}},
-     * @OA\Parameter(
-     * name="trip",
-     * in="path",
-     * required=true,
-     * description="The ID of the trip.",
-     * @OA\Schema(type="integer", example=12)
-     * ),
-     * @OA\RequestBody(
-     * required=true,
-     * @OA\JsonContent(
-     * required={"days"},
-     * @OA\Property(
-     * property="days",
-     * type="integer",
-     * description="Number of days for the itinerary (1-30).",
-     * example=3,
-     * minimum=1,
-     * maximum=30
-     * ),
-     * @OA\Property(
-     * property="radius",
-     * type="integer",
-     * nullable=true,
-     * description="Search radius in meters (100–20000).",
-     * example=2000,
-     * minimum=100,
-     * maximum=20000
-     * )
-     * )
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Itinerary successfully generated and saved.",
-     * @OA\JsonContent(
-     * @OA\Property(
-     * property="data",
-     * ref="#/components/schemas/ItineraryResource"
-     * )
-     * )
-     * ),
-     * @OA\Response(response=400, description="Bad Request (e.g., generation constraints violated)."),
-     * @OA\Response(response=422, description="Validation error."),
-     * )
-     */
     public function generateFullRoute(Request $request, Trip $trip): JsonResponse
     {
         $this->authorize('view', $trip);
@@ -129,41 +45,82 @@ class ItineraryController extends Controller
         try {
             $dto = $this->itineraryService->generateFullRoute(
                 $trip,
-                (int)$validated['days'],
-                (int)($validated['radius'] ?? 2000)
+                (int) $validated['days'],
+                (int) ($validated['radius'] ?? 2000)
             );
         } catch (DomainException $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
 
-        return (new ItineraryResource($dto))->response();
+        $saved = $this->itineraryService->getSaved($trip);
+
+        return response()->json([
+            'data' => (new ItineraryResource($dto))->resolve(),
+            'meta' => [
+                'updated_at' => $saved['updated_at'] ?? null,
+            ],
+        ]);
     }
 
-    /**
-     * @OA\Get(
-     * path="/trips/{trip}/preferences/aggregate",
-     * summary="Aggregate preferences from all members of a trip.",
-     * tags={"Itinerary"},
-     * security={{"bearerAuth":{}}},
-     * @OA\Parameter(
-     * name="trip",
-     * in="path",
-     * required=true,
-     * description="The ID of the trip.",
-     * @OA\Schema(type="integer", example=4)
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Successful operation.",
-     * @OA\JsonContent(
-     * @OA\Property(property="data", type="object", description="Aggregated preference scores."),
-     * @OA\Property(property="message", type="string", example="Aggregated preferences calculated.")
-     * )
-     * ),
-     * @OA\Response(response=401, description="Unauthenticated"),
-     * @OA\Response(response=403, description="Forbidden (Access denied).")
-     * )
-     */
+    public function show(Trip $trip): JsonResponse
+    {
+        $this->authorize('view', $trip);
+
+        $saved = $this->itineraryService->getSaved($trip);
+
+        if (!$saved) {
+            return response()->json([
+                'data' => null,
+                'meta' => ['updated_at' => null],
+            ]);
+        }
+
+        return response()->json([
+            'data' => (new ItineraryResource($saved['dto']))->resolve(),
+            'meta' => ['updated_at' => $saved['updated_at']],
+        ]);
+    }
+
+    public function update(Request $request, Trip $trip): JsonResponse
+    {
+        $this->authorize('view', $trip);
+
+        $validated = $request->validate([
+            'day_count' => ['required', 'integer', 'min:1', 'max:30'],
+            'schedule' => ['required', 'array'],
+            'schedule.*.day' => ['required', 'integer', 'min:1', 'max:30'],
+            'schedule.*.places' => ['required', 'array'],
+            'schedule.*.places.*.id' => ['required', 'integer'],
+            'expected_updated_at' => ['required', 'date'],
+        ]);
+
+        try {
+            $res = $this->itineraryService->updateSaved(
+                $trip,
+                (int) $validated['day_count'],
+                $validated['schedule'],
+                (string) $validated['expected_updated_at']
+            );
+        } catch (DomainException $e) {
+            $msg = (string) $e->getMessage();
+            if (str_starts_with($msg, 'itinerary_conflict:')) {
+                $current = trim(substr($msg, strlen('itinerary_conflict:')));
+                return response()->json([
+                    'error' => 'itinerary_conflict',
+                    'message' => 'Itinerary was updated by another user.',
+                    'meta' => ['updated_at' => $current !== '' ? $current : null],
+                ], 409);
+            }
+
+            return response()->json(['error' => $msg], 400);
+        }
+
+        return response()->json([
+            'data' => (new ItineraryResource($res['dto']))->resolve(),
+            'meta' => ['updated_at' => $res['updated_at']],
+        ]);
+    }
+
     public function aggregatePreferences(Trip $trip): JsonResponse
     {
         $this->authorize('view', $trip);

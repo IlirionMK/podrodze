@@ -11,6 +11,7 @@ use App\Models\Trip;
 use App\Models\TripItinerary;
 use App\Services\Activity\ActivityLogger;
 use DomainException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ItineraryService implements ItineraryServiceInterface
@@ -235,14 +236,15 @@ class ItineraryService implements ItineraryServiceInterface
             $tripPlaces->pluck('id')->all()
         );
 
-        $scored = $tripPlaces->map(function ($p) use ($prefs, $votes, $distances) {
+        $scored = $tripPlaces->map(function ($p) use ($prefs, $votes, $distances, $radius) {
             $prefScore = (float) ($prefs[$p->category_slug] ?? 0.0);
             $voteScore = (float) ($votes[$p->id] ?? 0.0);
             $rating    = (float) ($p->rating ?? 0.0);
             $isFixed   = (bool) ($p->pivot?->is_fixed ?? false);
             $distance  = (float) ($distances[$p->id] ?? 0.0);
 
-            $distancePenalty = $distance > 0 ? ($distance / 2000.0) : 0.0;
+            $denom = max(100.0, (float) $radius);
+            $distancePenalty = $distance > 0 ? ($distance / $denom) : 0.0;
 
             $openBoost = 0.0;
             $opening   = $p->opening_hours ?? null;
@@ -369,5 +371,92 @@ class ItineraryService implements ItineraryServiceInterface
         );
 
         return $itinerary;
+    }
+
+    public function getSaved(Trip $trip): ?array
+    {
+        $row = TripItinerary::query()
+            ->where('trip_id', $trip->id)
+            ->first();
+
+        if (!$row) {
+            return null;
+        }
+
+        $dto = new Itinerary(
+            trip_id: $trip->id,
+            day_count: (int) ($row->day_count ?? 0),
+            schedule: $row->schedule ?? [],
+            cache_info: [
+                'mode' => 'saved',
+                'source' => 'db',
+                'cached' => true,
+                'cached_at' => optional($row->generated_at)?->toISOString() ?? $row->updated_at?->toISOString(),
+            ],
+        );
+
+        return [
+            'dto' => $dto,
+            'updated_at' => $row->updated_at?->toISOString(),
+        ];
+    }
+
+    public function updateSaved(Trip $trip, int $dayCount, array $schedule, string $expectedUpdatedAt): array
+    {
+        $expected = Carbon::parse($expectedUpdatedAt)->toDateTimeString();
+
+        $updated = DB::transaction(function () use ($trip, $dayCount, $schedule, $expected) {
+            $affected = TripItinerary::query()
+                ->where('trip_id', $trip->id)
+                ->where('updated_at', $expected)
+                ->update([
+                    'day_count' => $dayCount,
+                    'schedule' => $schedule,
+                    'generated_at' => now(),
+                ]);
+
+            if ($affected === 0) {
+                return null;
+            }
+
+            return TripItinerary::query()
+                ->where('trip_id', $trip->id)
+                ->first();
+        });
+
+        if (!$updated) {
+            $current = TripItinerary::query()
+                ->where('trip_id', $trip->id)
+                ->first();
+
+            throw new DomainException('itinerary_conflict:' . ($current?->updated_at?->toISOString() ?? ''));
+        }
+
+        $dto = new Itinerary(
+            trip_id: $trip->id,
+            day_count: (int) $updated->day_count,
+            schedule: $updated->schedule ?? [],
+            cache_info: [
+                'mode' => 'saved',
+                'source' => 'db',
+                'cached' => true,
+                'cached_at' => optional($updated->generated_at)?->toISOString() ?? $updated->updated_at?->toISOString(),
+            ],
+        );
+
+        $this->activityLogger->add(
+            actor: auth()->user(),
+            action: 'trip.itinerary_updated',
+            target: $trip,
+            details: [
+                'trip_id' => $trip->getKey(),
+                'day_count' => (int) $updated->day_count,
+            ]
+        );
+
+        return [
+            'dto' => $dto,
+            'updated_at' => $updated->updated_at?->toISOString(),
+        ];
     }
 }

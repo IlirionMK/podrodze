@@ -2,15 +2,14 @@
 import { ref, computed, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { X, Vote, Pin, Trash2 } from "lucide-vue-next"
 
+import api from "@/composables/api/api.js"
 import { fetchTrip } from "@/composables/api/trips.js"
 import {
   fetchTripPlaces,
   createTripPlace,
-  voteTripPlace,
   updateTripPlace,
-  deleteTripPlace
+  deleteTripPlace,
 } from "@/composables/api/tripPlaces.js"
 import { fetchTripMembers } from "@/composables/api/tripMembers.js"
 
@@ -21,6 +20,7 @@ import TripMembersPanel from "@/components/trips/panels/TripMembersPanel.vue"
 import TripPreferencesPanel from "@/components/trips/panels/TripPreferencesPanel.vue"
 import TripPlanPanel from "@/components/trips/panels/TripPlanPanel.vue"
 import PlaceSearchModal from "@/components/trips/PlaceSearchModal.vue"
+import PlaceDetailsDrawer from "@/components/trips/PlaceDetailsDrawer.vue"
 
 const route = useRoute()
 const router = useRouter()
@@ -31,7 +31,7 @@ function tr(key, fallback) {
 }
 
 function getErrMessage(err) {
-  return err?.response?.data?.message || tr("errors.default", "Something went wrong.")
+  return err?.response?.data?.message || err?.response?.data?.error || tr("errors.default", "Something went wrong.")
 }
 
 const tripId = computed(() => String(route.params.id || ""))
@@ -57,13 +57,10 @@ const placeSearchOpen = ref(false)
 const placeModalOpen = ref(false)
 const actionBusy = ref(false)
 
+const votesByPlaceId = ref({})
+
 const bannerImage =
     "https://images.unsplash.com/photo-1528909514045-2fa4ac7a08ba?auto=format&fit=crop&w=1600&q=80"
-
-const btnBase =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-const btnSecondary = btnBase + " border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
-const btnDanger = btnBase + " border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
 
 const allowedTabs = new Set(["overview", "places", "plan", "team", "preferences"])
 
@@ -122,8 +119,22 @@ async function refreshMembers(id = tripId.value) {
   }
 }
 
-let loadSeq = 0
+async function refreshVotes(id = tripId.value) {
+  if (!id) return
+  try {
+    const res = await api.get(`/trips/${id}/places/votes`)
+    const items = res.data?.data || []
+    const map = {}
+    for (const v of items) {
+      if (v?.place_id != null) map[String(v.place_id)] = v
+    }
+    votesByPlaceId.value = map
+  } catch {
+    // optional
+  }
+}
 
+let loadSeq = 0
 async function loadData(id = tripId.value) {
   if (!id) return
   const seq = ++loadSeq
@@ -143,6 +154,8 @@ async function loadData(id = tripId.value) {
     trip.value = tripRes.data.data
     members.value = membersRes.data.data || []
     places.value = placesRes.data.data || []
+
+    await refreshVotes(id)
   } catch (err) {
     if (seq !== loadSeq) return
     errorMsg.value = getErrMessage(err)
@@ -184,7 +197,7 @@ const filteredPlaces = computed(() => {
       list.sort((a, b) => (a?.place?.category_slug || "").localeCompare(b?.place?.category_slug || ""))
       break
     case "cat_desc":
-      list.sort((a, b) => (b?.place?.category_slug || "").localeCompare(a?.place?.category_slug || ""))
+      list.sort((a, b) => (b?.place?.category_slug || "").localeCompare(b?.place?.category_slug || ""))
       break
     default:
       list.sort((a, b) => (a?.place?.name || "").localeCompare(b?.place?.name || ""))
@@ -205,10 +218,24 @@ const selectedTripPlace = computed(() => {
   return places.value.find((p) => p.id === id) || places.value.find((p) => p?.place?.id === id) || null
 })
 
-const selectedBackendId = computed(() => {
+const selectedPlaceId = computed(() => {
   const tp = selectedTripPlace.value
-  if (!tp) return null
-  return tp?.place?.id ?? tp?.id ?? null
+  return tp?.place?.id ?? null
+})
+
+function extractCoords(tp) {
+  const lat = tp?.place?.lat ?? tp?.place?.location?.lat ?? tp?.lat ?? null
+  const lon = tp?.place?.lon ?? tp?.place?.location?.lng ?? tp?.lon ?? null
+  if (lat == null || lon == null) return null
+  return { lat: Number(lat), lon: Number(lon) }
+}
+
+const selectedIsStart = computed(() => {
+  const tp = selectedTripPlace.value
+  if (!tp || !trip.value) return false
+  const coords = extractCoords(tp)
+  if (!coords) return false
+  return Number(trip.value?.start_latitude) === coords.lat && Number(trip.value?.start_longitude) === coords.lon
 })
 
 const selectedIsFixed = computed(() => {
@@ -217,9 +244,12 @@ const selectedIsFixed = computed(() => {
   return Boolean(tp.is_fixed ?? tp.fixed ?? tp.is_mandatory ?? false)
 })
 
-function closePlaceModal() {
-  placeModalOpen.value = false
-}
+const selectedRating = computed(() => {
+  const pid = selectedPlaceId.value
+  if (!pid) return null
+  const v = votesByPlaceId.value[String(pid)]
+  return v?.my_score ?? null
+})
 
 function onSelectPlace(id) {
   selectedTripPlaceId.value = id
@@ -248,15 +278,11 @@ watch(
 async function onAddPlace(payload) {
   placeSearchOpen.value = false
   placesLoading.value = true
-
   try {
     await createTripPlace(tripId.value, payload)
-
-    if (activeTab.value !== 'places') {
-      setTab('places')
-    }
-
+    if (activeTab.value !== "places") setTab("places")
     await refreshPlaces()
+    await refreshVotes()
   } catch (e) {
     errorMsg.value = getErrMessage(e)
   } finally {
@@ -264,24 +290,60 @@ async function onAddPlace(payload) {
   }
 }
 
-async function doVote() {
-  if (!selectedBackendId.value) return
-  actionBusy.value = true
+function normalizeKey(payload) {
+  if (payload?.place_id != null) return `db:${String(payload.place_id)}`
+  if (payload?.google_place_id) return `g:${String(payload.google_place_id).replace(/^google:/, "")}`
+  if (payload?.name) return `n:${String(payload.name).trim().toLowerCase()}`
+  return null
+}
+
+function existingKeys() {
+  const set = new Set()
+
+  for (const tp of places.value || []) {
+    const p = tp?.place || tp
+    const id = p?.id ?? tp?.place_id ?? null
+    const g = p?.google_place_id ?? p?.external_id ?? null
+    const name = p?.name ?? null
+
+    if (id != null) set.add(`db:${String(id)}`)
+    if (g) set.add(`g:${String(g).replace(/^google:/, "")}`)
+    if (name) set.add(`n:${String(name).trim().toLowerCase()}`)
+  }
+
+  return set
+}
+
+function isAlreadyAttachedMessage(msg) {
+  const s = String(msg || "").toLowerCase()
+  return s.includes("already attached") || s.includes("already exists") || s.includes("already added")
+}
+
+async function onAddSuggestedPlace(payload) {
+  const key = normalizeKey(payload)
+  if (key && existingKeys().has(key)) {
+    return
+  }
+
+  placesLoading.value = true
   try {
-    await voteTripPlace(tripId.value, selectedBackendId.value)
+    await createTripPlace(tripId.value, payload)
     await refreshPlaces()
+    await refreshVotes()
   } catch (e) {
-    errorMsg.value = getErrMessage(e)
+    const msg = getErrMessage(e)
+    if (isAlreadyAttachedMessage(msg)) return
+    errorMsg.value = msg
   } finally {
-    actionBusy.value = false
+    placesLoading.value = false
   }
 }
 
 async function doToggleFixed() {
-  if (!selectedBackendId.value) return
+  if (!selectedPlaceId.value) return
   actionBusy.value = true
   try {
-    await updateTripPlace(tripId.value, selectedBackendId.value, { is_fixed: !selectedIsFixed.value })
+    await updateTripPlace(tripId.value, selectedPlaceId.value, { is_fixed: !selectedIsFixed.value })
     await refreshPlaces()
   } catch (e) {
     errorMsg.value = getErrMessage(e)
@@ -291,13 +353,68 @@ async function doToggleFixed() {
 }
 
 async function doRemove() {
-  if (!selectedBackendId.value) return
+  if (!selectedPlaceId.value) return
   actionBusy.value = true
   try {
-    await deleteTripPlace(tripId.value, selectedBackendId.value)
-    closePlaceModal()
+    await deleteTripPlace(tripId.value, selectedPlaceId.value)
+    placeModalOpen.value = false
     selectedTripPlaceId.value = null
     await refreshPlaces()
+    await refreshVotes()
+  } catch (e) {
+    errorMsg.value = getErrMessage(e)
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+async function doRate(stars) {
+  if (!selectedPlaceId.value) return
+  actionBusy.value = true
+  try {
+    const res = await api.post(`/trips/${tripId.value}/places/${selectedPlaceId.value}/vote`, {
+      score: Number(stars),
+    })
+    const vote = res.data?.data
+    if (vote?.place_id != null) {
+      votesByPlaceId.value = {
+        ...votesByPlaceId.value,
+        [String(vote.place_id)]: vote,
+      }
+    } else {
+      await refreshVotes()
+    }
+  } catch (e) {
+    errorMsg.value = getErrMessage(e)
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+async function doSetStart() {
+  const tp = selectedTripPlace.value
+  if (!tp) return
+
+  const coords = extractCoords(tp)
+  if (!coords) {
+    errorMsg.value = tr("errors.default", "Missing coordinates for this place.")
+    return
+  }
+
+  actionBusy.value = true
+  try {
+    await api.patch(`/trips/${tripId.value}/start-location`, {
+      start_latitude: coords.lat,
+      start_longitude: coords.lon,
+    })
+
+    if (trip.value) {
+      trip.value = {
+        ...trip.value,
+        start_latitude: coords.lat,
+        start_longitude: coords.lon,
+      }
+    }
   } catch (e) {
     errorMsg.value = getErrMessage(e)
   } finally {
@@ -405,6 +522,7 @@ async function doRemove() {
             :places="places"
             :places-loading="placesLoading"
             @error="errorMsg = $event"
+            @picked="onAddSuggestedPlace"
         />
 
         <TripMembersPanel
@@ -428,94 +546,17 @@ async function doRemove() {
             @picked="onAddPlace"
         />
 
-        <Teleport to="body">
-          <Transition
-              appear
-              enter-active-class="transition duration-200 ease-out"
-              enter-from-class="opacity-0 scale-95"
-              enter-to-class="opacity-100 scale-100"
-              leave-active-class="transition duration-150 ease-in"
-              leave-from-class="opacity-100 scale-100"
-              leave-to-class="opacity-0 scale-95"
-          >
-            <div v-if="placeModalOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true">
-              <button class="absolute inset-0 bg-black/50" @click="closePlaceModal" aria-label="Close" />
-
-              <div class="relative w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden">
-                <div class="p-6">
-                  <div class="flex items-start justify-between gap-4">
-                    <div class="min-w-0">
-                      <h3 class="text-xl font-semibold text-gray-900 truncate">
-                        {{
-                          selectedTripPlace?.place?.name ||
-                          selectedTripPlace?.name ||
-                          tr("trip.place.modal.title", "Place")
-                        }}
-                      </h3>
-
-                      <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700">
-                          {{ tr("trip.place.modal.category", "Category") }}:
-                          <span class="ml-1 font-semibold">
-                            {{ selectedTripPlace?.place?.category_slug || "—" }}
-                          </span>
-                        </span>
-
-                        <span
-                            v-if="selectedIsFixed"
-                            class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700"
-                        >
-                          <Pin class="h-3.5 w-3.5 mr-1" />
-                          {{ tr("trip.place.modal.fixed", "Fixed") }}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        class="h-10 w-10 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center"
-                        @click="closePlaceModal"
-                    >
-                      <X class="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <button
-                        type="button"
-                        :class="btnSecondary + ' py-3'"
-                        :disabled="actionBusy || !selectedBackendId"
-                        @click="doVote"
-                    >
-                      <Vote class="h-4 w-4" />
-                      {{ tr("trip.place.actions.vote", "Vote") }}
-                    </button>
-
-                    <button
-                        type="button"
-                        :class="btnSecondary + ' py-3'"
-                        :disabled="actionBusy || !selectedBackendId"
-                        @click="doToggleFixed"
-                    >
-                      <Pin class="h-4 w-4" />
-                      {{ selectedIsFixed ? tr("trip.place.actions.unfix", "Unfix") : tr("trip.place.actions.fix", "Fix") }}
-                    </button>
-
-                    <button
-                        type="button"
-                        :class="btnDanger + ' py-3'"
-                        :disabled="actionBusy || !selectedBackendId"
-                        @click="doRemove"
-                    >
-                      <Trash2 class="h-4 w-4" />
-                      {{ tr("actions.remove", "Remove") }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Transition>
-        </Teleport>
+        <PlaceDetailsDrawer
+            v-model="placeModalOpen"
+            :trip-place="selectedTripPlace"
+            :busy="actionBusy"
+            :rating="selectedRating"
+            :is-start="selectedIsStart"
+            @rate="doRate"
+            @toggle-fixed="doToggleFixed"
+            @remove="doRemove"
+            @set-start="doSetStart"
+        />
       </div>
     </div>
   </div>

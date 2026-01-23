@@ -84,7 +84,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/trips/{trip}/preferences/aggregate', [ItineraryController::class, 'aggregatePreferences']);
         Route::get('/trips/{trip}/itinerary/generate', [ItineraryController::class, 'generate']);
         Route::post('/trips/{trip}/itinerary/generate-full', [ItineraryController::class, 'generateFullRoute']);
-
+        Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'show']);
+        Route::patch('/trips/{trip}/itinerary', [ItineraryController::class, 'update']);
         Route::get('/trips/{trip}/places/suggestions', TripPlaceSuggestionsController::class)
             ->middleware('throttle:30,1');
 
