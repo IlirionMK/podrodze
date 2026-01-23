@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 
 /**
  * End-to-end test for complete user registration and onboarding flow.
@@ -32,6 +33,8 @@ use Tests\TestCase\ApiTestCase;
 #[Group('e2e')]
 class UserOnboardingE2ETest extends ApiTestCase
 {
+    use DatabaseMigrations;
+    
     private const TEST_EMAIL = 'newuser@example.com';
     private const TEST_PASSWORD = 'SecurePass123!';
     private const TEST_NAME = 'New Test User';

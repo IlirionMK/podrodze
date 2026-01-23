@@ -10,6 +10,7 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 use Mockery;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 
 /**
  * End-to-end tests for social authentication flows.
@@ -31,6 +32,8 @@ use Tests\TestCase\ApiTestCase;
 #[Group('e2e')]
 class SocialAuthE2ETest extends ApiTestCase
 {
+    use DatabaseMigrations;
+    
     private const TEST_EMAIL = 'social.user@example.com';
     private const TEST_PASSWORD = 'SecurePass123!';
     private const TEST_NAME = 'Social User';

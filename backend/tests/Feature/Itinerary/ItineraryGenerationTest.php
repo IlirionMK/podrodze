@@ -230,9 +230,7 @@ class ItineraryGenerationTest extends TestCase
 
         $response = $this->postJson("$this->baseUrl/trips/{$this->trip->id}/itinerary/generate-full", [
             'days' => 3,
-            'radius' => 5000,
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays(2)->format('Y-m-d')
+            'radius' => 5000
         ]);
 
         if ($response->status() !== 200) {
@@ -499,9 +497,7 @@ class ItineraryGenerationTest extends TestCase
             ->assertJsonValidationErrors(['days']);
 
         $response = $this->postJson("$this->baseUrl/trips/{$this->trip->id}/itinerary/generate-full", [
-            'days' => 5,
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays(4)->format('Y-m-d')
+            'days' => 5
         ]);
 
         $response->assertStatus(200);
@@ -520,27 +516,21 @@ class ItineraryGenerationTest extends TestCase
 
         $response = $this->postJson("$this->baseUrl/trips/{$this->trip->id}/itinerary/generate-full", [
             'days' => 3,
-            'radius' => 99,
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays(2)->format('Y-m-d')
+            'radius' => 99
         ]);
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['radius']);
 
         $response = $this->postJson("$this->baseUrl/trips/{$this->trip->id}/itinerary/generate-full", [
             'days' => 3,
-            'radius' => 20001,
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays(2)->format('Y-m-d')
+            'radius' => 20001
         ]);
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['radius']);
 
         $response = $this->postJson("$this->baseUrl/trips/{$this->trip->id}/itinerary/generate-full", [
             'days' => 3,
-            'radius' => 1000,
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays(2)->format('Y-m-d')
+            'radius' => 1000
         ]);
         $response->assertStatus(200);
     }
@@ -561,9 +551,7 @@ class ItineraryGenerationTest extends TestCase
             ->assertJsonValidationErrors(['days']);
 
         $response = $this->postJson("$this->baseUrl/trips/{$this->trip->id}/itinerary/generate-full", [
-            'days' => 3,
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays(2)->format('Y-m-d')
+            'days' => 3
         ]);
 
 

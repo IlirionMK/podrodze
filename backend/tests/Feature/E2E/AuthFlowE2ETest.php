@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 
 /**
  * End-to-end tests for the complete authentication flow.
@@ -29,6 +30,8 @@ use Tests\TestCase\ApiTestCase;
 #[Group('authentication')]
 class AuthFlowE2ETest extends ApiTestCase
 {
+    use DatabaseMigrations;
+    
     protected bool $enableRateLimiting = false;
 
     /**

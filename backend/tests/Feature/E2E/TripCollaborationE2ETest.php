@@ -6,7 +6,7 @@ namespace Tests\Feature\E2E;
 
 use App\Models\Trip;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -33,7 +33,7 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('e2e')]
 class TripCollaborationE2ETest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     /** @var User Trip owner user instance */
     private User $owner;
