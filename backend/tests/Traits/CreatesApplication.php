@@ -7,6 +7,12 @@ use Illuminate\Foundation\Application;
 
 /**
  * Trait for creating the application in tests.
+ *
+ * This trait is responsible for bootstrapping the Laravel
+ * application instance for testing purposes.
+ *
+ * @package Tests\Traits
+ *
  */
 trait CreatesApplication
 {

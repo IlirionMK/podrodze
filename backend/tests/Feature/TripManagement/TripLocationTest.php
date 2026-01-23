@@ -16,7 +16,8 @@ use Tests\TestCase\TripTestCase;
  * - Trip start location can be updated
  * - Invalid location data is rejected
  * - Partial updates are handled correctly
- * - Location data is properly formatted in responses
+ *
+ * @covers \App\Http\Controllers\Api\V1\TripController
  */
 #[Group('location')]
 #[Group('trip')]

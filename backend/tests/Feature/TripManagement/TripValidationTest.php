@@ -13,11 +13,12 @@ use Tests\TestCase\TripTestCase;
  * Tests for trip data validation.
  *
  * This class verifies that:
- * - Required fields are properly validated
- * - Date ranges are validated (start before end)
- * - Past dates are not allowed
- * - Input formats are enforced
- * - Appropriate validation messages are returned
+ * - Required trip fields are validated
+ * - Date ranges are properly validated
+ * - Invalid data is rejected with appropriate errors
+ * - Custom validation rules work as expected
+ *
+ * @covers \App\Http\Requests\TripRequest
  */
 #[Group('validation')]
 #[Group('trip')]

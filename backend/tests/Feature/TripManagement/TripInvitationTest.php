@@ -10,14 +10,15 @@ use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\TripTestCase;
 
 /**
- * Tests for trip invitation system.
+ * Tests for trip invitation functionality.
  *
  * This class verifies that:
- * - Trip owners can invite users via email
+ * - Trip owners can invite other users
  * - Invitations can be accepted or declined
- * - Invitation status is properly tracked
- * - Only valid invitations can be accepted
- * - Invitation listing works as expected
+ * - Invitation emails are sent
+ * - Expired invitations are handled
+ *
+ * @covers \App\Http\Controllers\Api\V1\TripUserController
  */
 #[Group('invitation')]
 #[Group('trip')]

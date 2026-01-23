@@ -342,33 +342,31 @@ class TripManagementTest extends TripTestCase
         $response->assertStatus(200);
     }
 
-    // W.I.P
     public function test_guest_cannot_access_protected_routes(): void
     {
+        $trip = $this->createTrip(['owner_id' => $this->owner->getKey()]);
+        $tripId = $trip->getKey();
         $nonExistentId = 999999;
 
         $routes = [
-            ['get', '/api/v1/trips', 200],
-            ['post', '/api/v1/trips', 422],
-            ['get', "/api/v1/trips/$nonExistentId", 404],
-            ['put', "/api/v1/trips/$nonExistentId", 404],
-            ['delete', "/api/v1/trips/$nonExistentId", 404],
-            ['get', "/api/v1/trips/$nonExistentId/members", 404],
-            ['patch', "/api/v1/trips/$nonExistentId/start-location", 404],
+            ['method' => 'get', 'uri' => '/api/v1/trips', 'expectedStatus' => 401],
+            ['method' => 'post', 'uri' => '/api/v1/trips', 'expectedStatus' => 401],
+            ['method' => 'get', 'uri' => "/api/v1/trips/{$tripId}", 'expectedStatus' => 401],
+            ['method' => 'put', 'uri' => "/api/v1/trips/{$tripId}", 'expectedStatus' => 401],
+            ['method' => 'delete', 'uri' => "/api/v1/trips/{$tripId}", 'expectedStatus' => 401],
+            ['method' => 'get', 'uri' => "/api/v1/trips/{$tripId}/members", 'expectedStatus' => 401],
+            ['method' => 'patch', 'uri' => "/api/v1/trips/{$tripId}/start-location", 'expectedStatus' => 401],
+            ['method' => 'get', 'uri' => "/api/v1/trips/{$nonExistentId}", 'expectedStatus' => 401],
         ];
 
         foreach ($routes as $route) {
-            [$method, $uri, $expectedStatus] = $route;
-            $response = $this->actingAsUser($this->owner)
-                ->json($method, $uri);
+            $response = $this->json($route['method'], $route['uri']);
 
-            if ($response->status() !== $expectedStatus) {
-                echo "\nRoute: $method $uri\n";
-                echo "Expected status: $expectedStatus, got: {$response->status()}\n";
-                echo "Response: " . $response->getContent() . "\n";
-            }
-
-            $response->assertStatus($expectedStatus);
+            $this->assertEquals(
+                $route['expectedStatus'],
+                $response->status(),
+                "Failed asserting that route [{$route['method']} {$route['uri']}] returns status {$route['expectedStatus']}. Got: {$response->status()}"
+            );
         }
     }
 }

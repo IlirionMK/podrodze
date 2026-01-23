@@ -9,7 +9,13 @@ use Laravel\Sanctum\Sanctum;
 
 /**
  * Base test case for authenticated API tests.
- * Provides authentication related functionality for tests.
+ *
+ * This class provides authentication related functionality
+ * and helper methods for testing authenticated routes.
+ *
+ * @package Tests\TestCase
+ * @uses \Tests\TestCase\ApiTestCase
+ * @property string $defaultPassword Default password for test users
  */
 abstract class AuthenticatedTestCase extends ApiTestCase
 {

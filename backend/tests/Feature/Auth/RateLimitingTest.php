@@ -9,7 +9,17 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
-
+/**
+ * Tests for rate limiting on authentication routes.
+ *
+ * This class verifies that:
+ * - Rate limiting is enforced on login attempts
+ * - Rate limiting is enforced on registration attempts
+ * - Rate limiting is enforced on password reset requests
+ * - Rate limits are properly configured and reset
+ *
+ * @covers \App\Http\Middleware\ThrottleRequests
+ */
 #[Group('auth')]
 #[Group('security')]
 #[Group('rate-limiting')]

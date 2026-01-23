@@ -10,7 +10,16 @@ use Illuminate\Support\Str;
 
 /**
  * Base test case for trip-related tests.
- * Provides common functionality for testing trip management features.
+ *
+ * This class provides common setup and helper methods
+ * for testing trip management features.
+ *
+ * @package Tests\TestCase
+ * @uses \Tests\TestCase\AuthenticatedTestCase
+ * @property User $owner Test trip owner
+ * @property User $editor Test trip editor
+ * @property User $member Test trip member
+ * @property User $otherUser Non-member test user
  */
 abstract class TripTestCase extends AuthenticatedTestCase
 {

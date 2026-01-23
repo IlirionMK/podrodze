@@ -7,9 +7,14 @@ namespace Tests\Traits;
 use Exception;
 
 /**
- * Trait HandlesRateLimiting
+ * Trait for handling rate limiting in tests.
  *
- * Provides rate limiting functionality for tests.
+ * This trait provides methods to manage and test
+ * rate limiting functionality in the application.
+ *
+ * @package Tests\Traits
+ * @method void clearRateLimiting() Clear rate limiting for testing
+ * @method void assertRateLimited(string $uri, string $method = 'POST', int $maxAttempts = 5) Assert that a route is rate limited
  */
 trait HandlesRateLimiting
 {

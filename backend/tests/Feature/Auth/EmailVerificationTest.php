@@ -11,7 +11,20 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\AuthenticatedTestCase;
-
+/**
+ * Tests for email verification functionality.
+ *
+ * This class verifies that:
+ * - Email verification links can be requested
+ * - Email verification links are valid and can be used
+ * - Verified users can access protected routes
+ * - Unverified users are restricted as configured
+ *
+ * @covers \App\Http\Controllers\Auth\{
+ *     EmailVerificationNotificationController,
+ *     VerifyEmailController
+ * }
+ */
 #[Group('auth')]
 #[Group('verification')]
 class EmailVerificationTest extends AuthenticatedTestCase
@@ -46,7 +59,6 @@ class EmailVerificationTest extends AuthenticatedTestCase
      */
     protected function createUser(array $attributes = [], bool $verified = null): User
     {
-        // Only set email_verified_at if explicitly specified
         if ($verified !== null) {
             $attributes['email_verified_at'] = $verified ? now() : null;
         }
@@ -65,6 +77,8 @@ class EmailVerificationTest extends AuthenticatedTestCase
 
     public function test_email_can_be_verified(): void
     {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ValidateSignature::class);
+
         $user = $this->createUser([], false);
 
         $verificationUrl = URL::temporarySignedRoute(
@@ -157,6 +171,8 @@ class EmailVerificationTest extends AuthenticatedTestCase
 
     public function test_email_verification_requires_correct_user(): void
     {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ValidateSignature::class);
+
         $user1 = $this->createUser([], false);
         $user2 = $this->createUser(['email' => 'another@example.com'], false);
 

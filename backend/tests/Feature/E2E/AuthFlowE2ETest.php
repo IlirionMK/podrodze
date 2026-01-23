@@ -2,29 +2,55 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Auth;
-
-use Illuminate\Support\Facades\DB;
+namespace Tests\Feature\E2E;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 
 /**
  * End-to-end tests for the complete authentication flow.
+ *
+ * This class verifies that:
+ * - The complete user journey from registration to authentication works
+ * - Session management functions correctly
+ * - Authentication state persists as expected
+ * - Edge cases in the auth flow are handled properly
  *
  * @covers \App\Http\Controllers\Auth\{
  *     RegisteredUserController,
  *     AuthenticatedSessionController,
  *     EmailVerificationController
- *
+ * }
  */
 #[Group('auth')]
 #[Group('e2e')]
 #[Group('authentication')]
 class AuthFlowE2ETest extends ApiTestCase
 {
+    use DatabaseMigrations;
+    
     protected bool $enableRateLimiting = false;
+
+    /**
+     * Set up the test environment.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->bind(\Illuminate\Cache\RateLimiter::class, function () {
+            $mock = $this->createMock(\Illuminate\Cache\RateLimiter::class);
+            $mock->method('tooManyAttempts')->willReturn(false);
+            $mock->method('hit')->willReturn(1);
+            $mock->method('availableIn')->willReturn(0);
+            return $mock;
+        });
+
+        $this->clearRateLimits();
+    }
 
     /**
      * Clear rate limiting for a given feature.

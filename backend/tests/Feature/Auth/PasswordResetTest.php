@@ -9,7 +9,20 @@ use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase\ApiTestCase;
 use Illuminate\Testing\TestResponse;
-
+/**
+ * Tests for password reset functionality.
+ *
+ * This class verifies that:
+ * - Users can request password reset links
+ * - Password reset tokens are properly generated
+ * - Users can reset their passwords with valid tokens
+ * - Invalid or expired tokens are rejected
+ *
+ * @covers \App\Http\Controllers\Auth\{
+ *     PasswordResetLinkController,
+ *     NewPasswordController
+ * }
+ */
 #[Group('auth')]
 #[Group('password')]
 #[Group('security')]
@@ -162,10 +175,8 @@ class PasswordResetTest extends ApiTestCase
             'password_confirmation' => 'wrong-confirmation',
         ]);
 
-        // The API returns 422 with validation errors
         $this->assertUnprocessableResponse($response);
 
-        // Check for the specific validation error
         $response->assertJsonValidationErrors(['password']);
     }
 
@@ -181,10 +192,8 @@ class PasswordResetTest extends ApiTestCase
             'password_confirmation' => 'short',
         ]);
 
-        // The API returns 422 with validation errors
         $this->assertUnprocessableResponse($response);
 
-        // Check for the specific validation error
         $response->assertJsonValidationErrors(['password']);
     }
 
