@@ -70,7 +70,7 @@ describe('Register Page', () => {
 
   it('renders register form correctly', () => {
     expect(wrapper.find('form').exists()).toBe(true)
-    expect(wrapper.text()).toContain('auth.register.title')
+    expect(wrapper.text()).toContain('Rejestracja')
     expect(wrapper.find('button[type="submit"]').exists()).toBe(true)
   })
 

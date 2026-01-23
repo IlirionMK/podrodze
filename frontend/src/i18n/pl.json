@@ -252,16 +252,20 @@
 
     "place": {
       "vote": "Głosuj",
+      "votes": "Głosy",
       "fix": "Przypnij",
       "details_hint": "Kliknij miejsce, aby zobaczyć szczegóły.",
 
       "modal": {
         "title": "Miejsce",
+        "subtitle": "Zarządzaj głosami i przypnij to miejsce do podróży.",
         "category": "Kategoria",
         "fixed": "Stałe"
       },
 
       "actions": {
+        "like": "Lubię",
+        "dislike": "Nie lubię",
         "vote": "Głosuj",
         "fix": "Przypnij",
         "unfix": "Odepnij"

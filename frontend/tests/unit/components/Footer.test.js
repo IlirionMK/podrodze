@@ -28,8 +28,8 @@ describe('Footer', () => {
     const wrapper = mount(Footer)
     
     // Check for section headers
-    expect(wrapper.text()).toContain('footer.section.project')
-    expect(wrapper.text()).toContain('footer.section.team')
+    expect(wrapper.text()).toContain('Projekt')
+    expect(wrapper.text()).toContain('Zespół')
   })
 
   it('has proper grid layout', () => {
@@ -43,8 +43,8 @@ describe('Footer', () => {
   it('displays footer links', () => {
     const wrapper = mount(Footer)
     
-    expect(wrapper.text()).toContain('footer.links.about_us')
-    expect(wrapper.text()).toContain('footer.links.contact')
+    expect(wrapper.text()).toContain('O nas')
+    expect(wrapper.text()).toContain('Kontakt')
   })
 
   it('has proper styling classes', () => {
