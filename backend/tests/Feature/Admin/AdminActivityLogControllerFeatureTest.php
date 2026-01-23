@@ -210,6 +210,8 @@ class AdminActivityLogControllerFeatureTest extends TestCase
         $this->createActivityLog([
             'user_id' => $this->regularUser->id,
             'action' => 'login',
+            'target_type' => 'user',
+            'target_id' => $this->regularUser->id,
             'details' => ['description' => 'User logged in'],
             'created_at' => now()->subHours(2)
         ]);
@@ -217,6 +219,8 @@ class AdminActivityLogControllerFeatureTest extends TestCase
         $this->createActivityLog([
             'user_id' => $this->regularUser->id,
             'action' => 'logout',
+            'target_type' => 'user',
+            'target_id' => $this->regularUser->id,
             'details' => ['description' => 'User logged out'],
             'created_at' => now()->subHours(1)
         ]);
@@ -224,6 +228,8 @@ class AdminActivityLogControllerFeatureTest extends TestCase
         $this->createActivityLog([
             'user_id' => $this->admin->id,
             'action' => 'login',
+            'target_type' => 'user',
+            'target_id' => $this->admin->id,
             'details' => ['description' => 'Admin logged in'],
             'created_at' => now()->subMinutes(30)
         ]);
@@ -236,7 +242,15 @@ class AdminActivityLogControllerFeatureTest extends TestCase
     private function createActivityLog(array $data): void
     {
         if (class_exists('\App\Models\ActivityLog')) {
-            \App\Models\ActivityLog::create($data);
+            $defaults = [
+                'target_type' => 'user',
+                'target_id' => $data['user_id'] ?? null,
+                'details' => [],
+                'created_at' => now(),
+            ];
+            
+            $activityData = array_merge($defaults, $data);
+            \App\Models\ActivityLog::create($activityData);
         }
     }
 }

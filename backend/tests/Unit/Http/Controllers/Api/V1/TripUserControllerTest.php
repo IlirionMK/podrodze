@@ -184,17 +184,6 @@ class TripUserControllerTest extends TestCase
         $this->trip->members()->attach($this->member->id, ['role' => 'member']);
 
         $request = Mockery::mock(Request::class);
-        // No user() expectation needed since authorization is bypassed
-
-        $translator = Mockery::mock(\Illuminate\Contracts\Translation\Translator::class);
-        $translator->shouldReceive('get')->once()->andReturn('The given data is invalid.');
-
-        $messageBag = Mockery::mock(\Illuminate\Support\MessageBag::class);
-        $messageBag->shouldReceive('all')->once()->andReturn(['Invalid role']);
-
-        $validator = Mockery::mock(\Illuminate\Contracts\Validation\Validator::class);
-        $validator->shouldReceive('errors')->once()->andReturn($messageBag);
-        $validator->shouldReceive('getTranslator')->once()->andReturn($translator);
 
         $validationException = \Illuminate\Validation\ValidationException::withMessages(['role' => ['Invalid role']]);
         $validationException->response = new \Illuminate\Http\JsonResponse(['errors' => ['role' => ['Invalid role']]], 422);

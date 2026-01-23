@@ -3,9 +3,9 @@
 namespace Tests\Unit\Services\External;
 
 use App\Services\External\GooglePlacesService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
-use PHPUnit\Framework\Attributes\Test;
 
 class GooglePlacesServiceTest extends TestCase
 {
@@ -15,90 +15,112 @@ class GooglePlacesServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new GooglePlacesService($this->testApiKey);
+        
+        // Set up test configuration
+        config(['services.google.maps_server_key' => $this->testApiKey]);
+        config(['app.url' => 'http://localhost']);
 
-        Http::fake();
+        $this->service = new GooglePlacesService();
+
+        // Mock cache to always return null (not found)
+        Cache::shouldReceive('get')->andReturn(null);
+        Cache::shouldReceive('remember')->andReturnUsing(function ($key, $ttl, $callback) {
+            return $callback();
+        });
+        Cache::shouldReceive('put')->andReturn(true);
+        Cache::shouldReceive('forget')->andReturn(true);
     }
 
-    #[Test]
-    public function it_searches_places()
+    public function test_it_fetches_nearby_places()
     {
-        $query = 'restaurants in Paris';
+        $lat = 52.23;
+        $lon = 21.01;
+        $radius = 1000;
+
         $mockResponse = [
-            'results' => [
-                ['name' => 'Test Restaurant', 'place_id' => '123']
-            ]
-        ];
-
-        Http::fake([
-            'maps.googleapis.com/maps/api/place/textsearch/json*' => Http::response($mockResponse)
-        ]);
-
-        $results = $this->service->searchPlaces($query);
-
-        $this->assertIsArray($results);
-        $this->assertArrayHasKey('results', $results);
-        $this->assertEquals('Test Restaurant', $results['results'][0]['name']);
-    }
-
-    #[Test]
-    public function it_gets_place_details()
-    {
-        $placeId = 'test-place-id';
-        $mockResponse = [
-            'result' => [
-                'name' => 'Test Place',
-                'formatted_address' => '123 Test St',
-                'geometry' => [
-                    'location' => ['lat' => 52.23, 'lng' => 21.01]
+            'places' => [
+                [
+                    'id' => 'test-place-id',
+                    'displayName' => ['text' => 'Test Place'],
+                    'location' => ['latitude' => 52.23, 'longitude' => 21.01],
+                    'types' => ['restaurant'],
+                    'rating' => 4.5,
+                    'userRatingCount' => 100,
+                    'formattedAddress' => '123 Test St'
                 ]
             ]
         ];
 
+        // Mock the HTTP client to return our test response
         Http::fake([
-            'maps.googleapis.com/maps/api/place/details/json*' => Http::response($mockResponse)
+            'places.googleapis.com/v1/places:searchNearby' => Http::response($mockResponse, 200, [
+                'Content-Type' => 'application/json'
+            ])
+        ]);
+
+        $results = $this->service->fetchNearby($lat, $lon, $radius);
+
+        $this->assertIsArray($results);
+        $this->assertNotEmpty($results);
+        $this->assertEquals('Test Place', $results[0]['name']);
+        $this->assertEquals('test-place-id', $results[0]['place_id']);
+        $this->assertEquals(52.23, $results[0]['lat']);
+        $this->assertEquals(21.01, $results[0]['lon']);
+    }
+
+    public function test_it_gets_place_details()
+    {
+        $placeId = 'test-place-id';
+        $mockResponse = [
+            'status' => 'OK',
+            'result' => [
+                'place_id' => 'test-place-id',
+                'name' => 'Test Place',
+                'formatted_address' => '123 Test St',
+                'geometry' => ['location' => ['lat' => 52.23, 'lng' => 21.01]],
+                'types' => ['restaurant'],
+                'rating' => 4.5,
+                'user_ratings_total' => 100,
+                'vicinity' => '123 Test St',
+                'opening_hours' => ['open_now' => true],
+                'website' => 'https://example.com',
+                'international_phone_number' => '+48123456789'
+            ]
+        ];
+
+        // Mock the HTTP client to return our test response
+        Http::fake([
+            'maps.googleapis.com/maps/api/place/details/json*' => Http::response($mockResponse, 200, [
+                'Content-Type' => 'application/json'
+            ])
         ]);
 
         $details = $this->service->getPlaceDetails($placeId);
 
         $this->assertIsArray($details);
-        $this->assertEquals('Test Place', $details['result']['name']);
+        $this->assertEquals('Test Place', $details['name']);
+        $this->assertEquals(52.23, $details['lat']);
+        $this->assertEquals(21.01, $details['lon']);
+        $this->assertEquals('test-place-id', $details['place_id']);
+        $this->assertEquals('food', $details['category_slug']);
+        $this->assertArrayHasKey('meta', $details);
+        $this->assertEquals('123 Test St', $details['meta']['address']);
     }
 
-    #[Test]
-    public function it_searches_nearby_places()
+    public function test_it_handles_place_details_errors()
     {
-        $location = ['lat' => 52.23, 'lng' => 21.01];
-        $radius = 1000;
-        $type = 'restaurant';
+        $placeId = 'invalid-place-id';
 
-        $mockResponse = [
-            'results' => [
-                ['name' => 'Nearby Restaurant', 'place_id' => '456']
-            ]
-        ];
-
+        // Mock error response
         Http::fake([
-            'maps.googleapis.com/maps/api/place/nearbysearch/json*' => Http::response($mockResponse)
+            'maps.googleapis.com/maps/api/place/details/json*' => Http::response([
+                'status' => 'INVALID_REQUEST',
+                'error_message' => 'Invalid request'
+            ], 200, ['Content-Type' => 'application/json'])
         ]);
 
-        $results = $this->service->searchNearby($location, $radius, $type);
+        $details = $this->service->getPlaceDetails($placeId);
 
-        $this->assertIsArray($results);
-        $this->assertCount(1, $results['results']);
-        $this->assertEquals('Nearby Restaurant', $results['results'][0]['name']);
-    }
-
-    #[Test]
-    public function it_handles_api_errors()
-    {
-        Http::fake([
-            'maps.googleapis.com/*' => Http::response(['error_message' => 'Invalid request'], 400)
-        ]);
-
-        $result = $this->service->searchPlaces('');
-
-        $this->assertArrayHasKey('error', $result);
-        $this->assertEquals('Invalid request', $result['error']);
+        $this->assertNull($details);
     }
 }

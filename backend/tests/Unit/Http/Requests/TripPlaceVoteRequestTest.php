@@ -4,6 +4,7 @@ namespace Tests\Unit\Http\Requests;
 
 use App\Http\Requests\TripPlaceVoteRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -19,7 +20,7 @@ class TripPlaceVoteRequestTest extends TestCase
         // Create a test route to test the request
         Route::post('/test-route', function (TripPlaceVoteRequest $request) {
             return response()->json($request->validated());
-        })->middleware('web');
+        })->middleware('api');
     }
 
     #[Test]

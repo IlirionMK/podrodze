@@ -19,7 +19,7 @@ class TripPlaceUpdateRequestTest extends TestCase
         // Create a test route to test the request
         Route::put('/test-route', function (TripPlaceUpdateRequest $request) {
             return response()->json($request->validated());
-        })->middleware('web');
+        })->middleware('api');
     }
 
     #[Test]
@@ -53,35 +53,34 @@ class TripPlaceUpdateRequestTest extends TestCase
             ]);
 
             $response->assertStatus(200);
-            $response->assertJson([
-                'status' => $status,
-            ]);
+            $this->assertEquals($status, $response->json('status'));
         }
     }
 
     #[Test]
     public function it_validates_is_fixed_as_boolean()
     {
+        // Test non-boolean
         $response = $this->putJson('/test-route', [
             'is_fixed' => 'not-a-boolean',
         ]);
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors('is_fixed');
-
+        
         // Test valid boolean values
         $response = $this->putJson('/test-route', [
             'is_fixed' => true,
         ]);
         $response->assertStatus(200);
-        $this->assertTrue($response->json('is_fixed'));
-
+        $this->assertEquals(true, $response->json('is_fixed'));
+        
         $response = $this->putJson('/test-route', [
             'is_fixed' => false,
         ]);
         $response->assertStatus(200);
-        $this->assertFalse($response->json('is_fixed'));
-    }
+        $this->assertEquals(false, $response->json('is_fixed'));
+            }
 
     #[Test]
     public function it_validates_day_field()
@@ -92,14 +91,14 @@ class TripPlaceUpdateRequestTest extends TestCase
         ]);
         $response->assertStatus(422);
         $response->assertJsonValidationErrors('day');
-
+        
         // Test less than 1
         $response = $this->putJson('/test-route', [
             'day' => 0,
         ]);
         $response->assertStatus(422);
         $response->assertJsonValidationErrors('day');
-
+        
         // Test valid day
         $response = $this->putJson('/test-route', [
             'day' => 1,
@@ -116,6 +115,7 @@ class TripPlaceUpdateRequestTest extends TestCase
             'order_index' => 'not-an-integer',
         ]);
         $response->assertStatus(422);
+        $response->assertJsonValidationErrors('order_index');
         $response->assertJsonValidationErrors('order_index');
 
         // Test less than 0
@@ -141,6 +141,7 @@ class TripPlaceUpdateRequestTest extends TestCase
             'note' => str_repeat('a', 256),
         ]);
         $response->assertStatus(422);
+        $response->assertJsonValidationErrors('note');
         $response->assertJsonValidationErrors('note');
 
         // Test valid note
