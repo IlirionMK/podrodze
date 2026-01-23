@@ -1,36 +1,51 @@
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, shallowRef, computed, onMounted, onUnmounted } from "vue"
 import { useI18n } from "vue-i18n"
+import { useRouter } from "vue-router"
 import { RefreshCw, Plus } from "lucide-vue-next"
 import { fetchUserTrips } from "@/composables/api/trips"
 
 const { t, te, locale } = useI18n()
+const router = useRouter()
 
 function tr(key, fallback) {
   return te(key) ? t(key) : fallback
 }
 
 function getErrMessage(err) {
-  return err?.response?.data?.message || tr("errors.default", "Something went wrong.")
+  return err?.response?.data?.message || tr("errors.default", "Something went wrong. Please try again.")
 }
 
-const trips = ref([])
+const trips = shallowRef([])
 const loading = ref(true)
 const errorMsg = ref("")
 const refreshing = ref(false)
 
-const btnPrimary =
-    "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold " +
-    "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg " +
-    "hover:opacity-95 active:opacity-90 transition " +
-    "focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+const CACHE_KEY = "podrodze_trips_cache_v1"
+const CACHE_TTL_MS = 60_000
 
-const btnPrimaryIcon =
-    "inline-flex items-center justify-center rounded-full w-11 h-11 " +
-    "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg " +
-    "hover:opacity-95 active:opacity-90 transition " +
-    "disabled:opacity-50 disabled:cursor-not-allowed " +
-    "focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+let abortController = null
+
+function safeJsonParse(value) {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
+}
+
+function readCache() {
+  const raw = sessionStorage.getItem(CACHE_KEY)
+  const parsed = raw ? safeJsonParse(raw) : null
+  if (!parsed || !Array.isArray(parsed.data) || typeof parsed.ts !== "number") return null
+  return parsed
+}
+
+function writeCache(data) {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }))
+  } catch {}
+}
 
 function parseISO(value) {
   if (!value) return null
@@ -38,14 +53,29 @@ function parseISO(value) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
+const dateFmtShort = computed(() => {
+  try {
+    return new Intl.DateTimeFormat(locale.value || "en", { day: "2-digit", month: "short" })
+  } catch {
+    return null
+  }
+})
+
+const dateFmtLong = computed(() => {
+  try {
+    return new Intl.DateTimeFormat(locale.value || "en", { day: "2-digit", month: "short", year: "numeric" })
+  } catch {
+    return null
+  }
+})
+
 function formatShortDate(value) {
   const d = parseISO(value)
   if (!d) return "—"
+  const fmt = dateFmtShort.value
+  if (!fmt) return d.toISOString().slice(0, 10)
   try {
-    return new Intl.DateTimeFormat(locale.value || "en", {
-      day: "2-digit",
-      month: "short",
-    }).format(d)
+    return fmt.format(d)
   } catch {
     return d.toISOString().slice(0, 10)
   }
@@ -63,12 +93,10 @@ function formatDateRange(start, end) {
     return `${formatShortDate(start)} – ${formatShortDate(end)}`
   }
 
+  const fmt = dateFmtLong.value
+  if (!fmt) return `${s.toISOString().slice(0, 10)} – ${e.toISOString().slice(0, 10)}`
+
   try {
-    const fmt = new Intl.DateTimeFormat(locale.value || "en", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    })
     return `${fmt.format(s)} – ${fmt.format(e)}`
   } catch {
     return `${s.toISOString().slice(0, 10)} – ${e.toISOString().slice(0, 10)}`
@@ -83,14 +111,45 @@ function tripDays(start, end) {
   return Number.isFinite(diff) ? diff : null
 }
 
+const viewTrips = computed(() => {
+  const list = trips.value || []
+  return list.map((trip) => {
+    const imgUrl = trip.cover_url || trip.image_url || ""
+    const title = trip.name || tr("trips.unnamed", "Trip")
+    const subtitle = trip.country || trip.location || ""
+    const dateRange = formatDateRange(trip.start_date, trip.end_date)
+    const days = tripDays(trip.start_date, trip.end_date)
+
+    return {
+      id: trip.id,
+      imgUrl,
+      title,
+      subtitle,
+      dateRange,
+      days,
+      activitiesCount: trip.activities_count,
+    }
+  })
+})
+
+function openTrip(id) {
+  router.push({ name: "app.trips.show", params: { id } })
+}
+
 async function loadTrips({ silent = false } = {}) {
   if (!silent) loading.value = true
   errorMsg.value = ""
 
+  if (abortController) abortController.abort()
+  abortController = new AbortController()
+
   try {
-    const res = await fetchUserTrips()
-    trips.value = res.data?.data ?? res.data ?? []
+    const res = await fetchUserTrips({ signal: abortController.signal })
+    const data = res.data?.data ?? res.data ?? []
+    trips.value = Array.isArray(data) ? data : []
+    writeCache(trips.value)
   } catch (e) {
+    if (e?.name === "AbortError") return
     errorMsg.value = getErrMessage(e)
   } finally {
     if (!silent) loading.value = false
@@ -107,40 +166,54 @@ async function refresh() {
   }
 }
 
-onMounted(() => loadTrips())
+onMounted(() => {
+  const cached = readCache()
+  if (cached?.data?.length) {
+    trips.value = cached.data
+    loading.value = false
+    loadTrips({ silent: true })
+    if (Date.now() - cached.ts > CACHE_TTL_MS) refresh()
+    return
+  }
+  loadTrips()
+})
+
+onUnmounted(() => {
+  if (abortController) abortController.abort()
+})
 </script>
 
 <template>
   <div class="max-w-6xl mx-auto px-4 py-8">
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6">
+    <div class="card-surface card-pad">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div class="min-w-0">
           <h1 class="text-lg sm:text-xl font-semibold text-gray-900">
-            {{ tr("trips.title", "Moje Podróże") }}
+            {{ tr("trips.title", "My trips") }}
           </h1>
           <p class="mt-1 text-sm text-gray-600">
-            {{ tr("trips.subtitle", "Wybierz podróż, aby zobaczyć szczegóły i planować aktywności") }}
+            {{ tr("trips.subtitle", "Choose a trip to view details and plan activities") }}
           </p>
         </div>
 
-        <div class="flex items-center gap-2 w-full md:w-auto">
+        <div class="flex items-center gap-2 w-full md:w-auto min-w-0">
           <button
               type="button"
-              :class="btnPrimaryIcon"
+              class="btn-primary-icon"
               :disabled="loading || refreshing"
               @click="refresh"
-              :aria-label="tr('actions.refresh', 'Odśwież')"
-              :title="tr('actions.refresh', 'Odśwież')"
+              :aria-label="tr('actions.refresh', 'Refresh')"
+              :title="tr('actions.refresh', 'Refresh')"
           >
             <RefreshCw class="h-4 w-4" :class="refreshing ? 'animate-spin' : ''" />
           </button>
 
           <router-link
               :to="{ name: 'app.trips.create' }"
-              :class="btnPrimary + ' w-full md:w-auto'"
+              class="btn-primary flex-1 md:flex-none"
           >
             <Plus class="h-4 w-4" />
-            {{ tr("trips.new", "Dodaj podróż") }}
+            {{ tr("trips.new", "Add trip") }}
           </router-link>
         </div>
       </div>
@@ -174,19 +247,19 @@ onMounted(() => loadTrips())
         </div>
       </div>
 
-      <div v-else-if="trips.length === 0" class="mt-6">
+      <div v-else-if="viewTrips.length === 0" class="mt-6">
         <div class="rounded-2xl border border-gray-200 bg-gray-50 p-6 text-gray-700">
           <div class="text-lg font-semibold">
-            {{ tr("trips.empty_title", "Brak podróży") }}
+            {{ tr("trips.empty_title", "No trips") }}
           </div>
           <div class="mt-1 text-sm text-gray-600">
-            {{ tr("trips.empty", "Nie masz jeszcze żadnych podróży. Utwórz pierwszą, aby zacząć planować.") }}
+            {{ tr("trips.empty", "You don’t have any trips yet. Create your first one to start planning.") }}
           </div>
 
           <div class="mt-4">
-            <router-link :to="{ name: 'app.trips.create' }" :class="btnPrimary">
+            <router-link :to="{ name: 'app.trips.create' }" class="btn-primary">
               <Plus class="h-4 w-4" />
-              {{ tr("trips.new", "Dodaj podróż") }}
+              {{ tr("trips.new", "Add trip") }}
             </router-link>
           </div>
         </div>
@@ -199,29 +272,30 @@ onMounted(() => loadTrips())
           class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       >
         <button
-            v-for="trip in trips"
+            v-for="trip in viewTrips"
             :key="trip.id"
             type="button"
-            class="text-left bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden
-                 hover:shadow-md hover:-translate-y-0.5 transform transition"
-            @click="$router.push({ name: 'app.trips.show', params: { id: trip.id } })"
+            class="text-left bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transform transition"
+            @click="openTrip(trip.id)"
         >
           <div class="h-36 bg-gray-100 relative">
             <img
-                v-if="trip.cover_url || trip.image_url"
-                :src="trip.cover_url || trip.image_url"
+                v-if="trip.imgUrl"
+                :src="trip.imgUrl"
                 alt=""
                 class="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
             />
             <div v-else class="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-purple-500/20"></div>
             <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
 
             <div class="absolute left-4 right-4 bottom-4">
               <div class="text-white font-semibold text-lg drop-shadow line-clamp-1">
-                {{ trip.name || tr("trips.unnamed", "Podróż") }}
+                {{ trip.title }}
               </div>
               <div class="text-white/90 text-sm line-clamp-1">
-                {{ trip.country || trip.location || "" }}
+                {{ trip.subtitle }}
               </div>
             </div>
           </div>
@@ -229,26 +303,23 @@ onMounted(() => loadTrips())
           <div class="p-4">
             <div class="flex items-center justify-between gap-3">
               <div class="text-sm text-gray-700">
-                {{ formatDateRange(trip.start_date, trip.end_date) }}
+                {{ trip.dateRange }}
               </div>
 
-              <div
-                  v-if="tripDays(trip.start_date, trip.end_date)"
-                  class="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700"
-              >
-                {{ tripDays(trip.start_date, trip.end_date) }} {{ tr("trips.days_short", "dni") }}
+              <div v-if="trip.days" class="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700">
+                {{ trip.days }} {{ tr("trips.days_short", "days") }}
               </div>
             </div>
 
             <div class="mt-3 flex items-center justify-between">
               <div class="text-xs text-gray-500">
-                <span v-if="trip.activities_count != null">
-                  {{ trip.activities_count }} {{ tr("trips.activities", "aktywności") }}
+                <span v-if="trip.activitiesCount != null">
+                  {{ trip.activitiesCount }} {{ tr("trips.activities", "activities") }}
                 </span>
               </div>
 
               <div class="text-sm font-medium text-gray-900">
-                {{ tr("trips.details", "Zobacz szczegóły") }} →
+                {{ tr("trips.details", "View details") }} →
               </div>
             </div>
           </div>

@@ -15,7 +15,7 @@ const links = [
 </script>
 
 <template>
-  <footer class="bg-[#0d1117] text-gray-300 pt-12 pb-10 mt-20 border-t border-gray-800">
+  <footer class="bg-[#0d1117] text-gray-300 pt-12 pb-10 border-t border-gray-800">
     <div class="max-w-6xl mx-auto px-4">
       <!-- Top -->
       <div

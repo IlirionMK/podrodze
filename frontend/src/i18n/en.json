@@ -8,7 +8,8 @@
     "add": "Add",
     "refresh": "Refresh",
     "close": "Close",
-    "remove": "Remove"
+    "remove": "Remove",
+    "back": "Back"
   },
 
   "errors": {
@@ -114,7 +115,8 @@
       "title": "Login",
       "submit": "Sign in",
       "google": "Sign in with Google",
-      "facebook": "Sign in with Facebook"
+      "facebook": "Sign in with Facebook",
+      "or": "or"
     },
 
     "register": {
@@ -366,7 +368,37 @@
       "score_2": "Must have",
       "empty_title": "No categories found",
       "empty_hint": "Try changing your search query."
+    },
+
+    "create": {
+      "title": "Create trip",
+      "subtitle": "Set a name and dates to start planning.",
+      "button": "Create trip",
+      "creating": "Creating...",
+      "name_hint": "Example: Barcelona weekend, Summer in Italy...",
+      "errors": {
+        "date_order": "End date must be the same as or after start date."
+      }
+    },
+
+    "fields": {
+      "name": "Name",
+      "name_placeholder": "Trip name",
+      "start_date": "Start date",
+      "end_date": "End date"
     }
+  },
+
+  "trips": {
+    "title": "My trips",
+    "subtitle": "Choose a trip to view details and plan activities",
+    "new": "Add trip",
+    "empty_title": "No trips",
+    "empty": "You don’t have any trips yet. Create your first one to start planning.",
+    "unnamed": "Trip",
+    "days_short": "days",
+    "activities": "activities",
+    "details": "View details"
   },
 
   "footer": {

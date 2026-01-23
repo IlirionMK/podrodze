@@ -18,25 +18,24 @@ const endDate = ref("")
 const loading = ref(false)
 const errorMsg = ref("")
 
-const btnGradientBase =
-    "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold " +
-    "text-white shadow-lg hover:opacity-95 active:opacity-90 transition " +
-    "disabled:opacity-50 disabled:cursor-not-allowed " +
-    "focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-
-const btnPrimary = btnGradientBase + " bg-gradient-to-r from-blue-600 to-purple-600"
-const btnBack = btnGradientBase + " bg-gradient-to-r from-slate-600 to-slate-800"
-
 const inputBase =
     "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 " +
     "placeholder:text-gray-400 outline-none " +
     "focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition"
 
+const dateOrderInvalid = computed(() => {
+  return !!(startDate.value && endDate.value && startDate.value > endDate.value)
+})
+
 const canSubmit = computed(() => {
   if (loading.value) return false
   if (!name.value.trim()) return false
-  if (startDate.value && endDate.value) return startDate.value <= endDate.value
-  return true
+
+  // требуем обе даты
+  if (!startDate.value || !endDate.value) return false
+
+  // и корректный порядок
+  return !dateOrderInvalid.value
 })
 
 async function createTripHandler() {
@@ -48,16 +47,16 @@ async function createTripHandler() {
   try {
     const response = await createTrip({
       name: name.value.trim(),
-      start_date: startDate.value || null,
-      end_date: endDate.value || null,
+      start_date: startDate.value,
+      end_date: endDate.value,
     })
 
     const id = response.data?.data?.id ?? response.data?.id
     if (id) return router.push({ name: "app.trips.show", params: { id } })
 
-    errorMsg.value = tr("errors.default", "Something went wrong.")
+    errorMsg.value = tr("errors.default", "Something went wrong. Please try again.")
   } catch (err) {
-    errorMsg.value = err?.response?.data?.message || tr("errors.default", "Something went wrong.")
+    errorMsg.value = err?.response?.data?.message || tr("errors.default", "Something went wrong. Please try again.")
   } finally {
     loading.value = false
   }
@@ -70,7 +69,7 @@ function goBack() {
 
 <template>
   <div class="max-w-3xl mx-auto px-4 py-8">
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6">
+    <div class="card-surface card-pad">
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div class="min-w-0">
           <h1 class="text-lg sm:text-xl font-semibold text-gray-900">
@@ -81,13 +80,19 @@ function goBack() {
           </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <button type="button" :class="btnBack + ' w-full sm:w-auto'" @click="goBack" :disabled="loading">
+        <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto min-w-0">
+          <button type="button" class="btn-back w-full sm:w-auto" @click="goBack" :disabled="loading">
             <ArrowLeft class="h-4 w-4" />
             {{ tr("actions.back", "Back") }}
           </button>
 
-          <button type="button" :class="btnPrimary + ' w-full sm:w-auto'" @click="createTripHandler" :disabled="!canSubmit">
+          <button
+              type="button"
+              class="btn-primary w-full sm:w-auto"
+              @click="createTripHandler"
+              :disabled="!canSubmit"
+              :aria-disabled="!canSubmit"
+          >
             <Plus class="h-4 w-4" />
             {{ loading ? tr("trip.create.creating", "Creating...") : tr("trip.create.button", "Create trip") }}
           </button>
@@ -128,7 +133,7 @@ function goBack() {
         </div>
 
         <div
-            v-if="startDate && endDate && startDate > endDate"
+            v-if="dateOrderInvalid"
             class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
         >
           {{ tr("trip.create.errors.date_order", "End date must be the same as or after start date.") }}

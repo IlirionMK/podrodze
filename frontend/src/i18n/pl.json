@@ -8,7 +8,8 @@
     "save": "Zapisz",
     "refresh": "Odśwież",
     "close": "Zamknij",
-    "remove": "Usuń"
+    "remove": "Usuń",
+    "back": "Wróć"
   },
 
   "errors": {
@@ -114,7 +115,9 @@
       "title": "Logowanie",
       "submit": "Zaloguj się",
       "google": "Zaloguj się przez Google",
-      "facebook": "Zaloguj się przez Facebook"
+      "facebook": "Zaloguj się przez Facebook",
+      "or": "lub"
+
     },
 
     "register": {
@@ -366,6 +369,24 @@
       "score_2": "Bardzo ważne",
       "empty_title": "Nie znaleziono kategorii",
       "empty_hint": "Spróbuj zmienić zapytanie wyszukiwania."
+    },
+
+    "create": {
+      "title": "Utwórz podróż",
+      "subtitle": "Ustaw nazwę i daty, aby rozpocząć planowanie.",
+      "button": "Utwórz podróż",
+      "creating": "Tworzenie...",
+      "name_hint": "Przykład: weekend w Barcelonie, lato we Włoszech...",
+      "errors": {
+        "date_order": "Data zakończenia musi być taka sama lub późniejsza niż data rozpoczęcia."
+      }
+    },
+
+    "fields": {
+      "name": "Nazwa",
+      "name_placeholder": "Nazwa podróży",
+      "start_date": "Data rozpoczęcia",
+      "end_date": "Data zakończenia"
     }
   },
 
@@ -383,6 +404,18 @@
     },
 
     "student_project": "Projekt studencki"
+  },
+
+  "trips": {
+    "title": "Moje podróże",
+    "subtitle": "Wybierz podróż, aby zobaczyć szczegóły i planować aktywności",
+    "new": "Dodaj podróż",
+    "empty_title": "Brak podróży",
+    "empty": "Nie masz jeszcze żadnych podróży. Utwórz pierwszą, aby zacząć planować.",
+    "unnamed": "Podróż",
+    "days_short": "dni",
+    "activities": "aktywności",
+    "details": "Zobacz szczegóły"
   },
 
   "legal": {

@@ -15,13 +15,22 @@ const { isAuthenticated, user, logout } = useAuth()
 const showMenu = ref(false)
 const menuRef = ref(null)
 
+function closeMenu() {
+  showMenu.value = false
+}
+
+function toggleMenu() {
+  showMenu.value = !showMenu.value
+}
+
 function handleLogout() {
+  closeMenu()
   logout(router)
 }
 
 function clickOutside(e) {
   if (menuRef.value && !menuRef.value.contains(e.target)) {
-    showMenu.value = false
+    closeMenu()
   }
 }
 
@@ -32,7 +41,6 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
 <template>
   <header class="w-full border-b bg-white shadow-sm">
     <div class="max-w-7xl mx-auto flex justify-between items-center px-4 py-3 min-w-0">
-      <!-- Logo -->
       <router-link
           to="/"
           class="flex items-center gap-3 font-semibold text-xl hover:opacity-90 transition shrink-0"
@@ -42,12 +50,10 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
       </router-link>
 
       <div class="flex items-center gap-2 sm:gap-4 min-w-0">
-        <!-- Language -->
         <div class="shrink-0">
           <LanguageSwitcher />
         </div>
 
-        <!-- Guest -->
         <template v-if="!isAuthenticated">
           <router-link
               to="/login"
@@ -58,22 +64,20 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
 
           <router-link
               to="/register"
-              class="px-3 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap
-                   bg-gradient-to-r from-blue-600 to-purple-600
-                   text-white rounded-lg shadow-md hover:shadow-lg
-                   hover:brightness-105 transition-all active:scale-[0.98]"
+              class="px-3 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:brightness-105 transition-all active:scale-[0.98]"
           >
             {{ t("auth.register.title") }}
           </router-link>
         </template>
 
-        <!-- Authenticated -->
         <template v-else>
           <div class="relative min-w-0" ref="menuRef">
             <button
-                @click="showMenu = !showMenu"
-                class="flex items-center gap-3 px-3 py-1 rounded-lg hover:bg-gray-100 transition group min-w-0"
+                @click.stop="toggleMenu"
+                class="flex items-center gap-3 px-3 py-1 rounded-lg hover:bg-gray-100 transition group min-w-0 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 type="button"
+                aria-haspopup="menu"
+                :aria-expanded="showMenu ? 'true' : 'false'"
             >
               <img
                   :src="`https://api.dicebear.com/7.x/thumbs/svg?seed=${user?.name}`"
@@ -81,7 +85,6 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
                   alt=""
               />
 
-              <!-- hide on xs; on sm+ truncate so long names/translations won't stretch -->
               <span class="text-sm text-gray-700 hidden sm:inline min-w-0 truncate max-w-[14rem]">
                 {{ t("header.hello") }},
                 <strong>{{ user?.name }}</strong>
@@ -89,21 +92,23 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
             </button>
 
             <transition
-                enter-active-class="transition-opacity duration-150"
-                enter-from-class="opacity-0"
-                enter-to-class="opacity-100"
-                leave-active-class="transition-opacity duration-150"
-                leave-from-class="opacity-100"
-                leave-to-class="opacity-0"
+                enter-active-class="transition duration-150 ease-out"
+                enter-from-class="opacity-0 translate-y-1"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition duration-120 ease-in"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 translate-y-1"
             >
               <div
                   v-if="showMenu"
-                  class="absolute right-0 mt-2 w-48 bg-white border border-gray-200
-                       rounded-lg shadow-xl py-2 z-50"
+                  class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl py-2 z-50"
+                  role="menu"
               >
                 <router-link
                     to="/app/profile"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition whitespace-nowrap"
+                    role="menuitem"
+                    @click="closeMenu"
                 >
                   {{ t("header.profile") }}
                 </router-link>
@@ -111,6 +116,8 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
                 <router-link
                     to="/app/trips"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition whitespace-nowrap"
+                    role="menuitem"
+                    @click="closeMenu"
                 >
                   Trips
                 </router-link>
@@ -119,6 +126,7 @@ onUnmounted(() => document.removeEventListener("click", clickOutside))
                     @click="handleLogout"
                     class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition whitespace-nowrap"
                     type="button"
+                    role="menuitem"
                 >
                   {{ t("auth.logout") }}
                 </button>
