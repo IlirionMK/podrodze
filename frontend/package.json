@@ -9,7 +9,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install",
+    "test:docker": "docker-compose -f docker-compose.test.yml --profile tests up --build --abort-on-container-exit",
+    "test:docker:clean": "docker-compose -f docker-compose.test.yml --profile tests down -v"
   },
   "dependencies": {
     "axios": "^1.13.2",
@@ -19,12 +27,17 @@
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.50.0",
     "@tailwindcss/postcss": "^4.1.17",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/ui": "^2.1.8",
+    "@vue/test-utils": "^2.4.6",
     "autoprefixer": "^10.4.22",
+    "jsdom": "^25.0.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
     "vite": "^7.1.10",
-    "vite-plugin-vue-devtools": "^8.0.2"
+    "vite-plugin-vue-devtools": "^8.0.2",
+    "vitest": "^2.1.8"
   }
 }
