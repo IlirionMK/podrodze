@@ -50,11 +50,7 @@ class UserOnboardingE2ETest extends ApiTestCase
             'translations' => ['en' => 'Test Category', 'pl' => 'Kategoria testowa']
         ];
 
-        $category = new Category();
-        $category->forceFill(array_merge($defaults, $attributes));
-        $category->save();
-
-        return $category;
+        return Category::factory()->create(array_merge($defaults, $attributes));
     }
 
     /**

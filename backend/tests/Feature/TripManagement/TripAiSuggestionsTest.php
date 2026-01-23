@@ -46,7 +46,7 @@ class TripAiSuggestionsTest extends TripTestCase
     {
         parent::setUp();
 
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
@@ -54,7 +54,7 @@ class TripAiSuggestionsTest extends TripTestCase
 
         Sanctum::actingAs($this->user);
 
-        $this->trip = \App\Models\Trip::create([
+        $this->trip = \App\Models\Trip::factory()->create([
             'name' => 'Test Trip',
             'description' => 'Test Description',
             'owner_id' => $this->user->id,
@@ -124,7 +124,7 @@ class TripAiSuggestionsTest extends TripTestCase
     #[Test]
     public function user_can_accept_recommended_place()
     {
-        $place = new Place([
+        $place = Place::factory()->create([
             'name' => 'Test Place',
             'google_place_id' => 'test_place_1',
             'category_slug' => 'attraction',
@@ -136,7 +136,6 @@ class TripAiSuggestionsTest extends TripTestCase
                 'user_ratings_total' => 100
             ]
         ]);
-        $place->save();
 
         $response = $this->postJson("/api/v1/trips/{$this->trip->id}/places", [
             'place_id' => $place->id,
@@ -156,7 +155,7 @@ class TripAiSuggestionsTest extends TripTestCase
     #[Test]
     public function user_can_reject_recommended_place()
     {
-        $place = new Place([
+        $place = Place::factory()->create([
             'name' => 'Test Place 2',
             'google_place_id' => 'test_place_2',
             'category_slug' => 'museum',
@@ -168,7 +167,6 @@ class TripAiSuggestionsTest extends TripTestCase
                 'user_ratings_total' => 200
             ]
         ]);
-        $place->save();
 
         $response = $this->postJson("/api/v1/trips/{$this->trip->id}/places", [
             'place_id' => $place->id,
@@ -186,7 +184,7 @@ class TripAiSuggestionsTest extends TripTestCase
     #[Test]
     public function trip_plan_updates_after_accepting_recommendation()
     {
-        $place = new Place([
+        $place = Place::factory()->create([
             'name' => 'Test Place 3',
             'google_place_id' => 'test_place_3',
             'category_slug' => 'restaurant',
@@ -198,7 +196,6 @@ class TripAiSuggestionsTest extends TripTestCase
                 'user_ratings_total' => 150
             ]
         ]);
-        $place->save();
 
         $this->postJson("/api/v1/trips/{$this->trip->id}/places", [
             'place_id' => $place->id,

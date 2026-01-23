@@ -42,7 +42,7 @@ class PlaceControllerTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password'),
@@ -217,12 +217,9 @@ class PlaceControllerTest extends TestCase
     #[Test]
     public function it_returns_google_place_details()
     {
-        $place = Place::create([
+        $place = Place::factory()->create([
             'google_place_id' => 'test_place_id',
             'name' => 'Test Place',
-            'address' => 'Test Address',
-            'lat' => 52.23,
-            'lng' => 21.01,
             'category_slug' => 'test-category',
             'rating' => 4.5,
             'meta' => [
@@ -238,6 +235,10 @@ class PlaceControllerTest extends TestCase
                     'open_now' => true,
                     'weekday_text' => []
                 ]
+            ],
+            'opening_hours' => [
+                'monday' => '9:00-22:00',
+                'tuesday' => '9:00-22:00',
             ]
         ]);
 

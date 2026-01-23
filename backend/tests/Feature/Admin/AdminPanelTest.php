@@ -248,7 +248,7 @@ class AdminPanelTest extends ApiTestCase
      */
     public function test_admin_can_view_activity_logs(): void
     {
-        ActivityLog::create([
+        ActivityLog::factory()->create([
             'user_id' => $this->adminUser->id,
             'action' => 'test.action',
             'details' => ['test' => 'data'],

@@ -63,11 +63,7 @@ class PreferenceTest extends TestCase
             'translations' => ['en' => 'Test Category', 'pl' => 'Kategoria testowa']
         ];
 
-        $category = new Category();
-        $category->forceFill(array_merge($defaults, $attributes));
-        $category->save();
-
-        return $category;
+        return Category::factory()->create(array_merge($defaults, $attributes));
     }
 
     /**
@@ -81,17 +77,17 @@ class PreferenceTest extends TestCase
         $category2 = $this->createCategory(['slug' => 'museums']);
         $this->createCategory(['slug' => 'parks']);
 
-        (new UserPreference([
+        UserPreference::factory()->create([
             'user_id' => $this->user->getKey(),
             'category_id' => $category1->getKey(),
             'score' => 2
-        ]))->save();
+        ]);
 
-        (new UserPreference([
+        UserPreference::factory()->create([
             'user_id' => $this->user->getKey(),
             'category_id' => $category2->getKey(),
             'score' => 1
-        ]))->save();
+        ]);
 
         $response = $this->getJson($this->baseUrl . '/preferences');
 

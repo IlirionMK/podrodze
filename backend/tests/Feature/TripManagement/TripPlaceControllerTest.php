@@ -51,13 +51,13 @@ class TripPlaceControllerTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password'),
         ]);
 
-        $this->trip = Trip::create([
+        $this->trip = Trip::factory()->create([
             'name' => 'Test Trip',
             'description' => 'A test trip for automated testing',
             'start_date' => now(),
@@ -67,7 +67,7 @@ class TripPlaceControllerTest extends TestCase
             'start_longitude' => 21.0122,
         ]);
 
-        $this->place = Place::create([
+        $this->place = Place::factory()->create([
             'name' => 'Test Place',
             'google_place_id' => 'test_place_' . uniqid(),
             'category_slug' => 'test-category',
@@ -77,8 +77,10 @@ class TripPlaceControllerTest extends TestCase
                 'monday' => ['open' => '09:00', 'close' => '17:00'],
                 'tuesday' => ['open' => '09:00', 'close' => '17:00'],
             ],
-            'location' => DB::raw("ST_GeomFromText('POINT(52.2297 21.0122)')"),
         ]);
+
+        // Set location using PostGIS
+        DB::statement("UPDATE places SET location = ST_GeomFromText('POINT(52.2297 21.0122)', 4326) WHERE id = ?", [$this->place->id]);
 
         $token = $this->user->createToken('test-token')->plainTextToken;
         $this->withHeaders([
@@ -110,14 +112,16 @@ class TripPlaceControllerTest extends TestCase
     #[Test]
     public function it_adds_place_to_trip()
     {
-        $newPlace = Place::create([
+        $newPlace = Place::factory()->create([
             'name' => 'New Test Place',
             'google_place_id' => 'new_test_place_456',
             'category_slug' => 'test-category',
             'rating' => 4.0,
             'meta' => ['address' => '456 New Test St'],
-            'location' => DB::raw("ST_GeomFromText('POINT(52.2297 21.0122)')"),
         ]);
+
+        // Set location using PostGIS
+        DB::statement("UPDATE places SET location = ST_GeomFromText('POINT(52.2297 21.0122)', 4326) WHERE id = ?", [$newPlace->id]);
 
         $response = $this->actingAs($this->user)
             ->postJson("/api/v1/trips/{$this->trip->id}/places", [

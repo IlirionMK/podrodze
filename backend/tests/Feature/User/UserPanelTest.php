@@ -121,14 +121,14 @@ class UserPanelTest extends TestCase
     #[Test]
     public function user_can_update_preferences()
     {
-        $category = Category::create([
+        $category = Category::factory()->create([
             'slug' => 'test-category',
             'translations' => ['en' => 'Test Category']
         ]);
 
         $user = User::factory()->create();
 
-        UserPreference::create([
+        UserPreference::factory()->create([
             'user_id' => $user->id,
             'category_id' => $category->id,
             'score' => 0

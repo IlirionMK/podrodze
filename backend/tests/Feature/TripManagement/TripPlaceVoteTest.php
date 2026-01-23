@@ -51,14 +51,14 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
         ]);
         $this->actingAsUser($this->user);
 
-        $this->trip = Trip::create([
+        $this->trip = Trip::factory()->create([
             'name' => 'Test Trip',
             'start_date' => now(),
             'end_date' => now()->addDays(7),
             'owner_id' => $this->user->id,
         ]);
 
-        $this->place = Place::create([
+        $this->place = Place::factory()->create([
             'name' => 'Test Place',
             'google_place_id' => 'test_place_123',
             'category_slug' => 'test-category',
@@ -69,8 +69,10 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
                 'tuesday' => ['open' => '09:00', 'close' => '17:00'],
                 'sunday' => null,
             ],
-            'location' => DB::raw("ST_GeomFromText('POINT(0 0)')"),
         ]);
+
+        // Set location using PostGIS
+        DB::statement("UPDATE places SET location = ST_GeomFromText('POINT(0 0)', 4326) WHERE id = ?", [$this->place->id]);
 
         $this->trip->places()->attach($this->place->id);
     }
@@ -124,7 +126,7 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
     #[Test]
     public function user_cannot_vote_for_place_not_in_trip()
     {
-        $otherPlace = Place::create([
+        $otherPlace = Place::factory()->create([
             'name' => 'Another Place',
             'google_place_id' => 'another_place_456',
             'category_slug' => 'another-category',
@@ -133,8 +135,10 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
             'opening_hours' => [
                 'monday' => ['open' => '10:00', 'close' => '18:00']
             ],
-            'location' => DB::raw("ST_GeomFromText('POINT(1 1)')"),
         ]);
+
+        // Set location using PostGIS
+        DB::statement("UPDATE places SET location = ST_GeomFromText('POINT(1 1)', 4326) WHERE id = ?", [$otherPlace->id]);
 
         $response = $this->actingAs($this->user)
             ->postJson("/api/v1/trips/{$this->trip->id}/places/$otherPlace->id/vote", [
@@ -180,7 +184,7 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
                 'score' => 4
             ]);
 
-        $place2 = Place::create([
+        $place2 = Place::factory()->create([
             'name' => 'Second Place',
             'google_place_id' => 'second_place_789',
             'category_slug' => 'second-category',
@@ -189,9 +193,11 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
             'opening_hours' => [
                 'monday' => ['open' => '08:00', 'close' => '16:00']
             ],
-            'location' => DB::raw("ST_GeomFromText('POINT(2 2)')"),
         ]);
         $this->trip->places()->attach($place2->id);
+
+        // Set location using PostGIS
+        DB::statement("UPDATE places SET location = ST_GeomFromText('POINT(2 2)', 4326) WHERE id = ?", [$place2->id]);
 
         $this->actingAs($this->user)
             ->postJson("/api/v1/trips/{$this->trip->id}/places/{$place2->id}/vote", [
@@ -235,7 +241,7 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
     #[Test]
     public function user_can_only_view_votes_for_their_trips()
     {
-        $otherUser = User::create([
+        $otherUser = User::factory()->create([
             'name' => 'Other User',
             'email' => 'other@example.com',
             'password' => bcrypt('password'),
@@ -250,7 +256,7 @@ class TripPlaceVoteTest extends AuthenticatedTestCase
     #[Test]
     public function vote_requires_trip_membership()
     {
-        $otherUser = User::create([
+        $otherUser = User::factory()->create([
             'name' => 'Another User',
             'email' => 'another@example.com',
             'password' => bcrypt('password'),

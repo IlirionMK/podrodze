@@ -42,11 +42,7 @@ class ItineraryGenerationTest extends TestCase
             'translations' => ['en' => 'Test Category', 'pl' => 'Kategoria testowa']
         ];
 
-        $category = new Category();
-        $category->forceFill(array_merge($defaults, $attributes));
-        $category->save();
-
-        return $category;
+        return Category::factory()->create(array_merge($defaults, $attributes));
     }
 
     private function createPlace(array $attributes = []): Place
@@ -56,12 +52,12 @@ class ItineraryGenerationTest extends TestCase
             'category_slug' => 'restaurant',
             'rating' => 4.0,
             'meta' => [],
-            'location' => DB::raw("ST_GeomFromText('POINT(21.01 52.23)')")
         ];
 
-        $place = new Place();
-        $place->forceFill(array_merge($defaults, $attributes));
-        $place->save();
+        $place = Place::factory()->create(array_merge($defaults, $attributes));
+
+        // Set location using PostGIS
+        DB::statement("UPDATE places SET location = ST_GeomFromText('POINT(21.01 52.23)', 4326) WHERE id = ?", [$place->id]);
 
         return $place;
     }
