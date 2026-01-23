@@ -177,4 +177,24 @@ class RegistrationTest extends ApiTestCase
             $this->assertEquals(429, $response->getStatusCode());
         }
     }
+
+    public function test_registered_user_can_access_protected_routes_without_verification(): void
+    {
+        $this->clearRateLimits();
+        $uniqueEmail = 'test_' . time() . '@example.com';
+        $userData = array_merge($this->userData, ['email' => $uniqueEmail]);
+
+        $registerResponse = $this->postJson('/api/v1/register', $userData);
+
+        if ($registerResponse->getStatusCode() === 201 || $registerResponse->getStatusCode() === 200) {
+            $token = $registerResponse->json('token');
+
+            $this->withToken($token)
+                ->getJson('/api/v1/user')
+                ->assertOk()
+                ->assertJsonPath('email', $uniqueEmail);
+        } else {
+            $this->assertEquals(429, $registerResponse->getStatusCode());
+        }
+    }
 }

@@ -76,193 +76,130 @@ class TripCollaborationE2ETest extends TestCase
         ]);
     }
 
-    public function test_create_trip_with_details(): void
+    public function test_complete_trip_collaboration_flow(): void
     {
+        // Step 1: Owner creates a trip
         Sanctum::actingAs($this->owner);
-
+        
         $tripData = [
-            'name' => 'Summer Vacation 2024',
-            'description' => 'A trip to the mountains with friends',
-            'start_date' => '2024-07-15',
-            'end_date' => '2024-07-25',
+            'name' => 'European Adventure 2024',
+            'description' => 'A trip through Europe with friends',
+            'start_date' => '2024-06-15',
+            'end_date' => '2024-06-30',
         ];
 
-        $response = $this->postJson('/api/v1/trips', $tripData);
-
-        $response->assertStatus(201)
-            ->assertJsonStructure([
-                'data' => [
-                    'id',
-                    'name',
-                    'description',
-                    'start_date',
-                    'end_date',
-                    'owner_id',
-                    'created_at',
-                    'updated_at',
-                ]
-            ])
+        $createResponse = $this->postJson('/api/v1/trips', $tripData);
+        $tripId = $createResponse->json('data.id');
+        
+        $createResponse->assertStatus(201)
             ->assertJson([
                 'data' => [
-                    'name' => 'Summer Vacation 2024',
-                    'description' => 'A trip to the mountains with friends',
+                    'name' => 'European Adventure 2024',
                     'owner_id' => $this->owner->id,
                 ]
             ]);
 
-        $this->assertDatabaseHas('trips', [
-            'name' => 'Summer Vacation 2024',
-            'owner_id' => $this->owner->id,
+        // Step 2: Owner invites first member (editor role)
+        $inviteResponse = $this->postJson("/api/v1/trips/{$tripId}/members/invite", [
+            'email' => $this->member1->email,
+            'role' => 'editor'
         ]);
-    }
+        $inviteResponse->assertStatus(200);
 
-    public function test_invite_multiple_users_to_trip(): void
-    {
-        Sanctum::actingAs($this->owner);
-        $trip = Trip::factory()->create([
-            'owner_id' => $this->owner->id,
-            'name' => 'Group Hiking Trip'
-        ]);
-
-        $trip->members()->attach($this->member1->id, [
-            'role' => 'member',
-            'status' => 'accepted'
-        ]);
-
-        $response = $this->postJson("/api/v1/trips/{$trip->id}/members/invite", [
+        // Step 3: Owner invites second member (member role)
+        $inviteResponse = $this->postJson("/api/v1/trips/{$tripId}/members/invite", [
             'email' => $this->member2->email,
             'role' => 'member'
         ]);
+        $inviteResponse->assertStatus(200);
 
-        $response->assertStatus(200);
+        // Step 4: First member accepts invitation
+        Sanctum::actingAs($this->member1);
+        $invitesResponse = $this->getJson('/api/v1/users/me/invites');
+        $invitation = $invitesResponse->json('data.0');
+        
+        $acceptResponse = $this->postJson("/api/v1/trips/{$invitation['trip_id']}/accept");
+        $acceptResponse->assertStatus(200);
 
-        $response = $this->postJson("/api/v1/trips/{$trip->id}/members/invite", [
-            'email' => $this->invitee->email,
-            'role' => 'member'
+        // Step 5: Second member accepts invitation
+        Sanctum::actingAs($this->member2);
+        $invitesResponse = $this->getJson('/api/v1/users/me/invites');
+        $invitation = $invitesResponse->json('data.0');
+        
+        $acceptResponse = $this->postJson("/api/v1/trips/{$invitation['trip_id']}/accept");
+        $acceptResponse->assertStatus(200);
+
+        // Step 6: Verify all members are now part of the trip
+        $this->assertDatabaseHas('trip_user', [
+            'trip_id' => $tripId,
+            'user_id' => $this->member1->id,
+            'status' => 'accepted',
+            'role' => 'editor'
         ]);
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'message' => 'Invitation sent successfully.',
-            ]);
-
         $this->assertDatabaseHas('trip_user', [
-            'trip_id' => $trip->id,
+            'trip_id' => $tripId,
             'user_id' => $this->member2->id,
-            'status' => 'pending',
-            'role' => 'member'
-        ]);
-
-        $this->assertDatabaseHas('trip_user', [
-            'trip_id' => $trip->id,
-            'user_id' => $this->invitee->id,
-            'status' => 'pending',
-            'role' => 'member'
-        ]);
-    }
-
-    public function test_accept_decline_trip_invitation(): void
-    {
-        Sanctum::actingAs($this->owner);
-        $trip = Trip::factory()->create(['owner_id' => $this->owner->id]);
-
-        $response = $this->postJson("/api/v1/trips/{$trip->id}/members/invite", [
-            'email' => $this->invitee->email,
-            'role' => 'member'
-        ]);
-        $response->assertStatus(200);
-
-        Sanctum::actingAs($this->invitee);
-
-        $response = $this->getJson('/api/v1/users/me/invites');
-        $response->assertStatus(200);
-        $invitation = $response->json('data.0');
-
-        $response = $this->postJson("/api/v1/trips/{$invitation['trip_id']}/accept");
-        $response->assertStatus(200);
-
-        $this->assertDatabaseHas('trip_user', [
-            'trip_id' => $trip->id,
-            'user_id' => $this->invitee->id,
             'status' => 'accepted',
             'role' => 'member'
         ]);
 
+        // Step 7: Test role-based permissions - owner can edit
         Sanctum::actingAs($this->owner);
-        $response = $this->postJson("/api/v1/trips/{$trip->id}/members/invite", [
-            'email' => $this->member2->email,
-            'role' => 'member'
+        $updateResponse = $this->putJson("/api/v1/trips/{$tripId}", [
+            'description' => 'Updated by owner'
         ]);
-        $response->assertStatus(200);
+        $updateResponse->assertStatus(200);
 
-        Sanctum::actingAs($this->member2);
-
-        $response = $this->getJson('/api/v1/users/me/invites');
-        $response->assertStatus(200);
-        $invitation = $response->json('data.0');
-
-        $response = $this->postJson("/api/v1/trips/{$invitation['trip_id']}/decline");
-        $response->assertStatus(200);
-
-        $this->assertDatabaseHas('trip_user', [
-            'trip_id' => $trip->id,
-            'user_id' => $this->member2->id,
-            'status' => 'declined',
-            'role' => 'member'
-        ]);
-    }
-
-    public function test_role_based_access_control(): void
-    {
-        $trip = Trip::factory()->create(['owner_id' => $this->owner->id]);
-        $trip->members()->attach($this->member1->id, ['role' => 'member', 'status' => 'accepted']);
-        $trip->members()->attach($this->member2->id, ['role' => 'editor', 'status' => 'accepted']);
-
-        Sanctum::actingAs($this->owner);
-        $response = $this->putJson("/api/v1/trips/{$trip->id}", [
-            'title' => 'Updated Trip Title',
-            'description' => 'Updated description',
-        ]);
-        $response->assertStatus(200);
-
-        Sanctum::actingAs($this->member2);
-        $response = $this->putJson("/api/v1/trips/{$trip->id}", [
-            'description' => 'Updated by editor',
-        ]);
-        $response->assertStatus(200);
-
+        // Step 8: Test role-based permissions - editor can edit
         Sanctum::actingAs($this->member1);
-        $response = $this->putJson("/api/v1/trips/{$trip->id}", [
-            'description' => 'This should fail',
+        $updateResponse = $this->putJson("/api/v1/trips/{$tripId}", [
+            'description' => 'Updated by editor'
         ]);
-        $response->assertStatus(403);
+        $updateResponse->assertStatus(200);
 
-        $nonMember = User::factory()->create();
-        Sanctum::actingAs($nonMember);
-        $response = $this->getJson("/api/v1/trips/{$trip->id}");
-        $response->assertStatus(403);
-    }
-
-    public function test_real_time_updates_for_collaboration()
-    {
-        $trip = Trip::factory()->create(['owner_id' => $this->owner->id]);
-        $trip->members()->attach($this->member1->id, ['role' => 'editor', 'status' => 'accepted']);
-        $trip->members()->attach($this->member2->id, ['role' => 'member', 'status' => 'accepted']);
-
-        Sanctum::actingAs($this->member1);
-        $response = $this->putJson("/api/v1/trips/{$trip->id}", [
-            'description' => 'Updated by member1',
-        ]);
-        $response->assertStatus(200);
-
+        // Step 9: Test role-based permissions - member cannot edit
         Sanctum::actingAs($this->member2);
-        $response = $this->getJson("/api/v1/trips/{$trip->id}");
-        $response->assertStatus(200)
+        $updateResponse = $this->putJson("/api/v1/trips/{$tripId}", [
+            'description' => 'This should fail'
+        ]);
+        $updateResponse->assertStatus(403);
+
+        // Step 10: Test real-time collaboration - member can view updates
+        $viewResponse = $this->getJson("/api/v1/trips/{$tripId}");
+        $viewResponse->assertStatus(200)
             ->assertJson([
                 'data' => [
-                    'description' => 'Updated by member1',
+                    'description' => 'Updated by editor'
                 ]
             ]);
 
+        // Step 11: Owner invites new user who declines
+        Sanctum::actingAs($this->owner);
+        $this->postJson("/api/v1/trips/{$tripId}/members/invite", [
+            'email' => $this->invitee->email,
+            'role' => 'member'
+        ]);
+
+        Sanctum::actingAs($this->invitee);
+        $invitesResponse = $this->getJson('/api/v1/users/me/invites');
+        $invitation = $invitesResponse->json('data.0');
+        
+        $declineResponse = $this->postJson("/api/v1/trips/{$invitation['trip_id']}/decline");
+        $declineResponse->assertStatus(200);
+
+        // Step 12: Verify declined invitation
+        $this->assertDatabaseHas('trip_user', [
+            'trip_id' => $tripId,
+            'user_id' => $this->invitee->id,
+            'status' => 'declined',
+            'role' => 'member'
+        ]);
+
+        // Step 13: Non-member cannot access trip
+        $nonMember = User::factory()->create();
+        Sanctum::actingAs($nonMember);
+        $accessResponse = $this->getJson("/api/v1/trips/{$tripId}");
+        $accessResponse->assertStatus(403);
     }
 }

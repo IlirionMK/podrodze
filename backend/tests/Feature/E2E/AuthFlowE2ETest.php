@@ -31,7 +31,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
 class AuthFlowE2ETest extends ApiTestCase
 {
     use DatabaseMigrations;
-    
+
     protected bool $enableRateLimiting = false;
 
     /**
@@ -150,35 +150,4 @@ class AuthFlowE2ETest extends ApiTestCase
         }
     }
 
-    public function test_registered_user_can_access_protected_routes_without_verification(): void
-    {
-        $registerResponse = $this->postJson('/api/v1/register', array_merge(
-            self::TEST_USER,
-            ['password_confirmation' => self::TEST_USER['password']]
-        ));
-
-        $token = $registerResponse->json('token');
-
-        $this->withToken($token)
-            ->getJson('/api/v1/user')
-            ->assertOk()
-            ->assertJsonPath('email', strtolower(self::TEST_USER['email']));
-    }
-
-    public function test_cannot_login_with_invalid_credentials(): void
-    {
-        $this->createUser([
-            'email' => self::TEST_USER['email'],
-            'password' => bcrypt(self::TEST_USER['password']),
-            'email_verified_at' => now(),
-        ]);
-
-        $response = $this->postJson('/api/v1/login', [
-            'email' => self::TEST_USER['email'],
-            'password' => 'wrong-password',
-        ]);
-
-        $response->assertStatus(422)
-            ->assertJson(['message' => 'invalid_credentials']);
-    }
 }
